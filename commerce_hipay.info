@@ -1,1 +1,6 @@
 name = Commerce Hipay
+description = Integration with Hipay payment methods.
+package = Commerce (contrib)
+dependencies[] = commerce_customer
+dependencies[] = commerce_payment
+core = 7.x

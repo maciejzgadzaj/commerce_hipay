@@ -1,0 +1,5 @@
+name = Commerce Hipay TPP
+description = Provides integration with Hipay TPP payment method (off-site).
+package = Commerce (contrib)
+dependencies[] = commerce_hipay
+core = 7.x
