@@ -18,45 +18,119 @@
  */
 function commerce_hipay_tpp_get_payment_status_message($payment_status_code) {
   switch ($payment_status_code) {
-    case 101: return t('Created: The payment attempt was created.');
-    case 103: return t('Cardholder Enrolled: Card is enrolled in the 3-D Secure program. The merchant has to forward the cardholder to the authentication pages of the card issuer.');
-    case 104: return t('Cardholder Not Enrolled: Card is not enrolled in 3-D Secure program.');
-    case 104: return t('Cardholder Not Enrolled: Card is not enrolled in 3-D Secure program.');
-    case 105: return t('Unable to Authenticate: Unable to complete the authentication request.');
-    case 106: return t('Cardholder Authenticated: Cardholder was successfully authenticated in the 3-D Secure program.');
-    case 107: return t('Authentication Attempted: The Merchant has attempted to authenticate the cardholder in the 3-D Secure program and either the Issuer or cardholder is not enrolled.');
-    case 108: return t('Could Not Authenticate: The Issuer is not able to complete the authentication request.');
-    case 109: return t('Authentication Failed: Cardholder authentication failed. Authorization request should not be submitted.');
-    case 110: return t('Blocked: The transaction has been rejected for reasons of suspected fraud.');
-    case 111: return t('Denied: Merchant denied the payment attempt. After reviewing the fraud screening result, the merchant decided to decline the payment.');
-    case 112: return t('Authorized and Pending: The payment was challenged by the fraud rule set and is pending.');
-    case 113: return t('Refused: The financial institution refused to authorize the payment.');
-    case 114: return t('Expired: The validity period of the payment authorization has expired.');
-    case 115: return t('Cancelled: Merchant cancelled the payment attempt.');
-    case 116: return t('Authorized: The financial institution has approved the payment.');
-    case 117: return t('Capture Requested: A capture request has been sent to the financial institution.');
-    case 118: return t('Captured: The financial institution has processed the payment.');
-    case 119: return t('Partially Captured: The financial institution has processed part of the payment.');
-    case 120: return t('Collected: The funds have been made available for remittance to the merchant.');
-    case 121: return t('Partially Collected: A part of the transaction has been collected.');
-    case 122: return t('Settled: The financial operations linked to this transaction are closed. Funds have been debited or credited from your merchant account at Hipay.');
-    case 123: return t('Partially Settled: A part of the financial operations linked to this transaction is closed.');
-    case 124: return t('Refund Requested: A refund request has been sent to the financial institution.');
-    case 125: return t('Refunded: The payment was refunded.');
-    case 126: return t('Partially Refunded: A part of the transaction has been refunded.');
-    case 129: return t('Charged Back: The cardholder reversed a capture processed by their bank or credit card company.');
-    case 131: return t('Debited: The acquirer has informed us that a debit linked to the transaction is going to be applied.');
-    case 132: return t('Partially Debited: The acquirer has informed us that a partial debit linked to the transaction is going to be applied.');
-    case 140: return t('Authentication Requested: The payment method used requires authentication, authentication request was send and system is waiting for a customers’ action.');
-    case 141: return t('Authenticated: The payment method used requires authentication and it was successfull.');
-    case 142: return t('Authorization Requested: The payment method used requires an authorization request; the request was send and the system is waiting for the financial institution approval.');
-    case 150: return t('Acquirer Found: The acquirer payment route has been found.');
-    case 151: return t('Acquirer not Found: The acquirer payment route has not been found.');
-    case 160: return t('Cardholder Enrollment Unknown: Unable to verify if the card is enrolled in the 3-D Secure program.');
-    case 161: return t('Risk Accepted: The payment has been accepted by the fraud rule set.');
-    case 163: return t('Authorization Refused: The authorization was refused by the financial institution.');
-    case 173: return t('Capture Refused: The capture was refused by the financial institution.');
-    case 200: return t('Pending Payment: The transaction request was submitted to the acquirer but response is not yet available.');
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_CREATED:
+      return t('Created: The payment attempt was created.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_CARDHOLDER_ENROLLED:
+      return t('Cardholder Enrolled: Card is enrolled in the 3-D Secure program. The merchant has to forward the cardholder to the authentication pages of the card issuer.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_CARDHOLDER_NOT_ENROLLED:
+      return t('Cardholder Not Enrolled: Card is not enrolled in 3-D Secure program.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_UNABLE_TO_AUTH:
+      return t('Unable to Authenticate: Unable to complete the authentication request.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_CARTHOLDER_AUTH:
+      return t('Cardholder Authenticated: Cardholder was successfully authenticated in the 3-D Secure program.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_AUTH_ATTEMPTED:
+      return t('Authentication Attempted: The Merchant has attempted to authenticate the cardholder in the 3-D Secure program and either the Issuer or cardholder is not enrolled.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_COULD_NOT_AUTH:
+      return t('Could Not Authenticate: The Issuer is not able to complete the authentication request.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_AUTH_FAILED:
+      return t('Authentication Failed: Cardholder authentication failed. Authorization request should not be submitted.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_BLOCKED:
+      return t('Blocked: The transaction has been rejected for reasons of suspected fraud.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_DENIED:
+      return t('Denied: Merchant denied the payment attempt. After reviewing the fraud screening result, the merchant decided to decline the payment.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_AUTHORIZED_AND_PENDING:
+      return t('Authorized and Pending: The payment was challenged by the fraud rule set and is pending.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_REFUSED:
+      return t('Refused: The financial institution refused to authorize the payment.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_EXPIRED:
+      return t('Expired: The validity period of the payment authorization has expired.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_CANCELLED:
+      return t('Cancelled: Merchant cancelled the payment attempt.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_AUTHORIZED:
+      return t('Authorized: The financial institution has approved the payment.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_CAPTURE_REQUESTED:
+      return t('Capture Requested: A capture request has been sent to the financial institution.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_CAPTURED:
+      return t('Captured: The financial institution has processed the payment.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_PARTIALLY_CAPTURED:
+      return t('Partially Captured: The financial institution has processed part of the payment.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_COLLECTED:
+      return t('Collected: The funds have been made available for remittance to the merchant.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_PARTIALLY_COLLECTED:
+      return t('Partially Collected: A part of the transaction has been collected.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_SETTLED:
+      return t('Settled: The financial operations linked to this transaction are closed. Funds have been debited or credited from your merchant account at Hipay.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_PARTIALLY_SETTLED:
+      return t('Partially Settled: A part of the financial operations linked to this transaction is closed.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_REFUND_REQUESTEED:
+      return t('Refund Requested: A refund request has been sent to the financial institution.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_REFUNDED:
+      return t('Refunded: The payment was refunded.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_PARTIALLY_REFUNDED:
+      return t('Partially Refunded: A part of the transaction has been refunded.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_CHARGED_BACK:
+      return t('Charged Back: The cardholder reversed a capture processed by their bank or credit card company.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_DEBITED:
+      return t('Debited: The acquirer has informed us that a debit linked to the transaction is going to be applied.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_PARTIALLY_DEBITED:
+      return t('Partially Debited: The acquirer has informed us that a partial debit linked to the transaction is going to be applied.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_AUTH_REQUEST:
+      return t('Authentication Requested: The payment method used requires authentication, authentication request was send and system is waiting for a customers’ action.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_AUTHENTIFICATED:
+      return t('Authenticated: The payment method used requires authentication and it was successfull.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_AUTHORIZATION_REQUESTED:
+      return t('Authorization Requested: The payment method used requires an authorization request; the request was send and the system is waiting for the financial institution approval.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_ACQUIRE_FOUND:
+      return t('Acquirer Found: The acquirer payment route has been found.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_ACQUIRE_NOT_FOUND:
+      return t('Acquirer not Found: The acquirer payment route has not been found.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_CARDHOLDER_ENROLLMENT_UNKNOWN:
+      return t('Cardholder Enrollment Unknown: Unable to verify if the card is enrolled in the 3-D Secure program.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_RISK_ACCEPTED:
+      return t('Risk Accepted: The payment has been accepted by the fraud rule set.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_AUTHORIZATION_REFUSED:
+      return t('Authorization Refused: The authorization was refused by the financial institution.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_CAPTURE_REFUSED:
+      return t('Capture Refused: The capture was refused by the financial institution.');
+
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_PENDING_PAYMENT:
+      return t('Pending Payment: The transaction request was submitted to the acquirer but response is not yet available.');
   }
 }
 
