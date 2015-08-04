@@ -1,0 +1,772 @@
+<?php
+
+/**
+ * @file
+ * Provides integration with Hipay Wallet.
+ */
+
+require_once 'includes/commerce_hipay_ws.account.inc';
+require_once 'includes/commerce_hipay_ws.codes.inc';
+require_once 'includes/commerce_hipay_ws.constants.inc';
+require_once 'includes/commerce_hipay_ws.transfer.inc';
+require_once 'includes/commerce_hipay_ws.withdrawal.inc';
+
+/**
+ * Implements hook_commerce_payment_method_info().
+ *
+ * @see hook_commerce_payment_method_info()
+ */
+function commerce_hipay_ws_commerce_payment_method_info() {
+  $payment_methods = array();
+
+  $payment_methods['commerce_hipay_ws'] = array(
+    'title' => 'Hipay Wallet',
+    'description' => t('Hipay Wallet'),
+    'checkout' => FALSE,
+    'terminal' => FALSE,
+  );
+
+  return $payment_methods;
+}
+
+/**
+ * Implements hook_menu().
+ */
+function commerce_hipay_ws_menu() {
+  $items = array();
+
+  // Server-to-server notification URL.
+  $items['commerce-hipay-ws/notify'] = array(
+    'page callback' => 'commerce_hipay_ws_callback_notification',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  // Testing menu item for direct calls to the API.
+  $items['commerce-hipay-ws/soap/%'] = array(
+    'page callback' => 'commerce_hipay_ws_soap',
+    'page arguments' => array(2),
+    'access arguments' => array('access devel information'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['store/%commerce_store/hipay-wallet'] = array(
+    'title' => 'Hipay Wallet',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'commerce_hipay_ws_store_overview',
+    'page arguments' => array(1),
+    'access callback' => 'commerce_store_access',
+    'access arguments' => array('update', 1),
+    'weight' => 0,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'file' => 'includes/commerce_hipay_ws.admin.inc',
+  );
+
+  $items['store/%commerce_store/hipay-wallet/view'] = array(
+    'title' => 'Account details',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+
+  $items['store/%commerce_store/hipay-wallet/received-transfers'] = array(
+    'title' => 'Received transfers',
+    'page callback' => 'commerce_hipay_ws_store_transfers_received',
+    'page arguments' => array(1),
+    'access callback' => 'commerce_store_access',
+    'access arguments' => array('update', 1),
+    'weight' => 0,
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'file' => 'includes/commerce_hipay_ws.admin.inc',
+  );
+
+  $items['store/%commerce_store/hipay-wallet/sent-transfers'] = array(
+    'title' => 'Sent transfers',
+    'page callback' => 'commerce_hipay_ws_store_transfers_sent',
+    'page arguments' => array(1),
+    'access callback' => 'commerce_store_access',
+    'access arguments' => array('update', 1),
+    'weight' => 0,
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'file' => 'includes/commerce_hipay_ws.admin.inc',
+  );
+
+  $items['store/%commerce_store/hipay-wallet/withdrawals'] = array(
+    'title' => 'Withdrawals',
+    'page callback' => 'commerce_hipay_ws_store_withdrawals',
+    'page arguments' => array(1),
+    'access callback' => 'commerce_store_access',
+    'access arguments' => array('update', 1),
+    'weight' => 0,
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'file' => 'includes/commerce_hipay_ws.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Returns default settings for the Hipay Wallet payment method.
+ *
+ * @see commerce_hipay_ws_settings_form()
+ */
+function commerce_hipay_ws_settings_default() {
+  return array(
+    'endpoint' => COMMERCE_HIPAY_WS_TEST,
+    'account_id' => '',
+    'entity' => '',
+    'api_username' => '',
+    'api_password' => '',
+    'api_logging' => array(
+      'request' => FALSE,
+      'response' => FALSE,
+    ),
+    'bank_account' => array(
+      'bankName' => '',
+      'bankAddress' => '',
+      'bankZipCode' => '',
+      'bankCity' => '',
+      'bankCountry' => '',
+      'iban' => '',
+      'swift' => '',
+      'acct_num' => '',
+      'aba_num' => '',
+      'transit_num' => '',
+    ),
+  );
+}
+
+/**
+ * Payment method callback: settings form.
+ *
+ * @see hook_commerce_payment_method_info()
+ */
+function commerce_hipay_ws_settings_form($settings = array()) {
+  // Merge default settings into the stored settings array.
+  // Settings are stored in multi-level array, so we need recursive merge. And
+  // actually replace instead of merge, to make sure the default settings are
+  // correctly overriden by custom user settings (array_merge_recursive() would
+  // just add new array elements instead of overriding existing ones).
+  $settings = array_replace_recursive(commerce_hipay_ws_settings_default(), $settings);
+
+  $form = array();
+
+  $form['endpoint'] = array(
+    '#type' => 'radios',
+    '#title' => t('Environment'),
+    '#options' => array(
+      COMMERCE_HIPAY_WS_TEST => t('Test - process test operations on the test account'),
+      COMMERCE_HIPAY_WS_PRODUCTION => t('Production - process real operations on the production account'),
+    ),
+    '#default_value' => $settings['endpoint'],
+    '#required' => TRUE,
+  );
+
+  $form['account_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Account ID'),
+    '#description' => t('Hipay Wallet account ID.'),
+    '#default_value' => $settings['account_id'],
+    '#required' => TRUE,
+  );
+
+  $form['email'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Account email'),
+    '#description' => t('Hipay Wallet account email address.'),
+    '#default_value' => $settings['email'],
+    '#required' => TRUE,
+  );
+
+  $form['entity'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Entity'),
+    '#description' => t('Entity of the accounts involved in API operations (provided by Hipay after Hipay Wallet account setup).'),
+    '#default_value' => $settings['entity'],
+    '#required' => TRUE,
+  );
+
+  $form['api_username'] = array(
+    '#type' => 'textfield',
+    '#title' => t('API username'),
+    '#description' => t('The name of the user for accessing Hipay Wallet webservice. This, as well as API password, can be found in your Hipay Wallet Account under <em>Hipay wallet integration / Merchant Tool Kit / API</em>.'),
+    '#default_value' => $settings['api_username'],
+    '#required' => TRUE,
+  );
+
+  $form['api_password'] = array(
+    '#type' => 'textfield',
+    '#title' => t('API password'),
+    '#description' => t('The password for the user specified in the above field.'),
+    '#default_value' => $settings['api_password'],
+    '#required' => TRUE,
+  );
+
+  $form['api_logging'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Log the following messages for debugging'),
+    '#description' => t('Enabling this option will save full information on each API request and/or response in the dblog.'),
+    '#options' => array(
+      'request' => t('API request messages'),
+      'response' => t('API response messages'),
+    ),
+    '#default_value' => $settings['api_logging'],
+  );
+
+  // Vendor account details.
+  $form['vendor_account'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Vendor account details'),
+    '#collapsible' => TRUE,
+  );
+
+  if (!empty($settings['api_password'])) {
+    $rows = array();
+
+    // Balance.
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_BALANCE, array());
+    if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+      $rows[] = array(
+        t('Account ID'),
+        $response['balances']['item']['userAccountId'],
+      );
+      $rows[] = array(
+        t('Balance'),
+        commerce_currency_format(commerce_currency_decimal_to_amount($response['balances']['item']['balance'], $response['balances']['item']['currency']), $response['balances']['item']['currency']),
+      );
+      $rows[] = array(
+        t('Money available for withdrawal'),
+        commerce_currency_format(commerce_currency_decimal_to_amount($response['balances']['item']['moneyAvailableForWithdrawal'], $response['balances']['item']['currency']), $response['balances']['item']['currency']),
+      );
+    }
+
+    $form['vendor_account']['info'] = array(
+      '#type' => 'markup',
+      '#markup' => theme('table', array('rows' => $rows)),
+    );
+  }
+
+  // Bank account details.
+  $form['bank_account'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Bank account details'),
+    '#description' => '<p>' . t('Note that once the bank details are saved, and the bank account gets created in your Hipay Wallet account, they cannot be changed anymore. The only way to change or delete them is to contact Hipay support.') . '</p>'
+      . '<p>' . t('To avoid creating the bank account in your Hipay Wallet account after submitting this form you can leave the <em>Bank country</em> field empty - then the Hipay Wallet API will not be called when you submit the form, and the bank account will not be created (even if all other bank-related fields are filled).') . '</p>'
+      . '<p>' . t('Note that the required fields are different for different countries. To see which fields are required for your country, please select relevant <em>Bank country</em> value (leaving all other bank fields empty) and submit the form.') . '</p>',
+    '#collapsible' => TRUE,
+  );
+
+  // Check current bank information status only if API username and password
+  // have already been provided - otherwise we won't be able to make API call.
+  if (!empty($settings['api_password'])) {
+    $parameters = array('locale' => 'en_GB');
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_STATUS, $parameters);
+    if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+      // Display current status of bank account information.
+      $form['bank_account']['current_status'] = array(
+        '#markup' => t('Current Hipay Wallet bank information status: <strong>@status</strong>', array(
+          '@status' => $response['status'],
+        )),
+      );
+
+      // Add it to the form as well so we have access to it in validate
+      // and submit callbacks.
+      $form['bank_account']['status'] = array(
+        '#type' => 'value',
+        '#value' => $response['status'],
+      );
+
+      // If bank account has been already created in Hipay Wallet, we won't be
+      // able to change it anymore through API, so just disable all bank-related
+      // form fields, and collapse whole 'Bank account details' fieldset.
+      if ($response['status'] != COMMERCE_HIPAY_WS_ACCOUNT_NO_BANK_INFO) {
+        $disable_bank_form_elements = TRUE;
+
+        // If bank account details has been validated in Hipay Wallet, let's
+        // fetch all the information and display them in the form, overriding
+        // whatever settings has been saved locally before.
+        if ($response['status'] != COMMERCE_HIPAY_WS_ACCOUNT_BANK_INFO_VALIDATED) {
+          $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_CHECK, array());
+          if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+            // Alter existing payment method instance settings.
+            $settings['bank_account'] = $response;
+            // 'bankInfosCheck' API resource return 'bankCountry' as a label
+            // instead of country code (for example, it returns 'FRANCE' instead
+            // of 'FR'), but we need country code to set the dropdown default
+            // value, so we need another API call to get full country list,
+            // from which we can map country label to country code.
+            if (!empty($response['bankCountry'])) {
+              $settings['bank_account']['bankCountry'] = commerce_hipay_ws_get_code_from_country($response['bankCountry']);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  $form['bank_account']['bankName'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Bank name'),
+    '#default_value' => $settings['bank_account']['bankName'],
+    '#disabled' => !empty($disable_bank_form_elements),
+  );
+
+  $form['bank_account']['bankAddress'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Bank address'),
+    '#default_value' => $settings['bank_account']['bankAddress'],
+    '#disabled' => !empty($disable_bank_form_elements),
+  );
+
+  $form['bank_account']['bankZipCode'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Bank zip code'),
+    '#default_value' => $settings['bank_account']['bankZipCode'],
+    '#disabled' => !empty($disable_bank_form_elements),
+  );
+
+  $form['bank_account']['bankCity'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Bank city'),
+    '#default_value' => $settings['bank_account']['bankCity'],
+    '#disabled' => !empty($disable_bank_form_elements),
+  );
+
+  $options = array('' => '- select -') + country_get_list();
+  $form['bank_account']['bankCountry'] = array(
+    '#type' => 'select',
+    '#title' => t('Bank country'),
+    '#options' => $options,
+    '#default_value' => $settings['bank_account']['bankCountry'],
+    '#disabled' => !empty($disable_bank_form_elements),
+  );
+
+  $form['bank_account']['iban'] = array(
+    '#type' => 'textfield',
+    '#title' => t('IBAN'),
+    '#default_value' => $settings['bank_account']['iban'],
+    '#disabled' => !empty($disable_bank_form_elements),
+  );
+
+  $form['bank_account']['swift'] = array(
+    '#type' => 'textfield',
+    '#title' => t('SWIFT / BIC'),
+    '#default_value' => $settings['bank_account']['swift'],
+    '#disabled' => !empty($disable_bank_form_elements),
+  );
+
+  $form['bank_account']['acct_num'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Account number'),
+    '#default_value' => $settings['bank_account']['acct_num'],
+    '#disabled' => !empty($disable_bank_form_elements),
+  );
+
+  $form['bank_account']['aba_num'] = array(
+    '#type' => 'textfield',
+    '#title' => t('ABA number'),
+    '#default_value' => $settings['bank_account']['aba_num'],
+    '#disabled' => !empty($disable_bank_form_elements),
+  );
+
+  $form['bank_account']['transit_num'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Transit number'),
+    '#default_value' => $settings['bank_account']['transit_num'],
+    '#disabled' => !empty($disable_bank_form_elements),
+  );
+
+  return $form;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for rules_ui_edit_element.
+ *
+ * Adds custom validation callback for Hipay Wallet payment method settings form.
+ */
+function commerce_hipay_ws_form_rules_ui_edit_element_alter(&$form, &$form_state) {
+  if ($form_state['element_settings']['payment_method']['method_id'] == 'commerce_hipay_ws') {
+
+    $form['#submit'][] = 'commerce_hipay_ws_settings_form_submit_save_vendor_account';
+
+    // Submitted bank details.
+    $bank_account = $form['parameter']['payment_method']['settings']['payment_method']['settings']['bank_account'];
+
+    // Add custom validate and submit callbacks only
+    // if bank account hasn't been created yet.
+    if (
+      isset($bank_account['status'])
+      && $bank_account['status'] == COMMERCE_HIPAY_WS_ACCOUNT_NO_BANK_INFO
+    ) {
+      $form['#validate'][] = 'commerce_hipay_ws_settings_form_validate';
+      $form['#submit'][] = 'commerce_hipay_ws_settings_form_submit';
+    }
+  }
+}
+
+function commerce_hipay_ws_settings_form_submit_save_vendor_account(&$form, &$form_state) {
+  // Submitted payment method settings.
+  $settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
+
+  $record = array(
+    'account_id' => $settings['account_id'],
+    'store_id' => 0,
+    'email' => $settings['email'],
+    'hipay_vendor_account' => array(
+      'userAccountId' => $settings['account_id'],
+      'wsLogin' => $settings['api_username'],
+      'wsPassword' => $settings['api_password'],
+    ),
+  );
+
+  if ($account = commerce_hipay_ws_account_load_by_account_id($settings['account_id'])) {
+    $record = array_merge_recursive($account, $record);
+  }
+
+  commerce_hipay_ws_account_save($record);
+}
+
+/**
+ * Custom payment method settings form validation callback.
+ *
+ * @see commerce_hipay_ws_settings_form()
+ * @see commerce_hipay_ws_form_rules_ui_edit_element_alter().
+ */
+function commerce_hipay_ws_settings_form_validate(&$form, &$form_state) {
+  // Submitted bank details.
+  $bank_account = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings']['bank_account'];
+
+  // Run the validation only if bank country was selected.
+  if (!empty($bank_account['bankCountry'])) {
+    // Get all required fields for selected country from Hipay API.
+    $parameters = array(
+      'locale' => 'en_GB',
+      'country' => $bank_account['bankCountry'],
+    );
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_FIELDS, $parameters);
+
+    // If any of the required fields is empty, set form error.
+    if (!empty($response['fields']['item'])) {
+      foreach ($response['fields']['item'] as $field) {
+        if ($field['code'] != 'bankCountry' && empty($bank_account[$field['code']])) {
+          form_set_error('parameter][payment_method][settings][payment_method][settings][bank_account][' . $field['code'], t('Bank @field_label is required.', array(
+            '@field_label' => $field['label'],
+          )));
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Custom payment method settings form submit callback.
+ *
+ * @see commerce_hipay_ws_settings_form()
+ * @see  commerce_hipay_ws_form_rules_ui_edit_element_alter().
+ */
+function commerce_hipay_ws_settings_form_submit(&$form, &$form_state) {
+  // Submitted bank details.
+  $bank_account = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings']['bank_account'];
+
+  // If bank country was not selected, do not try to create the bank account.
+  if (empty($bank_account['bankCountry'])) {
+    return;
+  }
+
+  // Do the API call.
+  if (!$response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_REGISTER, $bank_account)) {
+    drupal_set_message(t('There was an error calling Hipay Wallet API. See log for more details.'), 'error');
+      return FALSE;
+  }
+
+  // If an error code was returned in the response.
+  if (!isset($response['code']) || $response['code'] != 0) {
+    drupal_set_message(t('There was an error creating bank account at Hipay Wallet (@error_code): @error_description', array(
+      '@error_code' => $response['code'],
+      '@error_description' => $response['description'],
+    )), 'error');
+    return FALSE;
+  }
+
+  drupal_set_message(t('Bank details have been successfully registered in your Hipay Wallet account.'));
+}
+
+/**
+ * Menu item callback: allows for custom calls to Hipay Wallet API.
+ *
+ * @see commerce_hipay_ws_menu()
+ */
+function commerce_hipay_ws_soap($resource) {
+  $parameters = commerce_hipay_ws_get_feedback();
+
+  $response = commerce_hipay_ws_api_request($resource, $parameters);
+
+  if (function_exists('kpr')) {
+    kpr($response);
+  }
+  else {
+    var_dump($response);
+  }
+}
+
+/**
+ * Performs a call to Hipay Wallet SOAP API.
+ *
+ * @param string $resource
+ *   Hipay SOAP API resource.
+ * @param array $request_data
+ *   A string of parameters to be sent to Hipay TPP API.
+ * @param array $payment_method
+ *   The payment method being used.
+ *
+ * @return object
+ *   An array of Hipay TPP API response parameters.
+ */
+function commerce_hipay_ws_api_request($resource, $parameters, $payment_method_instance = NULL) {
+  // If no specific payment method instance was requested in function parameter,
+  // load and use the first active 'commerce_hipay_ws' payment method instance.
+  if (empty($payment_method_instance)) {
+    $instances = commerce_hipay_ws_payment_method_instances('commerce_hipay_ws');
+    $payment_method_instance = reset($instances);
+  }
+
+  // Add API access credentials to API call parameters, allowing them
+  // to be overriden by parameters provided in the function call.
+  $parameters = array_replace_recursive(array(
+    'wsLogin' => $payment_method_instance['settings']['api_username'],
+    'wsPassword' => $payment_method_instance['settings']['api_password'],
+    'entity' => $payment_method_instance['settings']['entity'],
+  ), $parameters);
+
+  // Allow other modules to alter the $parameters array.
+  drupal_alter('commerce_hipay_ws_api_request', $parameters, $resource, $payment_method_instance);
+
+  // Log the request data if request logging is enabled.
+  if (!empty($payment_method_instance['settings']['api_logging']['request'])) {
+    watchdog('commerce_hipay_ws', '@resource: request: !parameters', array(
+      '@resource' => $resource,
+      '!parameters' => '<pre>' . var_export($parameters, TRUE) . '</pre>',
+    ), WATCHDOG_DEBUG);
+  }
+
+  // Prepare API request details.
+  $url = commerce_hipay_ws_get_server_url($payment_method_instance) . commerce_hipay_ws_get_resource_type($resource) . $resource;
+  $options = array(
+    'compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP,
+    'cache_wsdl' => WSDL_CACHE_NONE,
+    'soap_version' => SOAP_1_1,
+    'encoding' => 'UTF-8'
+  );
+
+  // Perform the call to Hipay Wallet SOAP API.
+  try {
+    $client = new SoapClient($url . '?wsdl', $options);
+    $result = $client->$resource(array('parameters' => $parameters));
+  }
+  // If there was any kind of error calling the API...
+  catch (SoapFault $fault) {
+    watchdog('commerce_hipay_ws', '@resource: SOAPFault: @faultstring<br />Request URL: @request_url<br />Request parameters: !parameters', array(
+      '@resource' => $resource,
+      '@faultstring' => $fault->faultstring,
+      '@request_url' => $url,
+      '!parameters' => '<pre>' . var_export($parameters, TRUE) . '</pre>',
+    ), WATCHDOG_ERROR);
+
+    return FALSE;
+  }
+
+  // Log the request data if request logging is enabled.
+  if (!empty($payment_method_instance['settings']['api_logging']['response'])) {
+    watchdog('commerce_hipay_ws', '@resource: response: !response', array(
+      '@resource' => $resource,
+      '!response' => '<pre>' . var_export($result, TRUE) . '</pre>',
+    ), WATCHDOG_DEBUG);
+  }
+
+  $response_key = $resource . 'Result';
+  if (!isset($result->$response_key)) {
+    watchdog('commerce_hipay_ws', '@resource: Unable to find @response_key parameter in API response: !response', array(
+      '@resource' => $resource,
+      '@response_key' => $response_key,
+      '!response' => '<pre>' . var_export($result, TRUE) . '</pre>',
+    ), WATCHDOG_ERROR);
+
+    return FALSE;
+  }
+
+  $response = json_decode(json_encode($result->$response_key), TRUE);
+
+  // Allow other modules to process the response.
+  foreach (module_implements('commerce_hipay_ws_api_response') as $module) {
+    $function = $module . '_commerce_hipay_ws_api_response';
+    $function($response, $parameters, $resource, $payment_method_instance);
+  }
+
+  return $response;
+}
+
+/**
+ * Callback page for gateway server-to-server notifications.
+ *
+ * @see commerce_hipay_ws_menu().
+ */
+function commerce_hipay_ws_callback_notification() {
+  // Get Hipay API notification feedback and process it.
+  $feedback = commerce_hipay_ws_get_feedback();
+
+  // @TODO.
+  switch ($feedback['type']) {
+
+    case 'Envoi':
+      $transfer = commerce_hipay_ws_transfer_load_by_transaction_id($feedback['transactionId']);
+      $transfer['notification'] = $feedback;
+      $transfer['status'] = $feedback['transactionStatus'];
+      commerce_hipay_ws_transfer_save($transfer);
+      break;
+
+    // It's not really 'withdrawal' here, for the moment no idea what it really is.
+    case 'withdrawal':
+      $withdrawal = commerce_hipay_ws_withdrawal_load_by_withdrawal_id($feedback['transactionId']);
+      $withdrawal['notification'] = $feedback;
+      $transfer['status'] = $feedback['transactionStatus'];
+      commerce_hipay_ws_withdrawal_save($withdrawal);
+      break;
+  }
+
+  watchdog('commerce_hipay_ws', 'Notification received: !feedback', array(
+    '!feedback' => '<pre>' . var_export($feedback, TRUE) . '</pre>',
+  ), WATCHDOG_DEBUG);
+}
+
+/**
+ * Returns parameters returned by Hipay TPP API.
+ *
+ * @return array
+ *   An associative array containing the Hipay feedback taken from the $_GET
+ *   and $_POST superglobals, excluding 'q'.
+ */
+function commerce_hipay_ws_get_feedback() {
+  $feedback = array_replace_recursive($_GET, $_POST);
+  unset($feedback['q']);
+  return $feedback;
+}
+
+/**
+ * Returns full URL of Hipay Wallet API endpoint.
+ *
+ * @param array $payment_method
+ *   Payment method instance definition array.
+ *
+ * @return string
+ *   The full URL of Hipay Wallet API endpoint.
+ */
+function commerce_hipay_ws_get_server_url($payment_method) {
+  switch ($payment_method['settings']['endpoint']) {
+    case COMMERCE_HIPAY_WS_PRODUCTION:
+      return COMMERCE_HIPAY_WS_ENDPOINT_PRODUCTION;
+    case COMMERCE_HIPAY_WS_TEST:
+      return COMMERCE_HIPAY_WS_ENDPOINT_TEST;
+  }
+}
+
+function commerce_hipay_ws_get_resource_type($resource) {
+  switch ($resource) {
+    case COMMERCE_HIPAY_WS_RESOURCE_TRANSFER:
+      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_TRANSFER;
+    case COMMERCE_HIPAY_WS_RESOURCE_WITHDRAWAL:
+      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_WITHDRAWAL;
+    case COMMERCE_HIPAY_WS_RESOURCE_LOCALE_CODES:
+    case COMMERCE_HIPAY_WS_RESOURCE_LOCALE_TIMEZONES:
+    case COMMERCE_HIPAY_WS_RESOURCE_LOCALE_COUNTRIES:
+      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_LOCALE;
+    default:
+      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_ACCOUNT;
+  }
+}
+
+/**
+ * Returns all payment method instances for a given payment method id.
+ *
+ * @param $method_id
+ *   A payment method id
+ * @param $include_disabled
+ *   Return enabled and disabled instances
+ *
+ * @return
+ *   An array of all loaded payment method instances keyed by instance_id
+ */
+function commerce_hipay_ws_payment_method_instances($method_id, $include_disabled = FALSE) {
+  $cached_ids = &drupal_static(__FUNCTION__, array());
+  $include_disabled = !empty($include_disabled);
+
+  if (!array_key_exists($method_id, $cached_ids)) {
+    $cached_ids[$method_id] = array();
+
+    // load all rules ... no easier way
+    $rules_configs = rules_config_load_multiple(FALSE);
+
+    // find all rules with an action to enable this method
+    foreach ($rules_configs as $rule_name => $rule) {
+      // Only rules and sub-types have actions.
+      if (!($rule instanceof Rule)) {
+        continue;
+      }
+
+      // fast skip if rule does not depend on commerce_payment
+      if (!isset($rule->dependencies) || !in_array('commerce_payment', $rule->dependencies)) {
+        continue;
+      }
+
+      foreach ($rule->actions() as $action) {
+        // skip any actions that are not simple rules actions, ie loops
+        if (!($action instanceof RulesAction)) {
+          continue;
+        }
+
+        if ($action->getElementName() == 'commerce_payment_enable_' . $method_id) {
+          $instance_id = commerce_payment_method_instance_id($method_id, $rule);
+          $cached_ids[$method_id][$instance_id] = $rule->active;
+          continue 2; // skip to next rule
+        }
+      }
+    }
+  }
+
+  // load instances
+  $instances = array();
+  if (!empty($cached_ids[$method_id])) {
+    foreach ($cached_ids[$method_id] as $instance_id => $instance_active) {
+      if ($instance_active || $include_disabled) {
+        $instances[$instance_id] = commerce_payment_method_instance_load($instance_id);
+      }
+    }
+  }
+
+  return $instances;
+}
+
+/**
+ * Returns Hipay Wallet country code for provided country label.
+ *
+ * @param string $country_label
+ *   A country label to return the country code for.
+ *
+ * @return string
+ *   A country code for provided country label.
+ */
+function commerce_hipay_ws_get_code_from_country($country_label) {
+  $parameters = array(
+    'locale' => 'en_GB',
+  );
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_LOCALE_COUNTRIES, $parameters);
+
+  if (!empty($response['countries']['item']) && is_array($response['countries']['item'])) {
+    foreach ($response['countries']['item'] as $item) {
+      if ($item['label'] == $country_label) {
+        return $item['code'];
+      }
+    }
+  }
+}

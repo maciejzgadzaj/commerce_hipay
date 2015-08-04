@@ -1,0 +1,5 @@
+name = Commerce Hipay Wallet
+description = Provides integration with Hipay Wallet.
+package = Commerce (contrib)
+dependencies[] = commerce_hipay
+core = 7.x
