@@ -27,7 +27,7 @@ function commerce_hipay_tpp_refresh($order, $transaction) {
   $url = commerce_hipay_tpp_get_server_url($payment_method) . COMMERCE_HIPAY_TPP_RESOURCE_TRANSACTION . $transaction->remote_id;
   $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, 'Refresh');
 
-  if (commerce_hipay_tpp_process_feedback($response['transaction'], 'refresh')) {
+  if (commerce_hipay_tpp_process_notification($response['transaction'], 'refresh')) {
     drupal_set_message(t('Transaction details has been successfully refreshed.'));
   }
 
@@ -52,11 +52,9 @@ function commerce_hipay_tpp_capture_form($form, &$form_state, $order, $transacti
 
   $balance = commerce_payment_order_balance($order);
 
-  if ($balance['amount'] > 0 && $balance['amount'] < $transaction->data['authorized_amount']) {
+  $default_amount = $transaction->data['authorized_amount'] - $transaction->data['captured_amount'];
+  if ($balance['amount'] < $default_amount) {
     $default_amount = $balance['amount'];
-  }
-  else {
-    $default_amount = $transaction->data['authorized_amount'] - $transaction->data['captured_amount'];
   }
 
   $default_amount = number_format(commerce_currency_amount_to_decimal($default_amount, $transaction->currency_code), 2, '.', '');

@@ -52,15 +52,6 @@ function commerce_hipay_tpp_commerce_payment_transaction_status_info() {
     'total' => FALSE,
   );
 
-  // @TODO: Remove? We probably won't be needing these...
-//  $statuses[COMMERCE_HIPAY_TPP_PAYMENT_STATUS_REFUNDED] = array(
-//    'status' => COMMERCE_HIPAY_TPP_PAYMENT_STATUS_REFUNDED,
-//    'title' => t('Refunded'),
-//    'icon' => drupal_get_path('module', 'commerce_payment') . '/theme/icon-success.png',
-//    // Refund transactions should be included in order balance calculations.
-//    'total' => TRUE,
-//  );
-
   $statuses[COMMERCE_HIPAY_TPP_PAYMENT_STATUS_CANCELLED] = array(
     'status' => COMMERCE_HIPAY_TPP_PAYMENT_STATUS_CANCELLED,
     'title' => t('Cancelled'),
@@ -77,6 +68,21 @@ function commerce_hipay_tpp_commerce_payment_transaction_status_info() {
     'title' => t('Waiting for server-to-server notification'),
     'icon' => drupal_get_path('module', 'commerce_payment') . '/theme/icon-pending.png',
     'total' => FALSE,
+  );
+
+  // Special statuses for "history transactions".
+  $statuses[COMMERCE_HIPAY_TPP_PAYMENT_STATUS_CAPTURED] = array(
+    'status' => COMMERCE_HIPAY_TPP_PAYMENT_STATUS_CAPTURED,
+    'title' => t('Captured'),
+    'icon' => drupal_get_path('module', 'commerce_payment') . '/theme/icon-success.png',
+    'total' => TRUE,
+  );
+
+  $statuses[COMMERCE_HIPAY_TPP_PAYMENT_STATUS_REFUNDED] = array(
+    'status' => COMMERCE_HIPAY_TPP_PAYMENT_STATUS_REFUNDED,
+    'title' => t('Refunded'),
+    'icon' => drupal_get_path('module', 'commerce_payment') . '/theme/icon-success.png',
+    'total' => TRUE,
   );
 
   return $statuses;
@@ -189,14 +195,16 @@ function commerce_hipay_tpp_access_capture($order, $transaction) {
   if (in_array($transaction->payment_method, array_keys(commerce_hipay_tpp_commerce_payment_method_info()))) {
     // Deny access if authorization has not been successfully completed,
     // or has been denied.
-    if (
-      $transaction->status !== COMMERCE_HIPAY_TPP_PAYMENT_STATUS_AUTHORIZED
-      && $transaction->status !== COMMERCE_PAYMENT_STATUS_SUCCESS
-    ) {
+    if ($transaction->status !== COMMERCE_HIPAY_TPP_PAYMENT_STATUS_AUTHORIZED) {
       return FALSE;
     }
     // Deny access if total authorization amount has already been captured.
-    if ($transaction->data['captured_amount'] >= $transaction->data['authorized_amount']) {
+    $totals = commerce_hipay_tpp_get_order_operation_totals($order);
+    if (
+      !empty($totals[COMMERCE_HIPAY_TPP_OPERATION_AUTHORIZATION])
+      && !empty($totals[COMMERCE_HIPAY_TPP_OPERATION_CAPTURE])
+      && $totals[COMMERCE_HIPAY_TPP_OPERATION_CAPTURE] >= $totals[COMMERCE_HIPAY_TPP_OPERATION_AUTHORIZATION]
+    ) {
       return FALSE;
     }
   }
@@ -216,13 +224,20 @@ function commerce_hipay_tpp_access_refund($order, $transaction) {
     // Deny access if no capture or canceled.
     if (
       $transaction->status !== COMMERCE_PAYMENT_STATUS_SUCCESS
-      && $transaction->remote_status !== COMMERCE_HIPAY_TPP_REMOTE_STATUS_CAPTURED
-      && $transaction->remote_status !== COMMERCE_HIPAY_TPP_REMOTE_STATUS_PARTIALLY_CAPTURED
+      && $transaction->status !== COMMERCE_HIPAY_TPP_PAYMENT_STATUS_AUTHORIZED
     ) {
       return FALSE;
     }
     // Deny access if total captured amount has already been refunded.
-    if ($transaction->data['captured_amount'] <= $transaction->data['refunded_amount']) {
+    $totals = commerce_hipay_tpp_get_order_operation_totals($order);
+    if (
+      // Main transaction was authorization, and nothing was captured.
+      $transaction->status == COMMERCE_HIPAY_TPP_PAYMENT_STATUS_AUTHORIZED
+      && empty($totals[COMMERCE_HIPAY_TPP_OPERATION_CAPTURE])
+      // The whole captured amount was refunded.
+      || !empty($totals[COMMERCE_HIPAY_TPP_OPERATION_REFUND])
+      && abs($totals[COMMERCE_HIPAY_TPP_OPERATION_REFUND]) >= $totals[COMMERCE_HIPAY_TPP_OPERATION_CAPTURE]
+    ) {
       return FALSE;
     }
   }
@@ -265,9 +280,9 @@ function commerce_hipay_tpp_access_delete($order, $transaction) {
   if (
     in_array($transaction->payment_method, array_keys(commerce_hipay_tpp_commerce_payment_method_info()))
     && (
-      // @TODO: Do these conditions properly.
-      // See commerce_ingenico_delete_access() for an example.
+      // @TODO: Do these conditions properly?
       $transaction->status !== COMMERCE_HIPAY_TPP_PAYMENT_STATUS_AUTHORIZED
+      || empty($transaction->remote_id)
     )
   ) {
     return FALSE;
@@ -653,6 +668,7 @@ function commerce_hipay_tpp_api_initialize($order, $payment_method) {
   $transaction->message_variables = array(
     '@operation' => ucfirst($payment_method['settings']['operation']),
   );
+  $transaction->data['operation'] = $payment_method['settings']['operation'];
   commerce_payment_transaction_save($transaction);
 
   $request_data['cdata2'] = $transaction->transaction_id;
@@ -688,6 +704,12 @@ function commerce_hipay_tpp_api_initialize($order, $payment_method) {
 
   // Save updated transaction.
   commerce_payment_transaction_save($transaction);
+
+  // Allow other modules to process the initialization response.
+  foreach (module_implements('commerce_hipay_tpp_api_initialize_response') as $module) {
+    $function = $module . '_commerce_hipay_tpp_api_initialize_response';
+    $function($response, $transaction, $order, $payment_method);
+  }
 
   return $response;
 }
@@ -1030,6 +1052,65 @@ function commerce_hipay_tpp_redirect_form_submit($order, $payment_method) {
 }
 
 /**
+ * Implements hook_commerce_cardonfile_checkout_pane_form_alter().
+ *
+ * Adds a checkbox to store the credit card for future use.
+ *
+ * Card on File module adds this checkbox only for onsite payment methods,
+ * but in case of Hipay we still want to add it even though it is offsite.
+ *
+ * @see commerce_cardonfile_form_alter()
+ * @see commerce_hipay_tpp_cardonfile_commerce_checkout_form_submit()
+ */
+function commerce_hipay_tpp_commerce_cardonfile_checkout_pane_form_alter(&$payment_details, &$form) {
+  $instance_id = $form['commerce_payment']['payment_method']['#default_value'];
+  $payment_method = commerce_payment_method_instance_load($instance_id);
+
+  if ($payment_method['method_id'] == 'commerce_hipay_tpp') {
+    // Card on File doesn't add a checkbox to store the credit card for future
+    // use for offsite payment methods. In case of Hipay though we still want
+    // this checkbox to be added, even though it is offsite.
+    $storage = variable_get('commerce_cardonfile_storage', 'opt-in');
+
+    if (in_array($storage, array('opt-in', 'opt-out'))) {
+      $payment_details['cardonfile_store'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Store this credit card on file for future use.'),
+        '#default_value' => $storage == 'opt-out',
+      );
+
+      $payment_details['cardonfile_instance_default']['#weight'] = 5;
+
+      // Add submit handler.
+      if (isset($form['buttons']['continue'])) {
+        $form['buttons']['continue']['#submit'][] = 'commerce_hipay_tpp_cardonfile_commerce_checkout_form_submit';
+      }
+    }
+    else {
+      $payment_details['cardonfile_store'] = array(
+        '#type' => 'value',
+        '#value' => TRUE,
+      );
+    }
+  }
+}
+
+/**
+ * Checkout form submit callback to process Hipay card on file options.
+ *
+ * @see commerce_hipay_tpp_commerce_cardonfile_checkout_pane_form_alter()
+ */
+function commerce_hipay_tpp_cardonfile_commerce_checkout_form_submit($form, &$form_state) {
+  // Add selected value for storing the credit card details into the order,
+  // as we will need it when processing the server-to-server notification.
+  // See commerce_hipay_tpp_process_notification().
+  if (isset($form_state['values']['commerce_payment']['payment_details']['cardonfile_store'])) {
+    $form_state['order']->data['commerce_hipay_tpp']['cardonfile_store'] = $form_state['values']['commerce_payment']['payment_details']['cardonfile_store'];
+    commerce_order_save($form_state['order']);
+  }
+}
+
+/**
  * Card on file callback: background charge payment
  *
  * @param object $payment_method
@@ -1093,6 +1174,7 @@ function commerce_hipay_tpp_cardonfile_charge($payment_method, $card_data, $orde
   $transaction->message_variables = array(
     '@operation' => ucfirst($payment_method['settings']['operation']),
   );
+  $transaction->data['operation'] = $payment_method['settings']['operation'];
   commerce_payment_transaction_save($transaction);
 
   $request_data['cdata2'] = $transaction->transaction_id;
@@ -1128,6 +1210,12 @@ function commerce_hipay_tpp_cardonfile_charge($payment_method, $card_data, $orde
 
   // Save updated transaction.
   commerce_payment_transaction_save($transaction);
+
+  // Allow other modules to process the order request response.
+  foreach (module_implements('commerce_hipay_tpp_api_order_request_response') as $module) {
+    $function = $module . '_commerce_hipay_tpp_api_order_request_response';
+    $function($response, $transaction, $order, $payment_method);
+  }
 
   return $return;
 }
@@ -1177,11 +1265,78 @@ function commerce_hipay_tpp_cardonfile_delete($form, &$form_state, $payment_meth
 function commerce_hipay_tpp_callback_notification() {
   // Get Hipay API notification feedback and process it.
   $feedback = commerce_hipay_tpp_get_feedback();
-  commerce_hipay_tpp_process_feedback($feedback, 'notification');
+  commerce_hipay_tpp_process_notification($feedback, 'notification');
 }
 
 /**
- * Processed the feedback returned by Hipay API.
+ * Processes status of the response returned by Hipay API.
+ *
+ * @param array $response
+ *   An associative array containing the Hipay API call response.
+ * @param object $transaction
+ *   Original payment transaction which current operation is based on.
+ * @param string $transaction_type
+ *   A string indicating which transaction type we are dealing with.
+ *   Might be either 'capture' or 'refund'.
+ *
+ * @see commerce_hipay_tpp_api_capture()
+ * @see commerce_hipay_tpp_api_refund()
+ */
+function commerce_hipay_tpp_process_response($response, &$transaction, $transaction_type) {
+  // Handle API exceptions.
+  if (!empty($response['code'])) {
+    $transaction->status = COMMERCE_PAYMENT_STATUS_FAILURE;
+    $transaction->message = t('Error @error_code: @error_message: @error_description');
+    $transaction->message_variables = array(
+      '@error_code' => $response['code'],
+      '@error_message' => $response['message'],
+      '@error_description' => $response['description'],
+    );
+    drupal_set_message(t('There has been an error requesting the @transaction_type: @error_code: @error_message: @error_description', array(
+      '@transaction_type' => $transaction_type,
+      '@error_code' => $response['code'],
+      '@error_message' => $response['message'],
+      '@error_description' => $response['description'],
+    )), 'error');
+  }
+  else {
+    $transaction->remote_status = $response['status'];
+
+    // Let's put status message in transaction's message_variables parameter,
+    // as this way it will be easier to update it later on transaction refresh.
+    $transaction->message = t('@status_message');
+    $transaction->message_variables = array(
+      '@status_message' => commerce_hipay_tpp_get_payment_status_message($response['status']),
+    );
+
+    if (in_array($response['status'], commerce_hipay_tpp_get_remote_statuses_for_operation_type($transaction_type))) {
+      if ($success_status = commerce_hipay_tpp_get_remote_success_status_for_operation_type($transaction_type)) {
+        $transaction->status = $success_status;
+      }
+    }
+    else {
+      $transaction->message .= '<br />' . t('Processing error: unhanded post-@transaction_type status: @remote_status');
+      $transaction->message_variables['@transaction_type'] = $transaction_type;
+      $transaction->message_variables['@remote_status'] = $response['status'];
+    }
+
+    if (!empty($response['reason']['code'])) {
+      $message = commerce_hipay_tpp_get_error_message($response['reason']['code']);
+      $transaction->message .= '<br />' . t('Error @error_code: @error_message');
+      $transaction->message_variables['@error_code'] = $response['reason']['code'];
+      $transaction->message_variables['@error_message'] = (!empty($message)) ? $message : $response['reason']['message'];
+    }
+
+    drupal_set_message('@transaction_type request has been sent to the payment gateway, now waiting for the server-to-server notification to update the transaction details. Refresh this page in a moment to see updated transaction details.', array(
+      '@transaction_type' => ucfirst($transaction_type),
+    ));
+  }
+
+  commerce_payment_transaction_save($transaction);
+}
+
+/**
+ * Processes the feedback returned by Hipay API.
  *
  * @param array $feedback
  *   An associative array containing the Hipay API call feedback.
@@ -1198,7 +1353,7 @@ function commerce_hipay_tpp_callback_notification() {
  * @see commerce_hipay_tpp_callback_notification()
  * @see commerce_hipay_tpp_refresh()
  */
-function commerce_hipay_tpp_process_feedback($feedback, $callback_type) {
+function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
   // Before we start with any validation, let's first try to load the payment
   // transaction and add received feedback to its payload, so it would be
   // possible later on to check what has gone wrong.
@@ -1277,50 +1432,105 @@ function commerce_hipay_tpp_process_feedback($feedback, $callback_type) {
   // while refresh call returns 'transactionReference'), which we must account
   // for here - hence the use of commerce_hipay_hpp_get_feedback_value().
   $transaction->remote_id = commerce_hipay_hpp_get_feedback_value($feedback, 'transactionReference');
-  $transaction->remote_status = $feedback['status'];
-  $transaction->currency_code = $feedback['currency'];
+  // We do not want to change the main transaction status from one of 'captured'
+  // statuses to one of 'authorized' statuses (which might happen when we start
+  // with a 'sale' transaction, and Hipay might send us first notification for
+  // 'capture requested', and only after that for 'authorized'.
+  if (!(
+    in_array($transaction->remote_status, commerce_hipay_tpp_get_remote_statuses_for_operation_type(COMMERCE_HIPAY_TPP_OPERATION_CAPTURE))
+    && in_array($feedback['status'], commerce_hipay_tpp_get_remote_statuses_for_operation_type(COMMERCE_HIPAY_TPP_OPERATION_AUTHORIZATION))
+  )) {
+    $transaction->remote_status = $feedback['status'];
+  }
 
-  $transaction->data['authorized_amount'] = commerce_currency_decimal_to_amount(commerce_hipay_hpp_get_feedback_value($feedback, 'authorizedAmount'), $transaction->currency_code);
-  $transaction->data['captured_amount'] = commerce_currency_decimal_to_amount(commerce_hipay_hpp_get_feedback_value($feedback, 'capturedAmount'), $transaction->currency_code);
-  $transaction->data['refunded_amount'] = commerce_currency_decimal_to_amount(commerce_hipay_hpp_get_feedback_value($feedback, 'refundedAmount'), $transaction->currency_code);
+  $transaction->data['authorized_amount'] = commerce_currency_decimal_to_amount(commerce_hipay_hpp_get_feedback_value($feedback, 'authorizedAmount'), $feedback['currency']);
+  $transaction->data['captured_amount'] = commerce_currency_decimal_to_amount(commerce_hipay_hpp_get_feedback_value($feedback, 'capturedAmount'), $feedback['currency']);
+  $transaction->data['refunded_amount'] = commerce_currency_decimal_to_amount(commerce_hipay_hpp_get_feedback_value($feedback, 'refundedAmount'), $feedback['currency']);
 
-  $transaction->amount = ($transaction->data['captured_amount'] > 0) ? $transaction->data['captured_amount'] - $transaction->data['refunded_amount'] : $transaction->data['authorized_amount'];
-
-  switch ($feedback['state']) {
-    case 'completed':
-      // We use different 'success' status for authorization and sale
-      // transactions. Note that it is important to use payment transaction
-      // status COMMERCE_PAYMENT_STATUS_SUCCESS for sale transactions, as only
-      // then the 'commerce_payment_order_paid_in_full' rule will be invoked
-      // (see commerce_payment_commerce_payment_transaction_insert()).
-      if ($feedback['status'] == COMMERCE_HIPAY_TPP_REMOTE_STATUS_CANCELLED) {
-        $transaction->status = COMMERCE_HIPAY_TPP_PAYMENT_STATUS_CANCELLED;
+  // We want to update the main transaction status only for the very first call
+  // (regardless whether it was authorization or capture), which means only when
+  // the main transaction still has its 'pending' status.
+  if (
+    // Initial status for 'sale' transactions.
+    $transaction->status == COMMERCE_PAYMENT_STATUS_PENDING
+    // Initial status for 'authorization' transactions.
+    || $transaction->status == COMMERCE_HIPAY_TPP_PAYMENT_STATUS_PENDING
+  ) {
+    switch ($feedback['state']) {
+      case 'completed':
+        // We use different 'success' status for authorization and sale
+        // transactions. Note that it is important to use payment transaction
+        // status COMMERCE_PAYMENT_STATUS_SUCCESS for sale transactions, as only
+        // then the 'commerce_payment_order_paid_in_full' rule will be invoked
+        // (see commerce_payment_commerce_payment_transaction_insert()).
+        if (
+          $transaction->data['operation'] == COMMERCE_HIPAY_TPP_OPERATION_SALE
+          && in_array($feedback['status'], commerce_hipay_tpp_get_remote_statuses_for_operation_type(COMMERCE_HIPAY_TPP_OPERATION_CAPTURE))
+        ) {
+          $transaction->status = COMMERCE_PAYMENT_STATUS_SUCCESS;
+        }
+        elseif ($transaction->data['operation'] == COMMERCE_HIPAY_TPP_OPERATION_AUTHORIZATION) {
+          $transaction->status = COMMERCE_HIPAY_TPP_PAYMENT_STATUS_AUTHORIZED;
+        }
+        break;
+      case 'declined':
+      case 'error':
+      default:
+        $transaction->status = COMMERCE_PAYMENT_STATUS_FAILURE;
+        break;
+    }
+  }
+  else {
+    // @TODO: Almost duplicate code, make it nicer somehow?
+    if ($feedback['status'] == COMMERCE_HIPAY_TPP_REMOTE_STATUS_CAPTURED) {
+      $conditions = array('status' => COMMERCE_HIPAY_TPP_PAYMENT_STATUS_CAPTURED);
+      $capture_transactions = commerce_hipay_tpp_get_order_transactions($order, $conditions);
+      $total_captured = 0;
+      foreach ($capture_transactions as $capture_transaction) {
+        $total_captured += $capture_transaction->amount;
       }
-      elseif (($captured_amount = commerce_hipay_hpp_get_feedback_value($feedback, 'capturedAmount')) > 0) {
-        $transaction->status = COMMERCE_PAYMENT_STATUS_SUCCESS;
+      $feedback_total_captured = commerce_hipay_hpp_get_feedback_value($feedback, 'capturedAmount');
+      $feedback_total_captured = commerce_currency_decimal_to_amount($feedback_total_captured, $feedback['currency']);
+      if ($feedback_total_captured == $total_captured) {
+        foreach ($capture_transactions as $capture_transaction) {
+          $capture_transaction->remote_status = $feedback['status'];
+          $capture_transaction->message = t('@status_message');
+          $capture_transaction->message_variables = array(
+            '@status_message' => commerce_hipay_tpp_get_payment_status_message($feedback['status']),
+          );
+          commerce_payment_transaction_save($capture_transaction);
+        }
       }
-      else {
-        $transaction->status = COMMERCE_HIPAY_TPP_PAYMENT_STATUS_AUTHORIZED;
+    }
+    if ($feedback['status'] == COMMERCE_HIPAY_TPP_REMOTE_STATUS_REFUNDED) {
+      $conditions = array('status' => COMMERCE_HIPAY_TPP_PAYMENT_STATUS_REFUNDED);
+      $refund_transactions = commerce_hipay_tpp_get_order_transactions($order, $conditions);
+      $total_refunded = 0;
+      foreach ($refund_transactions as $refund_transaction) {
+        $total_refunded += $refund_transaction->amount;
       }
-      break;
-    case 'pending':
-      $transaction->status = COMMERCE_PAYMENT_STATUS_PENDING;
-      break;
-    case 'declined':
-    case 'error':
-    default:
-      $transaction->status = COMMERCE_PAYMENT_STATUS_FAILURE;
-      break;
+      $feedback_total_refunded = commerce_hipay_hpp_get_feedback_value($feedback, 'refundedAmount');
+      $feedback_total_refunded = commerce_currency_decimal_to_amount($feedback_total_refunded, $feedback['currency']);
+      if ($feedback_total_refunded == abs($total_refunded)) {
+        foreach ($refund_transactions as $refund_transaction) {
+          $refund_transaction->remote_status = $feedback['status'];
+          $refund_transaction->message = t('@status_message');
+          $refund_transaction->message_variables = array(
+            '@status_message' => commerce_hipay_tpp_get_payment_status_message($feedback['status']),
+          );
+          commerce_payment_transaction_save($refund_transaction);
+        }
+      }
+    }
   }
 
   // Let's put status message in transaction's message_variables parameter,
   // as this way it will be easier to update it later on transaction refresh.
-  $transaction->message = t('@status_message');
+  $transaction->message = t('Last operation: @status_message');
   $transaction->message_variables = array(
     '@status_message' => commerce_hipay_tpp_get_payment_status_message($feedback['status']),
   );
 
-  // @TODO history of message variables.
   if (!empty($feedback['reason']['code'])) {
     $message = commerce_hipay_tpp_get_error_message($feedback['reason']['code']);
     $transaction->message .= '<br />' . t('Error @error_code: @error_message');
@@ -1370,32 +1580,31 @@ function commerce_hipay_tpp_process_feedback($feedback, $callback_type) {
   }
 
   // Authorized amount.
-  if (
-    ($authorized_amount = commerce_hipay_hpp_get_feedback_value($feedback, 'authorizedAmount')) != 0
-    && $transaction->status != COMMERCE_HIPAY_TPP_PAYMENT_STATUS_AUTHORIZED
-  ) {
+  if (($authorized_amount = commerce_hipay_hpp_get_feedback_value($feedback, 'authorizedAmount')) != 0) {
     $transaction->message .= '<br />' . t('Autorized amount: @authorized_amount');
     $transaction->message_variables['@authorized_amount'] = commerce_currency_format(commerce_currency_decimal_to_amount($authorized_amount, $transaction->currency_code), $transaction->currency_code);
   }
 
   // Captured amount.
   if (($captured_amount = commerce_hipay_hpp_get_feedback_value($feedback, 'capturedAmount')) != 0) {
-    $transaction->message .= '<br />' . t('Captured amount: @captured_amount');
+    $transaction->message .= '<br />' . t('Total captured amount: @captured_amount');
     $transaction->message_variables['@captured_amount'] = commerce_currency_format(commerce_currency_decimal_to_amount($captured_amount, $transaction->currency_code), $transaction->currency_code);
   }
 
   // Refunded amount.
   if (($refunded_amount = commerce_hipay_hpp_get_feedback_value($feedback, 'refundedAmount')) != 0) {
-    $transaction->message .= '<br />' . t('Refunded amount: @refunded_amount');
+    $transaction->message .= '<br />' . t('Total refunded amount: @refunded_amount');
     $transaction->message_variables['@refunded_amount'] = commerce_currency_format(commerce_currency_decimal_to_amount($refunded_amount, $transaction->currency_code), $transaction->currency_code);
   }
 
-  drupal_alter('commerce_hipay_tpp_process_feedback', $transaction, $feedback, $order, $payment_method);
+  drupal_alter('commerce_hipay_tpp_process_notification', $transaction, $feedback, $order, $payment_method);
 
   commerce_payment_transaction_save($transaction);
 
   // Try to save new Card on File.
-  commerce_hipay_tpp_cardonfile_save($feedback, $order, $payment_method);
+  if (!empty($order->data['commerce_hipay_tpp']['cardonfile_store'])) {
+    commerce_hipay_tpp_cardonfile_save($feedback, $order, $payment_method);
+  }
 
   return TRUE;
 }
@@ -1410,7 +1619,7 @@ function commerce_hipay_tpp_process_feedback($feedback, $callback_type) {
  * @param array $payment_method
  *   The payment method instance used for the payment transaction.
  *
- * @see commerce_hipay_tpp_process_feedback()
+ * @see commerce_hipay_tpp_process_notification()
  */
 function commerce_hipay_tpp_cardonfile_save($feedback, $order, $payment_method) {
   if (
@@ -1451,12 +1660,25 @@ function commerce_hipay_tpp_cardonfile_save($feedback, $order, $payment_method) 
  *   An authorization transaction to be captured.
  * @param int $amount
  *   An amount to be captured.
+ *
  * @return object
  *   A capture transaction.
  */
 function commerce_hipay_tpp_api_capture($transaction, $amount) {
   $order = commerce_order_load($transaction->order_id);
   $payment_method = commerce_payment_method_instance_load($transaction->instance_id);
+
+  // Create new transaction for capture.
+  $capture_transaction = commerce_payment_transaction_new($payment_method['method_id'], $transaction->order_id);
+  $capture_transaction->instance_id = $payment_method['instance_id'];
+  $capture_transaction->amount = commerce_currency_decimal_to_amount($amount, $transaction->currency_code);
+  $capture_transaction->currency_code = $transaction->currency_code;
+  $capture_transaction->status = COMMERCE_PAYMENT_STATUS_PENDING;
+  $capture_transaction->message = t('Capture transaction initialized.');
+  $capture_transaction->payload = array(
+    'related_transaction_id' => $transaction->transaction_id,
+  );
+  commerce_payment_transaction_save($capture_transaction);
 
   // Prepare the request data.
   // See http://hipay-tpp-gateway-api.readthedocs.org/en/latest/Chap3-RESTAPIResources-maintenanceOperations.html
@@ -1468,6 +1690,11 @@ function commerce_hipay_tpp_api_capture($transaction, $amount) {
   // Allow other modules to alter the $request_data array.
   drupal_alter('commerce_hipay_tpp_api_capture', $request_data, $order, $payment_method);
 
+  // Add request data to the transaction's payload.
+  $capture_transaction->payload['request-' . time()] = $request_data;
+  commerce_payment_transaction_save($capture_transaction);
+
+  // Also update the main transaction.
   $transaction->payload['capture-request-' . time()] = $request_data;
   commerce_payment_transaction_save($transaction);
 
@@ -1476,20 +1703,16 @@ function commerce_hipay_tpp_api_capture($transaction, $amount) {
   $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method);
 
   // Update payment transaction with response details.
-  $transaction->payload['capture-response-' . time()] = $response;
+  $capture_transaction->payload['response-' . time()] = $response;
+  commerce_payment_transaction_save($capture_transaction);
 
+  // Also update the main transaction.
+  $transaction->payload['capture-response-' . time()] = $response;
   commerce_payment_transaction_save($transaction);
 
-  if (!isset($response['code'])) {
-    drupal_set_message('Capture request has been sent to the payment gateway, now waiting for the server-to-server notification to update the transaction details. Refresh this page in a moment to see updated transaction details.');
-  }
-  else {
-    drupal_set_message(t('There has been an error requesting the capture: @error_code: @error_message: @error_description', array(
-      '@error_code' => $response['code'],
-      '@error_message' => $response['message'],
-      '@error_description' => $response['description'],
-    )), 'error');
-  }
+  commerce_hipay_tpp_process_response($response, $capture_transaction, COMMERCE_HIPAY_TPP_OPERATION_CAPTURE);
+
+  return $capture_transaction;
 }
 
 /**
@@ -1497,7 +1720,6 @@ function commerce_hipay_tpp_api_capture($transaction, $amount) {
  *
  * @param object $transaction
  *   An transaction with a refund.
- *
  * @param int $amount
  *   An amount to be refunded.
  *
@@ -1507,6 +1729,18 @@ function commerce_hipay_tpp_api_capture($transaction, $amount) {
 function commerce_hipay_tpp_api_refund($transaction, $amount) {
   $order = commerce_order_load($transaction->order_id);
   $payment_method = commerce_payment_method_instance_load($transaction->instance_id);
+
+  // Create new transaction for refund.
+  $refund_transaction = commerce_payment_transaction_new($payment_method['method_id'], $transaction->order_id);
+  $refund_transaction->instance_id = $payment_method['instance_id'];
+  $refund_transaction->amount = -commerce_currency_decimal_to_amount($amount, $transaction->currency_code);
+  $refund_transaction->currency_code = $transaction->currency_code;
+  $refund_transaction->status = COMMERCE_PAYMENT_STATUS_PENDING;
+  $refund_transaction->message = t('Refund transaction initialized.');
+  $refund_transaction->payload = array(
+    'related_transaction_id' => $transaction->transaction_id,
+  );
+  commerce_payment_transaction_save($refund_transaction);
 
   // Prepare the request data.
   // See http://hipay-tpp-gateway-api.readthedocs.org/en/latest/Chap3-RESTAPIResources-maintenanceOperations.html
@@ -1518,6 +1752,11 @@ function commerce_hipay_tpp_api_refund($transaction, $amount) {
   // Allow other modules to alter the $request_data array.
   drupal_alter('commerce_hipay_tpp_api_refund', $request_data, $order, $payment_method);
 
+  // Add request data to the transaction's payload.
+  $refund_transaction->payload['request-' . time()] = $request_data;
+  commerce_payment_transaction_save($refund_transaction);
+
+  // Also update the main transaction.
   $transaction->payload['refund-request-' . time()] = $request_data;
   commerce_payment_transaction_save($transaction);
 
@@ -1525,21 +1764,17 @@ function commerce_hipay_tpp_api_refund($transaction, $amount) {
   $url = commerce_hipay_tpp_get_server_url($payment_method) . COMMERCE_HIPAY_TPP_RESOURCE_MAINTAINANCE . $transaction->remote_id;
   $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method);
 
-  // Update payment transaction with response details.
-  $transaction->payload['refund-response-' . time()] = $response;
+  // Update refund transaction with response details.
+  $refund_transaction->payload['response-' . time()] = $response;
+  commerce_payment_transaction_save($refund_transaction);
 
+  // Also update the main transaction.
+  $transaction->payload['refund-response-' . time()] = $response;
   commerce_payment_transaction_save($transaction);
 
-  if (!isset($response['code'])) {
-    drupal_set_message('Refund request has been sent to the payment gateway, now waiting for the server-to-server notification to update the transaction details. Refresh this page in a moment to see updated transaction details.');
-  }
-  else {
-    drupal_set_message(t('There has been an error requesting the Refund: @error_code: @error_message: @error_description', array(
-      '@error_code' => $response['code'],
-      '@error_message' => $response['message'],
-      '@error_description' => $response['description'],
-    )), 'error');
-  }
+  commerce_hipay_tpp_process_response($response, $refund_transaction, 'refund');
+
+  return $refund_transaction;
 }
 
 /**
@@ -1547,9 +1782,6 @@ function commerce_hipay_tpp_api_refund($transaction, $amount) {
  *
  * @param object $transaction
  *   An transaction to cancel.
- *
- * @return object
- *   A Refund transaction.
  */
 function commerce_hipay_tpp_api_cancel($transaction) {
   $order = commerce_order_load($transaction->order_id);
@@ -1620,7 +1852,7 @@ function commerce_hipay_tpp_get_feedback() {
  * @return string|null
  *   A value of the requested parameter, or NULL if it doesn't exist.
  *
- * @see commerce_hipay_tpp_process_feedback
+ * @see commerce_hipay_tpp_process_notification
  */
 function commerce_hipay_hpp_get_feedback_value($feedback, $parameter_name) {
   if (isset($feedback[$parameter_name])) {
@@ -1751,6 +1983,33 @@ function commerce_hipay_tpp_get_secure_vault_url($payment_method) {
 }
 
 /**
+ * Returns current user's language string formatted for API request.
+ *
+ * @param array $payment_method
+ *   Payment method definition array.
+ *
+ * @return string
+ *   Current user's language string formatted for API request.
+ */
+function commerce_hipay_tpp_get_request_language($payment_method) {
+  global $language;
+
+  $locale_elements = explode('-', $language->prefix);
+  if (isset($locale_elements[1])) {
+    $request_language = $locale_elements[0] . '_' . drupal_strtoupper($locale_elements[1]);
+  }
+  else {
+    $request_language = $locale_elements[0] . '_' . drupal_strtoupper($locale_elements[0]);
+  }
+
+  if (!in_array($request_language, array_keys(commerce_hipay_get_supported_languages()))) {
+    $request_language = $payment_method['settings']['language'];
+  }
+
+  return $request_language;
+}
+
+/**
  * Returns an array of order total amount elements.
  *
  * @param object $order
@@ -1788,33 +2047,6 @@ function commerce_hipay_tpp_get_order_amounts_by_type($order) {
 }
 
 /**
- * Returns current user's language string formatted for API request.
- *
- * @param array $payment_method
- *   Payment method definition array.
- *
- * @return string
- *   Current user's language string formatted for API request.
- */
-function commerce_hipay_tpp_get_request_language($payment_method) {
-  global $language;
-
-  $locale_elements = explode('-', $language->prefix);
-  if (isset($locale_elements[1])) {
-    $request_language = $locale_elements[0] . '_' . drupal_strtoupper($locale_elements[1]);
-  }
-  else {
-    $request_language = $locale_elements[0] . '_' . drupal_strtoupper($locale_elements[0]);
-  }
-
-  if (!in_array($request_language, array_keys(commerce_hipay_get_supported_languages()))) {
-    $request_language = $payment_method['settings']['language'];
-  }
-
-  return $request_language;
-}
-
-/**
  * Loads Hipay TPP payment transactions for specified order.
  *
  * @param object $order
@@ -1832,4 +2064,108 @@ function commerce_hipay_tpp_get_order_transactions($order, $conditions = array()
     'payment_method' => array_keys(commerce_hipay_tpp_commerce_payment_method_info()),
   );
   return commerce_payment_transaction_load_multiple(array(), $conditions);
+}
+
+/**
+ * Returns an array of order payment transactions keyed by operation type.
+ *
+ * @param object $order
+ *   An order object.
+ * @param array $conditions
+ *   An array of conditions on the {commerce_payment_transaction} table in the
+ *   form 'field' => $value.
+ *
+ * @return array
+ *   An array of order payment transactions keyed by operation type.
+ */
+function commerce_hipay_tpp_get_order_transactions_by_operation($order, $conditions = array()) {
+  $statuses = commerce_hipay_tpp_get_remote_statuses_by_operation_type();
+  $transactions = commerce_hipay_tpp_get_order_transactions($order, $conditions);
+  $transactions_by_operation = array();
+
+  foreach ($statuses as $operation_type => $remote_statuses) {
+    foreach ($transactions as $transaction) {
+      if (
+        (in_array($transaction->remote_status, $remote_statuses) || $transaction->status == COMMERCE_HIPAY_TPP_PAYMENT_STATUS_AUTHORIZED)
+        && (
+          $transaction->status == commerce_hipay_tpp_get_remote_success_status_for_operation_type($operation_type)
+          || $transaction->data['operation'] == COMMERCE_HIPAY_TPP_OPERATION_SALE && $transaction->status == COMMERCE_PAYMENT_STATUS_SUCCESS
+        )
+      ) {
+        $transactions_by_operation[$operation_type][] = $transaction;
+      }
+    }
+  }
+
+  return $transactions_by_operation;
+}
+
+function commerce_hipay_tpp_get_order_operation_totals($order, $conditions = array()) {
+  $totals = array();
+  $transactions = commerce_hipay_tpp_get_order_transactions_by_operation($order, $conditions);
+  foreach ($transactions as $operation => $operation_transactions) {
+    $totals[$operation] = 0;
+    foreach ($operation_transactions as $transaction) {
+      $totals[$operation] += $transaction->amount;
+    }
+  }
+  return $totals;
+}
+
+/**
+ * Returns an array of remote payment statuses keyed by operation type.
+ *
+ * @return array
+ *   An array of managed remote payment statuses keyed by operation type.
+ */
+function commerce_hipay_tpp_get_remote_statuses_by_operation_type() {
+  return array(
+    COMMERCE_HIPAY_TPP_OPERATION_AUTHORIZATION => array(
+      COMMERCE_HIPAY_TPP_REMOTE_STATUS_AUTHORIZED,
+    ),
+    COMMERCE_HIPAY_TPP_OPERATION_CAPTURE => array(
+      COMMERCE_HIPAY_TPP_REMOTE_STATUS_CAPTURE_REQUESTED,
+      COMMERCE_HIPAY_TPP_REMOTE_STATUS_CAPTURED,
+      COMMERCE_HIPAY_TPP_REMOTE_STATUS_PARTIALLY_CAPTURED,
+    ),
+    COMMERCE_HIPAY_TPP_OPERATION_REFUND => array(
+      COMMERCE_HIPAY_TPP_REMOTE_STATUS_REFUND_REQUESTED,
+      COMMERCE_HIPAY_TPP_REMOTE_STATUS_REFUNDED,
+      COMMERCE_HIPAY_TPP_REMOTE_STATUS_PARTIALLY_REFUNDED,
+    ),
+  );
+}
+
+/**
+ * Returns an array of remote payment statuses for a specific operation type.
+ *
+ * @param string $operation_type
+ *   An operation type to return remote payment statuses for.
+ *
+ * @return mixed
+ *   An array of remote payment statuses for a specific operation type.
+ */
+function commerce_hipay_tpp_get_remote_statuses_for_operation_type($operation_type) {
+  $remote_statuses_by_type = commerce_hipay_tpp_get_remote_statuses_by_operation_type();
+  return $remote_statuses_by_type[$operation_type];
+}
+
+/**
+ * Returns local success payment status for a specific operation type.
+ *
+ * @param string $operation_type
+ *   An operation type to return the local success payment status for.
+ *
+ * @return string
+ *   A local success payment status for a specific operation type.
+ */
+function commerce_hipay_tpp_get_remote_success_status_for_operation_type($operation_type) {
+  switch ($operation_type) {
+    case COMMERCE_HIPAY_TPP_OPERATION_AUTHORIZATION:
+      return COMMERCE_HIPAY_TPP_PAYMENT_STATUS_AUTHORIZED;
+    case COMMERCE_HIPAY_TPP_OPERATION_CAPTURE:
+      return COMMERCE_HIPAY_TPP_PAYMENT_STATUS_CAPTURED;
+    case COMMERCE_HIPAY_TPP_OPERATION_REFUND:
+      return COMMERCE_HIPAY_TPP_PAYMENT_STATUS_REFUNDED;
+  }
 }

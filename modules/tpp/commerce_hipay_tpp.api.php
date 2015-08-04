@@ -147,6 +147,6 @@ function hook_commerce_hipay_tpp_api_cancel_alter(&$request_data, $order, $payme
  * @param array $payment_method
  *   The payment method instance used for the payment transaction.
  */
-function hook_commerce_hipay_tpp_process_feedback_alter(&$transaction, $feedback, $order, $payment_method) {
+function hook_commerce_hipay_tpp_process_notification_alter(&$transaction, $feedback, $order, $payment_method) {
   // No example.
 }

@@ -84,7 +84,7 @@ function commerce_hipay_tpp_get_payment_status_message($payment_status_code) {
     case COMMERCE_HIPAY_TPP_REMOTE_STATUS_PARTIALLY_SETTLED:
       return t('Partially Settled: A part of the financial operations linked to this transaction is closed.');
 
-    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_REFUND_REQUESTEED:
+    case COMMERCE_HIPAY_TPP_REMOTE_STATUS_REFUND_REQUESTED:
       return t('Refund Requested: A refund request has been sent to the financial institution.');
 
     case COMMERCE_HIPAY_TPP_REMOTE_STATUS_REFUNDED:

@@ -59,3 +59,22 @@ function commerce_hipay_get_supported_languages() {
     'nl_BE' => t('Dutch / Belgium'),
   );
 }
+
+/**
+ * Returns a list of currencies supported by Hipay gateway.
+ *
+ * @return array
+ *   An array of currencies supported by Hipay gateway.
+ */
+function commerce_hipay_get_supported_currencies() {
+  return array(
+    'EUR' => t('Euro'),
+    'CAD' => t('Canadian dollar'),
+    'USD' => t('United States dollar'),
+    'CHF' => t('Swiss franc'),
+    'AUD' => t('Australian dollar'),
+    'GBP' => t('British pound'),
+    'SEK' => t('Swedish krona'),
+    'BRL' => t('Brazilian real'),
+  );
+}
