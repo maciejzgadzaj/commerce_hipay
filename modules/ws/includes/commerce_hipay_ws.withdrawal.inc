@@ -1,5 +1,23 @@
 <?php
 
+/**
+ * Executes a withdraw from the wallet account to the registered bank account.
+ *
+ * @param int $account_id
+ *   The account from which we wil withdraw to fill the bank account.
+ *
+ * @param float $amount
+ *   The amount to withdraw.
+ *
+ * @param string $currency_code
+ *   The currency (EUR).
+ *
+ * @param string $label
+ *   A label to distinguish the withdraw.
+ *
+ * @return int|bool
+ *   The transfer id if successful, and false if it failed.
+ */
 function commerce_hipay_ws_api_withdrawal($account_id, $amount, $currency_code, $label) {
   // Make sure the vendor account exists.
   if (!$account = commerce_hipay_ws_account_load_by_account_id($account_id)) {
@@ -59,7 +77,7 @@ function commerce_hipay_ws_api_withdrawal($account_id, $amount, $currency_code, 
     return FALSE;
   }
 
-  return TRUE;
+  return $response['transactionPublicId'];
 }
 
 /**

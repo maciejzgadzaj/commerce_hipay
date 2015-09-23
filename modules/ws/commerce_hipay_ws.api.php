@@ -37,3 +37,14 @@ function hook_commerce_hipay_ws_api_request_alter(&$parameters, $resource, $paym
 function hook_commerce_hipay_ws_api_response($response, $parameters, $resource, $payment_method_instance) {
   // No example.
 }
+
+/**
+ * Allows other modules to do custom processing of Hipay Wallet Server to Server
+ * notifications.
+ *
+ * @param array $feedback
+ *   The request received.
+ */
+function commerce_hipay_ws_api_notification($feedback) {
+  // No example.
+}

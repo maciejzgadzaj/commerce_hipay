@@ -1,15 +1,29 @@
 <?php
 
+
 /**
- * @param int $sender_account_id
- * @param int $recipient_account_id
- * @param int $amount
- * @param string $currency_code
- * @param string $public_label
- * @param string $private_label
+ * Executes a transfer of wallet money from one account to another.
  *
- * @return bool
- *   A boolean indicating whether the transfer was successful.
+ * @param int $sender_account_id
+ *   The wallet account from which we will remove money.
+ *
+ * @param int $recipient_account_id
+ *   The wallet account to which we will put the money.
+ *
+ * @param int $amount
+ *   The amount to transfer.
+ *
+ * @param string $currency_code
+ *   The currency (EUR).
+ *
+ * @param string $public_label
+ *   A public label for the transaction.
+ *
+ * @param string $private_label
+ *   A private label to identify the transaction.
+ *
+ * @return int|bool
+ *   The transfer id if successful, and false if it failed.
  */
 function commerce_hipay_ws_api_transfer($sender_account_id, $recipient_account_id, $amount, $currency_code, $public_label, $private_label) {
   // Make sure the sender account exists.
@@ -80,7 +94,7 @@ function commerce_hipay_ws_api_transfer($sender_account_id, $recipient_account_i
     return FALSE;
   }
 
-  return TRUE;
+  return $response['transactionId'];
 }
 
 /**

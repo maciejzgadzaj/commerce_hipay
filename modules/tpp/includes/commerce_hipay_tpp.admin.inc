@@ -50,9 +50,11 @@ function commerce_hipay_tpp_capture_form($form, &$form_state, $order, $transacti
   $payment_method = commerce_payment_method_instance_load($transaction->instance_id);
   $form_state['payment_method'] = $payment_method;
 
+  $totals = commerce_hipay_tpp_get_order_operation_totals($order);
+  $total_captured = commerce_hipay_tpp_get_order_total_captured($totals);
   $balance = commerce_payment_order_balance($order);
 
-  $default_amount = $transaction->data['authorized_amount'] - $transaction->data['captured_amount'];
+  $default_amount = $totals[COMMERCE_HIPAY_TPP_OPERATION_AUTHORIZATION] - $total_captured;
   if ($balance['amount'] < $default_amount) {
     $default_amount = $balance['amount'];
   }
@@ -97,7 +99,10 @@ function commerce_hipay_tpp_capture_form_validate($form, &$form_state) {
   }
 
   // Ensure the amount is less than or equal to the authorisation amount.
-  $max_capture_amount = $transaction->data['authorized_amount'] - $transaction->data['captured_amount'];
+  $totals = commerce_hipay_tpp_get_order_operation_totals($form_state['order']);
+  $total_captured = commerce_hipay_tpp_get_order_total_captured($totals);
+
+  $max_capture_amount = $totals[COMMERCE_HIPAY_TPP_OPERATION_AUTHORIZATION] - $total_captured;
   if ($amount > commerce_currency_amount_to_decimal($max_capture_amount, $transaction->currency_code)) {
     form_set_error('amount', t('You cannot capture more than you authorised through Hipay.'));
   }
@@ -140,7 +145,13 @@ function commerce_hipay_tpp_refund_form($form, &$form_state, $order, $transactio
   $payment_method = commerce_payment_method_instance_load($transaction->instance_id);
   $form_state['payment_method'] = $payment_method;
 
-  $default_amount = $transaction->data['captured_amount'] - $transaction->data['refunded_amount'];
+  $totals = commerce_hipay_tpp_get_order_operation_totals($order);
+  $total_captured = commerce_hipay_tpp_get_order_total_captured($totals);
+
+  $default_amount = $total_captured;
+  if (!empty($totals[COMMERCE_HIPAY_TPP_OPERATION_REFUND])) {
+    $default_amount -= abs($totals[COMMERCE_HIPAY_TPP_OPERATION_REFUND]);
+  }
   $default_amount = number_format(commerce_currency_amount_to_decimal($default_amount, $transaction->currency_code), 2, '.', '');
 
   $form['amount'] = array(
@@ -181,7 +192,13 @@ function commerce_hipay_tpp_refund_form_validate($form, &$form_state) {
   }
 
   // Ensure the amount is less than or equal to the authorisation amount.
-  $max_capture_amount = $transaction->data['captured_amount'] - $transaction->data['refunded_amount'];
+  $totals = commerce_hipay_tpp_get_order_operation_totals($form_state['order']);
+  $total_captured = commerce_hipay_tpp_get_order_total_captured($totals);
+  $max_capture_amount = $total_captured;
+  if (!empty($totals[COMMERCE_HIPAY_TPP_OPERATION_REFUND])) {
+    $max_capture_amount -= abs($totals[COMMERCE_HIPAY_TPP_OPERATION_REFUND]);
+  }
+
   if ($amount > commerce_currency_amount_to_decimal($max_capture_amount, $transaction->currency_code)) {
     form_set_error('amount', t('You cannot refund more than you captured through Hipay.'));
   }
@@ -197,7 +214,7 @@ function commerce_hipay_tpp_refund_form_submit($form, &$form_state) {
   $transaction = $form_state['transaction'];
   $order = commerce_order_load($transaction->order_id);
 
-  commerce_hipay_tpp_api_refund($transaction, $form_state['values']['amount']);
+  $form_state['refund_transaction'] = commerce_hipay_tpp_api_refund($transaction, $form_state['values']['amount']);
 
   $form_state['redirect'] = 'admin/commerce/orders/' . $order->order_id . '/payment';
 }
@@ -254,39 +271,16 @@ function commerce_hipay_tpp_cancel_form_submit($form, &$form_state) {
  *   A summary of existing order transactions
  */
 function commerce_hipay_tpp_get_order_transaction_summary($order) {
-  $summary = array(
-    'authorized_amount' => 0,
-    'captured_amount' => 0,
-    'refunded_amount' => 0,
-  );
-
-  // Fetch transactions that either has been successfully authorized,
-  // or captured at least partially.
-  $conditions = array(
-    'status' => array(
-      COMMERCE_HIPAY_TPP_PAYMENT_STATUS_AUTHORIZED,
-      COMMERCE_PAYMENT_STATUS_SUCCESS,
-    ),
-  );
-  if ($transactions = commerce_hipay_tpp_get_order_transactions($order, $conditions)) {
-    foreach ($transactions as $transaction) {
-      foreach ($summary as $key => $value) {
-        if (isset($transaction->data[$key])) {
-          $summary[$key] += $transaction->data[$key];
-        }
-      }
-    }
-  }
-
   $balance = commerce_payment_order_balance($order);
   $return = array(t('Order balance: @balance', array(
     '@balance' => commerce_currency_format($balance['amount'], $balance['currency_code']),
   )));
 
-  foreach ($summary as $label => $value) {
-    $return[] = t('@label: @value', array(
+  $totals = commerce_hipay_tpp_get_order_operation_totals($order);
+  foreach ($totals as $label => $value) {
+    $return[] = t('@label amount: @value', array(
       '@label' => ucfirst(str_replace('_', ' ', $label)),
-      '@value' => commerce_currency_format($value, $balance['currency_code']),
+      '@value' => commerce_currency_format(abs($value), $balance['currency_code']),
     ));
   }
 

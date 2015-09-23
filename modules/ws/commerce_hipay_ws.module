@@ -607,6 +607,24 @@ function commerce_hipay_ws_api_request($resource, $parameters, $payment_method_i
   return $response;
 }
 
+function commerce_hipay_ws_get_notification_feedback() {
+
+  if (isset($_POST['xml']) && !empty($_POST['xml'])) {
+    $xml = simplexml_load_string($_POST['xml']);
+
+    $result = array(
+      'operation' => (string) $xml->result->operation,
+      'status' => (string) $xml->result->status,
+      'transactionId' => (string) $xml->result->transid,
+    );
+
+    return $result;
+
+  }
+
+  return FALSE;
+}
+
 /**
  * Callback page for gateway server-to-server notifications.
  *
@@ -614,30 +632,28 @@ function commerce_hipay_ws_api_request($resource, $parameters, $payment_method_i
  */
 function commerce_hipay_ws_callback_notification() {
   // Get Hipay API notification feedback and process it.
-  $feedback = commerce_hipay_ws_get_feedback();
+  $feedback = commerce_hipay_ws_get_notification_feedback();
 
-  // @TODO.
-  switch ($feedback['type']) {
+  if ($feedback) {
+    switch ($feedback['operation']) {
+      case 'withdraw_validation':
+        $withdrawal = commerce_hipay_ws_withdrawal_load_by_withdrawal_id($feedback['transactionId']);
+        $withdrawal['notification'] = $feedback;
+        $transfer['status'] = $feedback['status'];
+        commerce_hipay_ws_withdrawal_save($withdrawal);
+        break;
+    }
 
-    case 'Envoi':
-      $transfer = commerce_hipay_ws_transfer_load_by_transaction_id($feedback['transactionId']);
-      $transfer['notification'] = $feedback;
-      $transfer['status'] = $feedback['transactionStatus'];
-      commerce_hipay_ws_transfer_save($transfer);
-      break;
+    // Allow other modules to process the notification.
+    foreach (module_implements('commerce_hipay_ws_api_notification') as $module) {
+      $function = $module . '_commerce_hipay_ws_api_notification';
+      $function($feedback);
+    }
 
-    // It's not really 'withdrawal' here, for the moment no idea what it really is.
-    case 'withdrawal':
-      $withdrawal = commerce_hipay_ws_withdrawal_load_by_withdrawal_id($feedback['transactionId']);
-      $withdrawal['notification'] = $feedback;
-      $transfer['status'] = $feedback['transactionStatus'];
-      commerce_hipay_ws_withdrawal_save($withdrawal);
-      break;
+    watchdog('commerce_hipay_ws', 'Notification received: !feedback', array(
+      '!feedback' => '<pre>' . var_export($feedback, TRUE) . '</pre>',
+    ), WATCHDOG_DEBUG);
   }
-
-  watchdog('commerce_hipay_ws', 'Notification received: !feedback', array(
-    '!feedback' => '<pre>' . var_export($feedback, TRUE) . '</pre>',
-  ), WATCHDOG_DEBUG);
 }
 
 /**
@@ -769,4 +785,105 @@ function commerce_hipay_ws_get_code_from_country($country_label) {
       }
     }
   }
+}
+
+/**
+ * Check the balance of a sender account.
+ *
+ * @param array $sender_account
+ *   The sender account to check the balance of.
+ *
+ * @param float $amount
+ *   The amount the account should have.
+ *
+ * @param string $item_name
+ *   The balance item to check.
+ *   Should be either "balance" or "moneyAvailableForWithdrawal"
+ *
+ * @return bool
+ *   True if there is the necessary amount.
+ */
+function commerce_hipay_ws_check_balance($sender_account, $amount, $item_name = 'balance') {
+
+  static $balances = array();
+
+  $ws_login = $sender_account['hipay_vendor_account']['wsLogin'];
+
+  if (isset($balances[$ws_login])) {
+    $response = $balances[$ws_login];
+  } else {
+    $parameters = array(
+      'wsLogin' => $sender_account['hipay_vendor_account']['wsLogin'],
+      'wsPassword' => $sender_account['hipay_vendor_account']['wsPassword'],
+    );
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_BALANCE, $parameters);
+
+    $balances[$ws_login] = $response;
+  }
+
+  $balance = 0;
+  if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+    $balance = $response['balances']['item'][$item_name];
+  }
+
+  return $amount < $balance;
+}
+
+/**
+ * Check the balance to see if it has the funds for the transfer.
+ *
+ * @param array $sender_account
+ *   The sender account to check the balance of.
+ *
+ * @param float $amount
+ *   The amount the account should have.
+ *
+ * @return bool
+ *   True if there is the necessary amount.
+ */
+function commerce_hipay_ws_check_transfer_balance($sender_account, $amount) {
+  return commerce_hipay_ws_check_balance($sender_account, $amount);
+}
+
+/**
+ * Check the balance to see if it has the funds for the witdraw.
+ *
+ * @param array $sender_account
+ *   The sender account to check the balance of.
+ *
+ * @param float $amount
+ *   The amount the account should have.
+ *
+ * @return bool
+ *   True if there is the necessary amount.
+ */
+function commerce_hipay_ws_check_withdraw_balance($sender_account, $amount) {
+  return commerce_hipay_ws_check_balance($sender_account, $amount, 'moneyAvailableForWithdrawal');
+}
+
+/**
+ * Get the bank information of an account
+ *
+ * @param string $ws_login
+ *   Login for the account to get the information of.
+ *
+ * @param string $ws_password
+ *   Login for the account to get the information of.
+ *
+ * @return array|object
+ *   Empty if no information, if not bank information.
+ */
+function commerce_hipay_ws_get_bank_info($ws_login, $ws_password) {
+  // Bank account status.
+  $parameters = array(
+    'wsLogin' => $ws_login,
+    'wsPassword' => $ws_password,
+    'locale' => 'en_GB',
+  );
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_STATUS, $parameters);
+  if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+    return $response;
+  }
+
+  return array();
 }
