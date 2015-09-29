@@ -1212,9 +1212,15 @@ function commerce_hipay_tpp_cardonfile_charge($payment_method, $card_data, $orde
     drupal_set_message(t('There was an error processing your payment with Hipay. Please try again or contact us if the problem persists.'), 'error');
   }
   else {
-    // @TODO: check $response['state']
-    // Called from commerce_hipay_tpp_api_order_request()
-    $return = TRUE;
+    switch ($response['state']) {
+      case COMMERCE_HIPAY_TPP_API_STATUS_COMPLETED:
+      case COMMERCE_HIPAY_TPP_API_STATUS_PENDING:
+        $return = TRUE;
+        break;
+
+      default:
+        drupal_set_message(t('There was an error processing your payment with Hipay. Please try again or contact us if the problem persists.'), 'error');
+    }
   }
 
   // Save updated transaction.
