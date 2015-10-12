@@ -1618,7 +1618,7 @@ function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
 
   // Authorized amount.
   if (($authorized_amount = commerce_hipay_hpp_get_feedback_value($feedback, 'authorizedAmount')) != 0) {
-    $transaction->message .= '<br />' . t('Autorized amount: @authorized_amount');
+    $transaction->message .= '<br />' . t('Authorized amount: @authorized_amount');
     $transaction->message_variables['@authorized_amount'] = commerce_currency_format(commerce_currency_decimal_to_amount($authorized_amount, $transaction->currency_code), $transaction->currency_code);
   }
 
