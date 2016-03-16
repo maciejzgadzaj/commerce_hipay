@@ -33,6 +33,10 @@ function commerce_hipay_ws_store_overview($store) {
       t('API password'),
       $account['hipay_vendor_account']['wsPassword'],
     );
+    $rows[] = array(
+      t('Account Identified'),
+      commerce_hipay_ws_check_account_identified($account['hipay_vendor_account']['userAccountId']) ? 'Yes' : 'No',
+    );
 
     // Bank account status.
     $parameters = array(
@@ -50,8 +54,8 @@ function commerce_hipay_ws_store_overview($store) {
 
     // Bank account details.
     $parameters = array(
-//      'wsLogin' => $account['hipay_vendor_account']['wsLogin'],
-//      'wsPassword' => $account['hipay_vendor_account']['wsPassword'],
+      'wsLogin' => $account['hipay_vendor_account']['wsLogin'],
+      'wsPassword' => $account['hipay_vendor_account']['wsPassword'],
     );
     $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_CHECK, $parameters);
     if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
@@ -61,7 +65,7 @@ function commerce_hipay_ws_store_overview($store) {
         if (!empty($value)) {
           $rows[] = array(
             t($key),
-            t($value),
+            $value,
           );
         }
       }

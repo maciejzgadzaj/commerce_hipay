@@ -887,3 +887,44 @@ function commerce_hipay_ws_get_bank_info($ws_login, $ws_password) {
 
   return array();
 }
+
+/**
+ * Get information on an account.
+ *
+ * @param string $user_account_id
+ *   The hipay id of the account we wish to get the information of.
+ *
+ * @return array
+ *   The information or empty array.
+ */
+function commerce_hipay_ws_get_account_infos($user_account_id) {
+  $parameters = array(
+    'accountId' => $user_account_id,
+    'locale' => 'en_GB',
+  );
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_ACCOUNT_INFOS, $parameters);
+  if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+    return $response;
+  }
+
+  return array();
+}
+
+/**
+ * Check if an account is identified.
+ *
+ * @param string $user_account_id
+ *   The hipay id of the account we wish to check.
+ *
+ * @return bool
+ *   True if the account is identified, false if not.
+ */
+function commerce_hipay_ws_check_account_identified($user_account_id) {
+  $account_info = commerce_hipay_ws_get_account_infos($user_account_id);
+
+  if (empty($account_info) || empty($account_info['identified']) || $account_info['identified'] == 'no') {
+    return FALSE;
+  }
+
+  return TRUE;
+}

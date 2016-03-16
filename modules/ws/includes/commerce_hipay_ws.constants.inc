@@ -54,6 +54,10 @@ define('COMMERCE_HIPAY_WS_STATUS_ERROR_WRONG_BANK_STATUS', 23);
 define('COMMERCE_HIPAY_WS_ACCOUNT_NO_BANK_INFO', 'No bank information');
 define('COMMERCE_HIPAY_WS_ACCOUNT_BANK_INFO_VALIDATED', 'Validated');
 
+// Hipay Wallet accountInfosIdentified response 'status' values.
+define('COMMERCE_HIPAY_WS_ACCOUNT_NOT_IDENTIFIED', 'no');
+define('COMMERCE_HIPAY_WS_ACCOUNT_IDENTIFIED', 'yes');
+
 // Hipay Wallet transfer transaction types.
 define('COMMERCE_HIPAY_WS_TRANSFER_TYPE_TRANSFER', 'Envoi');
 define('COMMERCE_HIPAY_WS_TRANSFER_TYPE_OTHER', ' Autre');

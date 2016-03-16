@@ -1383,13 +1383,13 @@ function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
   }
 
   $operation_transaction = NULL;
-  if (isset($feedback['last_operation']) && isset($feedback['last_operation']['id'])) {
-    $operation_transaction = commerce_payment_transaction_load((int) $feedback['last_operation']['id']);
+  if (isset($feedback['operation']) && isset($feedback['operation']['id'])) {
+    $operation_transaction = commerce_payment_transaction_load((int) $feedback['operation']['id']);
 
     if (!$operation_transaction) {
       watchdog('commerce_hipay_tpp', '@callback_type: Unable to load payment transaction from Operation Reference (@last_operation_id). Feedback received: !feedback', array(
         '@callback_type' => ucfirst($callback_type),
-        '@last_operation_id' => $feedback['last_operation']['id'],
+        '@last_operation_id' => $feedback['operation']['id'],
         '!feedback' => '<pre>' . var_export($feedback, TRUE) . '</pre>',
       ), WATCHDOG_ERROR);
       return FALSE;
@@ -2131,7 +2131,10 @@ function commerce_hipay_tpp_get_order_operation_totals($order, $conditions = arr
   foreach ($transactions as $operation => $operation_transactions) {
     $totals[$operation] = 0;
     foreach ($operation_transactions as $transaction) {
-      $totals[$operation] += $transaction->amount;
+      // Ignore authorization transactions that hasn't been executed.
+      if ($transaction->status != 'pending' || !empty($transaction->remote_status)) {
+        $totals[$operation] += $transaction->amount;
+      }
     }
   }
   return $totals;
