@@ -1340,9 +1340,9 @@ function commerce_hipay_tpp_process_response($response, &$transaction, $transact
       $transaction->message_variables['@error_message'] = (!empty($message)) ? $message : $response['reason']['message'];
     }
 
-    drupal_set_message('@transaction_type request has been sent to the payment gateway, now waiting for the server-to-server notification to update the transaction details. Refresh this page in a moment to see updated transaction details.', array(
+    drupal_set_message(t('@transaction_type request has been sent to the payment gateway, now waiting for the server-to-server notification to update the transaction details. Refresh this page in a moment to see updated transaction details.', array(
       '@transaction_type' => ucfirst($transaction_type),
-    ));
+    )));
   }
 
   commerce_payment_transaction_save($transaction);
@@ -1833,7 +1833,7 @@ function commerce_hipay_tpp_api_cancel($transaction) {
   commerce_payment_transaction_save($transaction);
 
   if (!isset($response['code'])) {
-    drupal_set_message('Cancel request has been sent to the payment gateway, now waiting for the server-to-server notification to update the transaction details. Refresh this page in a moment to see updated transaction details.');
+    drupal_set_message(t('Cancel request has been sent to the payment gateway, now waiting for the server-to-server notification to update the transaction details. Refresh this page in a moment to see updated transaction details.'));
   }
   else {
     drupal_set_message(t('There has been an error requesting the Cancel: @error_code: @error_message: @error_description', array(
