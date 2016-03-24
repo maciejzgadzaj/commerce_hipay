@@ -173,10 +173,12 @@ function commerce_hipay_tpp_menu_alter(&$items) {
  */
 function commerce_hipay_tpp_access_refresh($order, $transaction) {
   // Deny access if transaction was not done using Hipay method, or it doesn't
-  // have Hipay transaction reference in 'remote_id' parameter.
+  // have Hipay transaction reference in 'remote_id' parameter, or it is not
+  // the main (first) transaction for this order.
   if (
     !in_array($transaction->payment_method, array_keys(commerce_hipay_tpp_commerce_payment_method_info()))
     || empty($transaction->remote_id)
+    || !empty($transaction->data['reference_transaction_id'])
   ) {
     return FALSE;
   }
