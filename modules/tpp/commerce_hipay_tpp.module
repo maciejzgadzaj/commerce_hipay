@@ -194,8 +194,11 @@ function commerce_hipay_tpp_access_capture($order, $transaction) {
   // Hipay-specific capture access restrictions.
   if (in_array($transaction->payment_method, array_keys(commerce_hipay_tpp_commerce_payment_method_info()))) {
     // Deny access if authorization has not been successfully completed,
-    // or has been denied.
-    if ($transaction->status !== COMMERCE_HIPAY_TPP_PAYMENT_STATUS_AUTHORIZED) {
+    // has been denied or cancelled.
+    if (
+      $transaction->status !== COMMERCE_HIPAY_TPP_PAYMENT_STATUS_AUTHORIZED
+      || $transaction->remote_status == COMMERCE_HIPAY_TPP_REMOTE_STATUS_CANCELLED
+    ) {
       return FALSE;
     }
     // Deny access if total authorization amount has already been captured.
