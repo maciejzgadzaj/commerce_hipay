@@ -1904,13 +1904,13 @@ function commerce_hipay_tpp_get_feedback() {
  *
  * @see commerce_hipay_tpp_process_notification
  */
-function commerce_hipay_hpp_get_feedback_value($feedback, $parameter_name) {
+function commerce_hipay_hpp_get_feedback_value($feedback, $parameter_name, $default_value = NULL) {
   if (isset($feedback[$parameter_name])) {
     return $feedback[$parameter_name];
   }
   else {
     $parameter_name = strtolower(preg_replace('/([A-Z])/', '_$1', $parameter_name));
-    return (isset($feedback[$parameter_name])) ? $feedback[$parameter_name] : NULL;
+    return (isset($feedback[$parameter_name])) ? $feedback[$parameter_name] : $default_value;
   }
 }
 
