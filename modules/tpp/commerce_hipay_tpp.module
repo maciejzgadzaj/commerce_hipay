@@ -267,6 +267,12 @@ function commerce_hipay_tpp_access_cancel($order, $transaction) {
     ) {
       return FALSE;
     }
+
+    // Deny access if a capture transaction exists.
+    $totals = commerce_hipay_tpp_get_order_operation_totals($order);
+    if (!empty($totals[COMMERCE_HIPAY_TPP_OPERATION_CAPTURE])) {
+      return FALSE;
+    }
   }
 
   // Allow access if the user can update this transaction.
