@@ -1495,17 +1495,6 @@ function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
     switch ($feedback['status']) {
       case COMMERCE_HIPAY_TPP_REMOTE_STATUS_CAPTURED:
         $operation_transaction->status = COMMERCE_HIPAY_TPP_PAYMENT_STATUS_CAPTURED;
-
-        $transactions = commerce_hipay_tpp_get_order_transactions($order);
-        foreach ($transactions as $sub_transaction) {
-          if ($sub_transaction->remote_status == COMMERCE_HIPAY_TPP_REMOTE_STATUS_CAPTURE_REQUESTED && $sub_transaction->created <= $operation_transaction->created) {
-            $sub_transaction->status = COMMERCE_HIPAY_TPP_PAYMENT_STATUS_CAPTURED;
-            $sub_transaction->remote_status = $feedback['status'];
-            $sub_transaction->payload[$callback_type . '-' . time()] = $feedback;
-            commerce_payment_transaction_save($sub_transaction);
-          }
-        }
-
         break;
 
       case COMMERCE_HIPAY_TPP_REMOTE_STATUS_CAPTURE_REFUSED:
@@ -1514,17 +1503,6 @@ function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
 
       case COMMERCE_HIPAY_TPP_REMOTE_STATUS_REFUNDED:
         $operation_transaction->status = COMMERCE_HIPAY_TPP_PAYMENT_STATUS_REFUNDED;
-
-        $transactions = commerce_hipay_tpp_get_order_transactions($order);
-        foreach ($transactions as $sub_transaction) {
-          if ($sub_transaction->remote_status == COMMERCE_HIPAY_TPP_REMOTE_STATUS_REFUND_REQUESTED && $sub_transaction->created <= $operation_transaction->created) {
-            $sub_transaction->status = COMMERCE_HIPAY_TPP_PAYMENT_STATUS_REFUNDED;
-            $sub_transaction->remote_status = $feedback['status'];
-            $sub_transaction->payload[$callback_type . '-' . time()] = $feedback;
-            commerce_payment_transaction_save($sub_transaction);
-          }
-        }
-
         break;
     }
 
