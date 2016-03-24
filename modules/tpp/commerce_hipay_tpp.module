@@ -2125,8 +2125,24 @@ function commerce_hipay_tpp_get_order_transactions_by_operation($order, $conditi
  * @return array
  *   An array of total amounts for each transaction type.
  */
-function commerce_hipay_tpp_get_order_operation_totals($order, $conditions = array()) {
+function commerce_hipay_tpp_get_order_operation_totals($order, $conditions = NULL) {
   $totals = array();
+
+  // By default, if no specific conditions were requested in the function param,
+  // let's return only successful transactions (including pending, which is used
+  // for Capture Requested and Refund Requested remote statuses).
+  if (!isset($conditions)) {
+    $conditions = array(
+      'status' => array(
+        COMMERCE_PAYMENT_STATUS_PENDING,
+        COMMERCE_PAYMENT_STATUS_SUCCESS,
+        COMMERCE_HIPAY_TPP_PAYMENT_STATUS_AUTHORIZED,
+        COMMERCE_HIPAY_TPP_PAYMENT_STATUS_CAPTURED,
+        COMMERCE_HIPAY_TPP_PAYMENT_STATUS_REFUNDED,
+      ),
+    );
+  }
+
   $transactions = commerce_hipay_tpp_get_order_transactions_by_operation($order, $conditions);
   foreach ($transactions as $operation => $operation_transactions) {
     $totals[$operation] = 0;
