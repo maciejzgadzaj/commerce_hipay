@@ -521,14 +521,14 @@ function commerce_hipay_ws_soap($resource) {
  * @param array $payment_method
  *   The payment method being used.
  *
- * @return object
+ * @return array
  *   An array of Hipay TPP API response parameters.
  */
 function commerce_hipay_ws_api_request($resource, $parameters, $payment_method_instance = NULL) {
   // If no specific payment method instance was requested in function parameter,
   // load and use the first active 'commerce_hipay_ws' payment method instance.
   if (empty($payment_method_instance)) {
-    $instances = commerce_hipay_ws_payment_method_instances('commerce_hipay_ws');
+    $instances = commerce_hipay_ws_payment_method_instances('commerce_hipay_ws', TRUE);
     $payment_method_instance = reset($instances);
   }
 
