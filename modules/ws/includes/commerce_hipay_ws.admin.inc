@@ -1,5 +1,63 @@
 <?php
 
+function commerce_hipay_ws_website_settings_form($form, $form_state) {
+  $form = array(
+    '#prefix' => '<div id="hipay_ws_website_settings">',
+    '#suffix' => '</div>',
+  );
+
+  $form['commerce_hipay_ws_website_business_line_id'] = array(
+    '#type' => 'select',
+    '#title' => t('Business line ID'),
+    '#description' => t('Main website theme.'),
+    '#options' => commerce_hipay_ws_get_website_business_line_options(),
+    '#default_value' => variable_get('commerce_hipay_ws_website_business_line_id'),
+    '#ajax' => array(
+      'callback' => 'commerce_hipay_ws_website_settings_form_ajax_callback',
+      'wrapper' => 'hipay_ws_website_settings',
+    ),
+    '#required' => TRUE,
+  );
+
+  $selected_business_line_id = (!empty($form_state['values']['commerce_hipay_ws_website_business_line_id'])) ? $form_state['values']['commerce_hipay_ws_website_business_line_id'] : variable_get('commerce_hipay_ws_website_business_line_id');
+
+  $form['commerce_hipay_ws_website_topic_id'] = array(
+    '#type' => 'select',
+    '#title' => t('Topic ID'),
+    '#description' => t('Secondary website theme.'),
+    '#options' => commerce_hipay_ws_get_website_topic_options($selected_business_line_id),
+    '#default_value' => variable_get('commerce_hipay_ws_website_topic_id'),
+    '#required' => TRUE,
+  );
+
+  $form['commerce_hipay_ws_website_contact_email'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Website contact email'),
+    '#default_value' => variable_get('commerce_hipay_ws_website_contact_email', variable_get('site_mail')),
+    '#required' => TRUE,
+  );
+
+  $form['commerce_hipay_ws_website_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Website name'),
+    '#default_value' => variable_get('commerce_hipay_ws_website_name', variable_get('site_name')),
+    '#required' => TRUE,
+  );
+
+  $form['commerce_hipay_ws_website_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Website URL'),
+    '#default_value' => $GLOBALS['base_url'],
+    '#required' => TRUE,
+  );
+
+  return system_settings_form($form);
+}
+
+function commerce_hipay_ws_website_settings_form_ajax_callback($form, $form_state) {
+  return $form;
+}
+
 /**
  * Page callback: Displays list of payment methods available for a store.
  *

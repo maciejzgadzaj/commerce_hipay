@@ -35,6 +35,24 @@ function commerce_hipay_ws_commerce_payment_method_info() {
 function commerce_hipay_ws_menu() {
   $items = array();
 
+  $items['admin/commerce/config/hipay_ws'] = array(
+    'title' => 'Hipay Wallet',
+    'description' => 'Manage Hipay Wallet settings.',
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' => array('access administration pages'),
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+  );
+
+  $items['admin/commerce/config/hipay_ws/website'] = array(
+    'title' => 'Website configuration',
+    'description' => 'Manage Hipay Wallet website configuration.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('commerce_hipay_ws_website_settings_form'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'includes/commerce_hipay_ws.admin.inc',
+  );
+
   // Server-to-server notification URL.
   $items['commerce-hipay-ws/notify'] = array(
     'page callback' => 'commerce_hipay_ws_callback_notification',
