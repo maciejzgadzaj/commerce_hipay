@@ -38,7 +38,6 @@ function commerce_hipay_ws_schema() {
         'size' => 'big',
         'serialize' => TRUE,
         'not null' => FALSE,
-        'default' => '',
       ),
       'hipay_bank_account' => array(
         'description' => 'The details of Hipay Wallet vendor bank account.',
@@ -46,7 +45,6 @@ function commerce_hipay_ws_schema() {
         'size' => 'big',
         'serialize' => TRUE,
         'not null' => FALSE,
-        'default' => '',
       ),
     ),
     'foreign keys' => array(
@@ -148,7 +146,6 @@ function commerce_hipay_ws_schema() {
         'size' => 'big',
         'serialize' => TRUE,
         'not null' => FALSE,
-        'default' => '',
       ),
     ),
     'foreign keys' => array(
@@ -243,7 +240,6 @@ function commerce_hipay_ws_schema() {
         'size' => 'big',
         'serialize' => TRUE,
         'not null' => FALSE,
-        'default' => '',
       ),
     ),
     'foreign keys' => array(
