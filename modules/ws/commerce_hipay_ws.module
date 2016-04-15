@@ -551,8 +551,16 @@ function commerce_hipay_ws_api_request($resource, $parameters, $payment_method_i
     ), WATCHDOG_DEBUG);
   }
 
+  // The resource name is exactly the same for getting both business lines as
+  // well as website topics (just 'get'). Therefore in these 2 cases our
+  // definition includes also the resource type, and in both cases it needs
+  // to be exploded to get its proper value.
+  $resource_path = $resource;
+  $resource_elements = explode('/', $resource_path);
+  $resource = array_pop($resource_elements);
+
   // Prepare API request details.
-  $url = commerce_hipay_ws_get_server_url($payment_method_instance) . commerce_hipay_ws_get_resource_type($resource) . $resource;
+  $url = commerce_hipay_ws_get_server_url($payment_method_instance) . commerce_hipay_ws_get_resource_type($resource_path) . $resource;
   $options = array(
     'compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP,
     'cache_wsdl' => WSDL_CACHE_NONE,
@@ -697,6 +705,10 @@ function commerce_hipay_ws_get_resource_type($resource) {
     case COMMERCE_HIPAY_WS_RESOURCE_LOCALE_TIMEZONES:
     case COMMERCE_HIPAY_WS_RESOURCE_LOCALE_COUNTRIES:
       return COMMERCE_HIPAY_WS_RESOURCE_TYPE_LOCALE;
+    case COMMERCE_HIPAY_WS_RESOURCE_GET_BUSINESS_LINES:
+      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_BUSINESS_LINES;
+    case COMMERCE_HIPAY_WS_RESOURCE_GET_WEBSITE_TOPICS:
+      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_WEBSITE_TOPICS;
     default:
       return COMMERCE_HIPAY_WS_RESOURCE_TYPE_ACCOUNT;
   }
@@ -927,4 +939,83 @@ function commerce_hipay_ws_check_account_identified($user_account_id) {
   }
 
   return TRUE;
+}
+
+/**
+ * Returns an array of available business lines formatted as select options.
+ *
+ * @return array
+ *   An array of available business lines formatted as select options.
+ */
+function commerce_hipay_ws_get_website_business_line_options() {
+  $return = array();
+
+  $response = commerce_hipay_ws_get_website_business_lines();
+  if (!empty($response['businessLines']['item'])) {
+    foreach ($response['businessLines']['item'] as $item) {
+      $return[$item['id']] = t($item['label']);
+    }
+  }
+
+  return $return;
+}
+
+/**
+ * Returns the list of available business lines.
+ *
+ * @return array
+ *   An array of Hipay TPP API response parameters, where 'businessLines ' key
+ *   includes the list of available business lines.
+ */
+function commerce_hipay_ws_get_website_business_lines() {
+  $parameters = array(
+    'locale' => 'en_GB',
+  );
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_BUSINESS_LINES, $parameters);
+  if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+    return $response;
+  }
+
+  return array();
+}
+
+/**
+ * Returns an array of available website topics formatted as select options
+ * for provided business line ID.
+ *
+ * @return array
+ *   An array of available website topics formatted as select options
+ *   for provided business line ID.
+ */
+function commerce_hipay_ws_get_website_topic_options($business_line_id) {
+  $return = array();
+
+  $response = commerce_hipay_ws_get_website_topics($business_line_id);
+  if (!empty($response['websiteTopics']['item'])) {
+    foreach ($response['websiteTopics']['item'] as $item) {
+      $return[$item['id']] = t($item['label']);
+    }
+  }
+
+  return $return;
+}
+
+/**
+ * Returns the list of available website topics.
+ *
+ * @return array
+ *   An array of Hipay TPP API response parameters, where 'websiteTopics' key
+ *   includes the list of available website topics.
+ */
+function commerce_hipay_ws_get_website_topics($business_line_id) {
+  $parameters = array(
+    'businessLineId' => $business_line_id,
+    'locale' => 'en_GB',
+  );
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_WEBSITE_TOPICS, $parameters);
+  if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+    return $response;
+  }
+
+  return array();
 }

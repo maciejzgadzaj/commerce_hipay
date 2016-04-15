@@ -17,6 +17,8 @@ define('COMMERCE_HIPAY_WS_RESOURCE_TYPE_ACCOUNT', 'user-account-v2/');
 define('COMMERCE_HIPAY_WS_RESOURCE_TYPE_TRANSFER', 'transfer/');
 define('COMMERCE_HIPAY_WS_RESOURCE_TYPE_WITHDRAWAL', 'withdrawal/');
 define('COMMERCE_HIPAY_WS_RESOURCE_TYPE_LOCALE', 'locale/');
+define('COMMERCE_HIPAY_WS_RESOURCE_TYPE_BUSINESS_LINES', 'business-lines-v2/');
+define('COMMERCE_HIPAY_WS_RESOURCE_TYPE_WEBSITE_TOPICS', 'website-topics-v2/');
 
 // SOAP API resources.
 // Account creation.
@@ -39,6 +41,10 @@ define('COMMERCE_HIPAY_WS_RESOURCE_WITHDRAWAL', 'create');
 define('COMMERCE_HIPAY_WS_RESOURCE_LOCALE_CODES', 'codes');
 define('COMMERCE_HIPAY_WS_RESOURCE_LOCALE_TIMEZONES', 'timezones');
 define('COMMERCE_HIPAY_WS_RESOURCE_LOCALE_COUNTRIES', 'countries');
+// 'Business lines' webservice.
+define('COMMERCE_HIPAY_WS_RESOURCE_GET_BUSINESS_LINES', 'business-lines-v2/get');
+// 'Website topics' webservice.
+define('COMMERCE_HIPAY_WS_RESOURCE_GET_WEBSITE_TOPICS', 'website-topics-v2/get');
 
 // Hipay Wallet error codes.
 define('COMMERCE_HIPAY_WS_STATUS_SUCCESS', 0);
