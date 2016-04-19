@@ -6,6 +6,18 @@ function commerce_hipay_ws_website_settings_form($form, $form_state) {
     '#suffix' => '</div>',
   );
 
+  // If the Hipay Wallet payment method instance has not yet been enabled
+  // or configured, display the warning message.
+  if ($instances = commerce_hipay_ws_payment_method_instances('commerce_hipay_ws', TRUE)) {
+    $payment_method_instance = reset($instances);
+  }
+  if (empty($payment_method_instance['settings'])) {
+    drupal_set_message(t('Please <a href="@url">enable and configure Hipay Wallet payment method</a> before providing the website configuration.', array(
+      '@url' => url('admin/commerce/config/payment-methods'),
+    )), 'error');
+    return;
+  }
+
   $form['commerce_hipay_ws_website_business_line_id'] = array(
     '#type' => 'select',
     '#title' => t('Business line ID'),
