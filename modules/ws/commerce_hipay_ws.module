@@ -546,8 +546,20 @@ function commerce_hipay_ws_api_request($resource, $parameters, $payment_method_i
   // If no specific payment method instance was requested in function parameter,
   // load and use the first active 'commerce_hipay_ws' payment method instance.
   if (empty($payment_method_instance)) {
-    $instances = commerce_hipay_ws_payment_method_instances('commerce_hipay_ws', TRUE);
-    $payment_method_instance = reset($instances);
+    if ($instances = commerce_hipay_ws_payment_method_instances('commerce_hipay_ws', TRUE)) {
+      $payment_method_instance = reset($instances);
+    }
+    // Return if Hipay Wallet payment method instance has not been enabled yet.
+    else {
+      watchdog('commerce_hipay_ws', 'Unable to call Hipay API: payment method instance does not exist.', array(), WATCHDOG_ERROR);
+      return FALSE;
+    }
+  }
+
+  // Return if Hipay Wallet payment method instance has not been configured yet.
+  if (empty($payment_method_instance['settings'])) {
+    watchdog('commerce_hipay_ws', 'Unable to call Hipay API: payment method instance is not configured.', array(), WATCHDOG_ERROR);
+    return FALSE;
   }
 
   // Add API access credentials to API call parameters, allowing them
