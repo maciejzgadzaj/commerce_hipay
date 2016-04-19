@@ -4,60 +4,13 @@
  * Implements hook_schema().
  */
 function commerce_hipay_ws_schema() {
-  $schema['commerce_hipay_ws_account'] = array(
-    'description' => 'Details of Hipay Wallet accounts.',
-    'fields' => array(
-      'id' => array(
-        'description' => 'The primary identifier.',
-        'type' => 'serial',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-      ),
-      'account_id' => array(
-        'description' => 'The Hipay account ID.',
-        'type' => 'int',
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'store_id' => array(
-        'description' => 'The store_id that owns this account.',
-        'type' => 'int',
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'email' => array(
-        'description' => 'The account main email address.',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => FALSE,
-        'default' => 0,
-      ),
-      'hipay_vendor_account' => array(
-        'description' => 'The details of Hipay wallet vendor account.',
-        'type' => 'text',
-        'size' => 'big',
-        'serialize' => TRUE,
-        'not null' => FALSE,
-      ),
-      'hipay_bank_account' => array(
-        'description' => 'The details of Hipay Wallet vendor bank account.',
-        'type' => 'text',
-        'size' => 'big',
-        'serialize' => TRUE,
-        'not null' => FALSE,
-      ),
-    ),
-    'foreign keys' => array(
-      'store_id' => array(
-        'table' => 'commerce_store',
-        'columns' => array('store_id' => 'store_id'),
-      ),
-    ),
-    'primary key' => array('id'),
-    'indexes' => array(
-      'store_id' => array('store_id'),
-    ),
-  );
+  $schema = array();
+
+  module_load_include('inc', 'commerce_hipay_ws', 'commerce_hipay_ws.entity.user_account');
+  $schema += commerce_hipay_ws_user_account_schema();
+
+  module_load_include('inc', 'commerce_hipay_ws', 'commerce_hipay_ws.entity.bank_account');
+  $schema += commerce_hipay_ws_bank_account_schema();
 
   $schema['commerce_hipay_ws_transfer'] = array(
     'description' => 'Details of Hipay Wallet transfers.',
@@ -256,4 +209,26 @@ function commerce_hipay_ws_schema() {
   );
 
   return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function commerce_hipay_ws_install() {
+  module_load_include('inc', 'commerce_hipay_ws', 'includes/entities/commerce_hipay_ws.entity.user_account');
+  module_load_include('inc', 'commerce_hipay_ws', 'includes/entities/commerce_hipay_ws.entity.bank_account');
+
+  commerce_hipay_ws_user_account_create_fields();
+  commerce_hipay_ws_bank_account_create_fields();
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function commerce_hipay_ws_uninstall() {
+  module_load_include('inc', 'commerce_hipay_ws', 'includes/entities/commerce_hipay_ws.entity.user_account');
+  module_load_include('inc', 'commerce_hipay_ws', 'includes/entities/commerce_hipay_ws.entity.bank_account');
+
+  commerce_hipay_ws_user_account_delete_fields();
+  commerce_hipay_ws_bank_account_delete_fields();
 }

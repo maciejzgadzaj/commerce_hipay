@@ -70,3 +70,10 @@ define('COMMERCE_HIPAY_WS_TRANSFER_TYPE_OTHER', ' Autre');
 
 // Hipay Wallet transfer statuses.
 define('COMMERCE_HIPAY_WS_TRANSFER_STATUS_CAPTURED', 'CAPTURED');
+
+// Hipay Wallet 'createFullUseraccount' API values.
+define('COMMERCE_HIPAY_WS_LEGAL_STATUS_PERSONAL', 0);
+define('COMMERCE_HIPAY_WS_LEGAL_STATUS_BUSINESS', 1);
+define('COMMERCE_HIPAY_WS_TITLE_MR', 1);
+define('COMMERCE_HIPAY_WS_TITLE_MRS', 2);
+define('COMMERCE_HIPAY_WS_TITLE_MISS', 3);

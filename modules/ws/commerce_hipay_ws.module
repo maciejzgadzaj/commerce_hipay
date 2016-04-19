@@ -10,6 +10,18 @@ require_once 'includes/commerce_hipay_ws.codes.inc';
 require_once 'includes/commerce_hipay_ws.constants.inc';
 require_once 'includes/commerce_hipay_ws.transfer.inc';
 require_once 'includes/commerce_hipay_ws.withdrawal.inc';
+require_once 'includes/entities/commerce_hipay_ws.entity.user_account.inc';
+require_once 'includes/entities/commerce_hipay_ws.entity.bank_account.inc';
+require_once 'includes/entities/commerce_hipay_ws.entity_ui.user_account.inc';
+require_once 'includes/entities/commerce_hipay_ws.entity_ui.bank_account.inc';
+
+/**
+ * Implements hook_entity_info().
+ */
+function commerce_hipay_ws_entity_info() {
+  return commerce_hipay_ws_user_account_entity_info()
+    + commerce_hipay_ws_bank_account_entity_info();
+}
 
 /**
  * Implements hook_commerce_payment_method_info().
@@ -30,26 +42,44 @@ function commerce_hipay_ws_commerce_payment_method_info() {
 }
 
 /**
+ * Implements hook_permission().
+ */
+function commerce_hipay_ws_permission() {
+  $permissions = array(
+    'administer Hipay Wallet configuration' => array(
+      'title' => t('Administer Hipay Wallet configuration'),
+      'description' => t('Allows users to administer Hipay Wallet configuration.'),
+      'restrict access' => TRUE,
+    ),
+  );
+
+  $permissions += commerce_entity_access_permissions('commerce_hipay_ws_user_account');
+  $permissions += commerce_entity_access_permissions('commerce_hipay_ws_bank_account');
+
+  return $permissions;
+}
+
+/**
  * Implements hook_menu().
  */
 function commerce_hipay_ws_menu() {
   $items = array();
 
-  $items['admin/commerce/config/hipay_ws'] = array(
+  $items['admin/commerce/config/hipay-wallet'] = array(
     'title' => 'Hipay Wallet',
     'description' => 'Manage Hipay Wallet settings.',
     'page callback' => 'system_admin_menu_block_page',
-    'access arguments' => array('access administration pages'),
+    'access arguments' => array('administer Hipay Wallet configuration'),
     'file' => 'system.admin.inc',
     'file path' => drupal_get_path('module', 'system'),
   );
 
-  $items['admin/commerce/config/hipay_ws/website'] = array(
+  $items['admin/commerce/config/hipay-wallet/website'] = array(
     'title' => 'Website configuration',
     'description' => 'Manage Hipay Wallet website configuration.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('commerce_hipay_ws_website_settings_form'),
-    'access arguments' => array('administer site configuration'),
+    'access arguments' => array('administer Hipay Wallet configuration'),
     'file' => 'includes/commerce_hipay_ws.admin.inc',
   );
 
@@ -83,7 +113,7 @@ function commerce_hipay_ws_menu() {
   $items['store/%commerce_store/hipay-wallet/view'] = array(
     'title' => 'Account details',
     'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => -10,
+    'weight' => -5,
   );
 
   $items['store/%commerce_store/hipay-wallet/received-transfers'] = array(
@@ -122,7 +152,24 @@ function commerce_hipay_ws_menu() {
     'file' => 'includes/commerce_hipay_ws.admin.inc',
   );
 
+  // User accounts.
+  $items += commerce_hipay_ws_user_account_menu();
+
+  // Bank accounts.
+  $items += commerce_hipay_ws_bank_account_menu();
+
   return $items;
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function commerce_hipay_ws_views_api() {
+  return array(
+    'api' => 3,
+    'version' => '3.0',
+    'path' => drupal_get_path('module', 'commerce_hipay_ws') . '/includes/views',
+  );
 }
 
 /**
