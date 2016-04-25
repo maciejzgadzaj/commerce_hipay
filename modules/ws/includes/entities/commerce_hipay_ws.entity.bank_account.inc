@@ -204,6 +204,19 @@ function commerce_hipay_ws_bank_account_label($entity, $entity_type) {
 }
 
 /**
+ * Returns an initialized bank account object.
+ *
+ * @param array $values
+ *   An array of values to set, keyed by property name.
+ *
+ * @return
+ *   A bank account object with all default properties initialized.
+ */
+function commerce_hipay_ws_bank_account_new($values = array()) {
+  return entity_get_controller('commerce_hipay_ws_bank_account')->create($values);
+}
+
+/**
  * Load single bank account.
  *
  * @param int $id

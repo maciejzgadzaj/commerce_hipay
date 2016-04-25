@@ -264,6 +264,19 @@ function commerce_hipay_ws_user_account_label($entity, $entity_type) {
 }
 
 /**
+ * Returns an initialized user account object.
+ *
+ * @param array $values
+ *   An array of values to set, keyed by property name.
+ *
+ * @return
+ *   A user account object with all default properties initialized.
+ */
+function commerce_hipay_ws_user_account_new($values = array()) {
+  return entity_get_controller('commerce_hipay_ws_user_account')->create($values);
+}
+
+/**
  * Load single user account.
  *
  * @param int $id
