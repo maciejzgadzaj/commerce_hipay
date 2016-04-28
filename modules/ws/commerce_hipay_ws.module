@@ -65,7 +65,7 @@ function commerce_hipay_ws_permission() {
 function commerce_hipay_ws_menu() {
   $items = array();
 
-  $items['admin/commerce/config/hipay-wallet'] = array(
+  $items['admin/commerce/hipay-wallet'] = array(
     'title' => 'Hipay Wallet',
     'description' => 'Manage Hipay Wallet settings.',
     'page callback' => 'system_admin_menu_block_page',
@@ -74,7 +74,7 @@ function commerce_hipay_ws_menu() {
     'file path' => drupal_get_path('module', 'system'),
   );
 
-  $items['admin/commerce/config/hipay-wallet/website'] = array(
+  $items['admin/commerce/hipay-wallet/website'] = array(
     'title' => 'Website configuration',
     'description' => 'Manage Hipay Wallet website configuration.',
     'page callback' => 'drupal_get_form',
@@ -184,6 +184,7 @@ function commerce_hipay_ws_settings_default() {
     'entity' => '',
     'api_username' => '',
     'api_password' => '',
+    'locale' => 'en_GB',
     'api_logging' => array(
       'request' => FALSE,
       'response' => FALSE,
@@ -269,6 +270,15 @@ function commerce_hipay_ws_settings_form($settings = array()) {
     '#required' => TRUE,
   );
 
+  $form['locale'] = array(
+    '#type' => 'select',
+    '#title' => t('Locale'),
+    '#description' => t('Default API locale.'),
+    '#options' => commerce_hipay_get_supported_languages(),
+    '#default_value' => $settings['locale'],
+    '#required' => TRUE,
+  );
+
   $form['api_logging'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Log the following messages for debugging'),
@@ -326,8 +336,7 @@ function commerce_hipay_ws_settings_form($settings = array()) {
   // Check current bank information status only if API username and password
   // have already been provided - otherwise we won't be able to make API call.
   if (!empty($settings['api_password'])) {
-    $parameters = array('locale' => 'en_GB');
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_STATUS, $parameters);
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_STATUS);
     if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
       // Display current status of bank account information.
       $form['bank_account']['current_status'] = array(
@@ -506,11 +515,7 @@ function commerce_hipay_ws_settings_form_validate(&$form, &$form_state) {
   // Run the validation only if bank country was selected.
   if (!empty($bank_account['bankCountry'])) {
     // Get all required fields for selected country from Hipay API.
-    $parameters = array(
-      'locale' => 'en_GB',
-      'country' => $bank_account['bankCountry'],
-    );
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_FIELDS, $parameters);
+    $response = commerce_hipay_ws_get_bank_fields($bank_account['bankCountry']);
 
     // If any of the required fields is empty, set form error.
     if (!empty($response['fields']['item'])) {
@@ -589,7 +594,7 @@ function commerce_hipay_ws_soap($resource) {
  * @return array
  *   An array of Hipay TPP API response parameters.
  */
-function commerce_hipay_ws_api_request($resource, $parameters, $payment_method_instance = NULL) {
+function commerce_hipay_ws_api_request($resource, $parameters = array(), $payment_method_instance = NULL) {
   // If no specific payment method instance was requested in function parameter,
   // load and use the first active 'commerce_hipay_ws' payment method instance.
   if (empty($payment_method_instance)) {
@@ -615,6 +620,7 @@ function commerce_hipay_ws_api_request($resource, $parameters, $payment_method_i
     'wsLogin' => $payment_method_instance['settings']['api_username'],
     'wsPassword' => $payment_method_instance['settings']['api_password'],
     'entity' => $payment_method_instance['settings']['entity'],
+    'locale' => $payment_method_instance['settings']['locale'],
   ), $parameters);
 
   // Allow other modules to alter the $parameters array.
@@ -862,10 +868,7 @@ function commerce_hipay_ws_payment_method_instances($method_id, $include_disable
  *   A country code for provided country label.
  */
 function commerce_hipay_ws_get_code_from_country($country_label) {
-  $parameters = array(
-    'locale' => 'en_GB',
-  );
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_LOCALE_COUNTRIES, $parameters);
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_LOCALE_COUNTRIES);
 
   if (!empty($response['countries']['item']) && is_array($response['countries']['item'])) {
     foreach ($response['countries']['item'] as $item) {
@@ -967,9 +970,30 @@ function commerce_hipay_ws_get_bank_info($ws_login, $ws_password) {
   $parameters = array(
     'wsLogin' => $ws_login,
     'wsPassword' => $ws_password,
-    'locale' => 'en_GB',
   );
   $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_STATUS, $parameters);
+  if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+    return $response;
+  }
+
+  return array();
+}
+
+/**
+ * Get the required bank field needed for an Hipay account.
+ *
+ * @param string $country
+ *   Country code of the bank account.
+ *
+ * @return array
+ *   Empty if no information, if not required bank fields information.
+ */
+function commerce_hipay_ws_get_bank_fields($country) {
+  // Bank account status.
+  $parameters = array(
+    'country' => $country,
+  );
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_FIELDS, $parameters);
   if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     return $response;
   }
@@ -987,10 +1011,7 @@ function commerce_hipay_ws_get_bank_info($ws_login, $ws_password) {
  *   The information or empty array.
  */
 function commerce_hipay_ws_get_account_infos($user_account_id) {
-  $parameters = array(
-    'accountId' => $user_account_id,
-    'locale' => 'en_GB',
-  );
+  $parameters = array('accountId' => $user_account_id);
   $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_ACCOUNT_INFOS, $parameters);
   if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     return $response;
@@ -1045,10 +1066,7 @@ function commerce_hipay_ws_get_website_business_line_options() {
  *   includes the list of available business lines.
  */
 function commerce_hipay_ws_get_website_business_lines() {
-  $parameters = array(
-    'locale' => 'en_GB',
-  );
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_BUSINESS_LINES, $parameters);
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_BUSINESS_LINES);
   if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     return $response;
   }
@@ -1085,10 +1103,7 @@ function commerce_hipay_ws_get_website_topic_options($business_line_id) {
  *   includes the list of available website topics.
  */
 function commerce_hipay_ws_get_website_topics($business_line_id) {
-  $parameters = array(
-    'businessLineId' => $business_line_id,
-    'locale' => 'en_GB',
-  );
+  $parameters = array('businessLineId' => $business_line_id);
   $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_WEBSITE_TOPICS, $parameters);
   if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     return $response;

@@ -18,7 +18,7 @@ class commerce_hipay_ws_bank_account_handler_operations_field extends views_hand
   }
 
   function render($values) {
-    $links = menu_contextual_links('commerce_hipay_ws_bank_account', 'admin/commerce/config/hipay-wallet/bank-accounts', array($this->get_value($values, 'bank_account_id')));
+    $links = menu_contextual_links('commerce_hipay_ws_bank_account', 'admin/commerce/hipay-wallet/bank-accounts', array($this->get_value($values, 'bank_account_id')));
 
     if (!empty($links)) {
       return theme('links', array('links' => $links, 'attributes' => array('class' => array('links', 'inline', 'operations'))));

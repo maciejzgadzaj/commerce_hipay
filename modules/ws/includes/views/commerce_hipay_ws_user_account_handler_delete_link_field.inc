@@ -11,6 +11,6 @@ class commerce_hipay_ws_user_account_handler_delete_link_field extends commerce_
     $text = !empty($this->options['text']) ? $this->options['text'] : t('delete');
     $user_account_id = $values->{$this->aliases['user_account_id']};
 
-    return l($text, 'admin/commerce/config/hipay-wallet/user-accounts/' . $user_account_id . '/delete');
+    return l($text, 'admin/commerce/hipay-wallet/user-accounts/' . $user_account_id . '/delete');
   }
 }

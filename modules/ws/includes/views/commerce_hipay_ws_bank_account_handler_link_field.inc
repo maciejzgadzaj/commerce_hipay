@@ -41,6 +41,6 @@ class commerce_hipay_ws_bank_account_handler_link_field extends views_handler_fi
     $text = !empty($this->options['text']) ? $this->options['text'] : t('view');
     $bank_account_id = $values->{$this->aliases['bank_account_id']};
 
-    return l($text, 'admin/commerce/config/hipay-wallet/bank-accounts/' . $bank_account_id);
+    return l($text, 'admin/commerce/hipay-wallet/bank-accounts/' . $bank_account_id);
   }
 }

@@ -3,7 +3,7 @@
 function commerce_hipay_ws_bank_account_menu() {
   $items = array();
 
-  $items['admin/commerce/config/hipay-wallet/bank-accounts/add'] = array(
+  $items['admin/commerce/hipay-wallet/bank-accounts/add'] = array(
     'title' => 'Add a bank account',
     'page callback' => 'commerce_hipay_ws_bank_account_add',
     'access arguments' => array('create commerce_hipay_ws_bank_account entities'),
@@ -11,16 +11,16 @@ function commerce_hipay_ws_bank_account_menu() {
     'file' => 'includes/entities/commerce_hipay_ws.entity_ui.bank_account.inc',
   );
 
-  $items['admin/commerce/config/hipay-wallet/bank-accounts/%commerce_hipay_ws_bank_account'] = array(
+  $items['admin/commerce/hipay-wallet/bank-accounts/%commerce_hipay_ws_bank_account'] = array(
     'title callback' => 'commerce_hipay_ws_bank_account_title',
-    'title arguments' => array(5),
+    'title arguments' => array(4),
     'page callback' => 'commerce_hipay_ws_bank_account_view',
-    'page arguments' => array(5),
+    'page arguments' => array(4),
     'access arguments' => array('view any commerce_hipay_ws_bank_account entity'),
     'file' => 'includes/entities/commerce_hipay_ws.entity_ui.bank_account.inc',
   );
 
-  $items['admin/commerce/config/hipay-wallet/bank-accounts/%commerce_hipay_ws_bank_account/view'] = array(
+  $items['admin/commerce/hipay-wallet/bank-accounts/%commerce_hipay_ws_bank_account/view'] = array(
     'title' => 'view',
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
@@ -28,20 +28,20 @@ function commerce_hipay_ws_bank_account_menu() {
     'file' => 'includes/entities/commerce_hipay_ws.entity_ui.bank_account.inc',
   );
 
-  $items['admin/commerce/config/hipay-wallet/bank-accounts/%commerce_hipay_ws_bank_account/edit'] = array(
+  $items['admin/commerce/hipay-wallet/bank-accounts/%commerce_hipay_ws_bank_account/edit'] = array(
     'title' => 'edit',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('commerce_hipay_ws_bank_account_form', 5),
+    'page arguments' => array('commerce_hipay_ws_bank_account_form', 4),
     'access arguments' => array('edit any commerce_hipay_ws_bank_account entity'),
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'file' => 'includes/entities/commerce_hipay_ws.entity_ui.bank_account.inc',
   );
 
-  $items['admin/commerce/config/hipay-wallet/bank-accounts/%commerce_hipay_ws_bank_account/delete'] = array(
+  $items['admin/commerce/hipay-wallet/bank-accounts/%commerce_hipay_ws_bank_account/delete'] = array(
     'title' => 'delete',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('commerce_hipay_ws_bank_account_delete_form', 5),
+    'page arguments' => array('commerce_hipay_ws_bank_account_delete_form', 4),
     'access arguments' => array('delete any commerce_hipay_ws_bank_account entity'),
     'type' => MENU_LOCAL_TASK,
     'weight' => 10,
@@ -172,7 +172,7 @@ function commerce_hipay_ws_bank_account_form_submit($form, &$form_state) {
   commerce_hipay_ws_bank_account_save($bank_account);
 
   drupal_set_message(t('Hipay bank account saved.'));
-  $form_state['redirect'] = 'admin/commerce/config/hipay-wallet/bank-accounts/' . $bank_account->bank_account_id;
+  $form_state['redirect'] = 'admin/commerce/hipay-wallet/bank-accounts/' . $bank_account->bank_account_id;
 }
 
 /**
@@ -190,7 +190,7 @@ function commerce_hipay_ws_bank_account_delete_form($form, &$form_state, $bank_a
 
   $form = confirm_form($form,
     t('Are you sure you want to delete this bank account?'),
-    'admin/commerce/config/hipay-wallet/bank-accounts',
+    'admin/commerce/hipay-wallet/bank-accounts',
     '<p>' . t('This action cannot be undone.') . '</p>',
     t('Delete'),
     t('Cancel'),
@@ -207,5 +207,5 @@ function commerce_hipay_ws_bank_account_delete_form_submit($form, &$form_state) 
   $form_state['commerce_hipay_ws_bank_account']->delete();
 
   drupal_set_message(t('The bank account has been deleted.'));
-  $form_state['redirect'] = 'admin/commerce/config/hipay-wallet/bank-accounts';
+  $form_state['redirect'] = 'admin/commerce/hipay-wallet/bank-accounts';
 }

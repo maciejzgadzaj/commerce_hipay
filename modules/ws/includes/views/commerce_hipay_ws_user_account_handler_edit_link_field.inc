@@ -13,6 +13,6 @@ class commerce_hipay_ws_user_account_handler_edit_link_field extends commerce_hi
     $text = !empty($this->options['text']) ? $this->options['text'] : t('edit');
     $user_account_id = $values->{$this->aliases['user_account_id']};
 
-    return l($text, 'admin/commerce/config/hipay-wallet/user-accounts/' . $user_account_id . '/edit');
+    return l($text, 'admin/commerce/hipay-wallet/user-accounts/' . $user_account_id . '/edit');
   }
 }

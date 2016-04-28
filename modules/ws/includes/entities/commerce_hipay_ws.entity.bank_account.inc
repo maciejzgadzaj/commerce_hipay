@@ -87,7 +87,7 @@ function commerce_hipay_ws_bank_account_entity_info() {
         'hipay_bank_account' => array(
           'label' => t('Bank account'),
           'admin' => array(
-            'path' => 'admin/commerce/config/hipay-wallet/bank-accounts',
+            'path' => 'admin/commerce/hipay-wallet/bank-accounts',
             'access arguments' => array('administer commerce_hipay_ws_bank_account entities'),
           ),
         ),
@@ -178,7 +178,7 @@ function commerce_hipay_ws_bank_account_entity_property_info() {
  */
 function commerce_hipay_ws_bank_account_uri($entity) {
   return array(
-    'path' => 'admin/commerce/config/hipay-wallet/bank-account/' . $entity->bank_account_id,
+    'path' => 'admin/commerce/hipay-wallet/bank-accounts/' . $entity->bank_account_id,
   );
 }
 
@@ -555,7 +555,7 @@ function commerce_hipay_ws_bank_account_field_instances() {
           'organisation' => 0,
           'name-full' => 0,
           'name-oneline' => 0,
-          'address-optional' => 0,
+          'address-optional' => 'address-optional',
         ),
       ),
       'type' => 'addressfield_standard',
@@ -612,7 +612,7 @@ function commerce_hipay_ws_bank_account_field_instances() {
     'entity_type' => 'commerce_hipay_ws_bank_account',
     'field_name' => 'hipay_ws_bank_name',
     'label' => 'Bank name',
-    'required' => 1,
+    'required' => 0,
     'settings' => array(
       'text_processing' => 0,
     ),

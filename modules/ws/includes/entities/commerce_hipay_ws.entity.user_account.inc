@@ -115,7 +115,14 @@ function commerce_hipay_ws_user_account_entity_info() {
         'hipay_user_account' => array(
           'label' => t('User account'),
           'admin' => array(
-            'path' => 'admin/commerce/config/hipay-wallet/user-accounts',
+            'path' => 'admin/commerce/hipay-wallet/user-accounts',
+            'access arguments' => array('administer commerce_hipay_ws_user_account entities'),
+          ),
+        ),
+        'hipay_user_subaccount' => array(
+          'label' => t('User sub-account'),
+          'admin' => array(
+            'path' => 'admin/commerce/hipay-wallet/user-subaccounts',
             'access arguments' => array('administer commerce_hipay_ws_user_account entities'),
           ),
         ),
@@ -238,7 +245,7 @@ function commerce_hipay_ws_user_account_entity_property_info() {
  */
 function commerce_hipay_ws_user_account_uri($entity) {
   return array(
-    'path' => 'admin/commerce/config/hipay-wallet/user-account/' . $entity->user_account_id,
+    'path' => 'admin/commerce/hipay-wallet/user-accounts/' . $entity->user_account_id,
   );
 }
 
@@ -255,12 +262,21 @@ function commerce_hipay_ws_user_account_title($entity) {
  * Implements callback_entity_info_label().
  *
  * Returns the label of an entity.
+ * For principal user accounts we return just the email address.
+ * For sub-accounts we also add the sub-account currency.
  *
  * @see commerce_hipay_ws_user_account_entity_info()
  */
 function commerce_hipay_ws_user_account_label($entity, $entity_type) {
   $wrapper = entity_metadata_wrapper('commerce_hipay_ws_user_account', $entity);
-  return $wrapper->hipay_ws_user_email->value();
+  $additional_info = '';
+
+  if ($entity->type == 'hipay_user_subaccount') {
+    $additional_info = ' (' . $wrapper->hipay_ws_user_currency->value() . ')';
+    $wrapper = $wrapper->hipay_ws_user_user_account;
+  }
+
+  return $wrapper->hipay_ws_user_email->value() . $additional_info;
 }
 
 /**
@@ -298,6 +314,53 @@ function commerce_hipay_ws_user_account_load($id = NULL, $reset = FALSE) {
  */
 function commerce_hipay_ws_user_account_load_multiple($ids = FALSE, $conditions = array(), $reset = FALSE) {
   return entity_load('commerce_hipay_ws_user_account', $ids, $conditions, $reset);
+}
+
+/**
+ * Loads sub-accounts connected to the provided user account ID.
+ *
+ * @param int $user_account_id
+ *   A user account ID to load the sub-accounts for.
+ *
+ * @return array
+ *   An array of user sub-accounts connected to the provided account ID.
+ */
+function commerce_hipay_ws_user_account_load_subaccounts($user_account_id) {
+  $return = array();
+
+  $query = new EntityFieldQuery();
+  $result = $query->entityCondition('entity_type', 'commerce_hipay_ws_user_account')
+    ->entityCondition('bundle', 'hipay_user_subaccount')
+    ->fieldCondition('hipay_ws_user_user_account', 'target_id', $user_account_id, '=')
+    ->execute();
+  if (!empty($result['commerce_hipay_ws_user_account'])) {
+    $return = entity_load('commerce_hipay_ws_user_account', array_keys($result['commerce_hipay_ws_user_account']));
+  }
+
+  return $return;
+}
+
+/**
+ * Loads bank accounts connected to the provided user account ID.
+ *
+ * @param int $user_account_id
+ *   A user account ID to load the sub-accounts for.
+ *
+ * @return array
+ *   An array of user sub-accounts connected to the provided account ID.
+ */
+function commerce_hipay_ws_user_account_load_bank_accounts($user_account_id) {
+  $return = array();
+
+  $query = new EntityFieldQuery();
+  $result = $query->entityCondition('entity_type', 'commerce_hipay_ws_bank_account')
+    ->fieldCondition('hipay_ws_bank_user_account', 'target_id', $user_account_id, '=')
+    ->execute();
+  if (!empty($result['commerce_hipay_ws_bank_account'])) {
+    $return = entity_load('commerce_hipay_ws_bank_account', array_keys($result['commerce_hipay_ws_bank_account']));
+  }
+
+  return $return;
 }
 
 /**
@@ -454,6 +517,27 @@ function commerce_hipay_ws_user_account_field_bases() {
     ),
     'translatable' => 0,
     'type' => 'text',
+  );
+
+  $field_bases['hipay_ws_user_currencies'] = array(
+    'active' => 1,
+    'cardinality' => -1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'hipay_ws_user_currencies',
+    'indexes' => array(
+      'value' => array(
+        0 => 'value',
+      ),
+    ),
+    'locked' => 0,
+    'module' => 'list',
+    'settings' => array(
+      'allowed_values' => array(),
+      'allowed_values_function' => 'commerce_hipay_ws_allowed_values_user_currency',
+    ),
+    'translatable' => 0,
+    'type' => 'list_text',
   );
 
   $field_bases['hipay_ws_user_currency'] = array(
@@ -755,6 +839,42 @@ function commerce_hipay_ws_user_account_field_bases() {
     'type' => 'list_text',
   );
 
+  $field_bases['hipay_ws_user_user_account'] = array(
+    'active' => 1,
+    'cardinality' => 1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'hipay_ws_user_user_account',
+    'indexes' => array(
+      'target_id' => array(
+        0 => 'target_id',
+      ),
+    ),
+    'locked' => 0,
+    'module' => 'entityreference',
+    'settings' => array(
+      'handler' => 'base',
+      'handler_settings' => array(
+        'behaviors' => array(
+          'views-select-list' => array(
+            'status' => 0,
+          ),
+        ),
+        'sort' => array(
+          'direction' => 'ASC',
+          'field' => 'hipay_ws_user_email:value',
+          'type' => 'field',
+        ),
+        'target_bundles' => array(
+          'hipay_user_account' => 'hipay_user_account',
+        ),
+      ),
+      'target_type' => 'commerce_hipay_ws_user_account',
+    ),
+    'translatable' => 0,
+    'type' => 'entityreference',
+  );
+
   $field_bases['hipay_ws_user_vat_number'] = array(
     'active' => 1,
     'cardinality' => 1,
@@ -803,7 +923,7 @@ function commerce_hipay_ws_user_account_field_instances() {
           'use_widget_handlers' => 1,
         ),
         'type' => 'addressfield_default',
-        'weight' => 11,
+        'weight' => 12,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -829,7 +949,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         ),
       ),
       'type' => 'addressfield_standard',
-      'weight' => 11,
+      'weight' => 12,
     ),
   );
 
@@ -850,7 +970,7 @@ function commerce_hipay_ws_user_account_field_instances() {
           'show_remaining_days' => FALSE,
         ),
         'type' => 'date_default',
-        'weight' => 13,
+        'weight' => 14,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -876,7 +996,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'year_range' => '-100:+0',
       ),
       'type' => 'date_popup',
-      'weight' => 13,
+      'weight' => 14,
     ),
   );
 
@@ -891,7 +1011,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'text',
         'settings' => array(),
         'type' => 'text_default',
-        'weight' => 19,
+        'weight' => 20,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -908,7 +1028,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'size' => 60,
       ),
       'type' => 'text_textfield',
-      'weight' => 19,
+      'weight' => 20,
     ),
   );
 
@@ -923,7 +1043,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'list',
         'settings' => array(),
         'type' => 'list_default',
-        'weight' => 20,
+        'weight' => 21,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -936,7 +1056,7 @@ function commerce_hipay_ws_user_account_field_instances() {
       'module' => 'options',
       'settings' => array(),
       'type' => 'options_select',
-      'weight' => 20,
+      'weight' => 21,
     ),
   );
 
@@ -951,7 +1071,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'text',
         'settings' => array(),
         'type' => 'text_default',
-        'weight' => 9,
+        'weight' => 10,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -968,7 +1088,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'size' => 60,
       ),
       'type' => 'text_textfield',
-      'weight' => 9,
+      'weight' => 10,
     ),
   );
 
@@ -983,7 +1103,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'text',
         'settings' => array(),
         'type' => 'text_default',
-        'weight' => 14,
+        'weight' => 15,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1000,7 +1120,35 @@ function commerce_hipay_ws_user_account_field_instances() {
         'size' => 60,
       ),
       'type' => 'text_textfield',
-      'weight' => 14,
+      'weight' => 15,
+    ),
+  );
+
+  $field_instances['hipay_ws_user_currencies'] = array(
+    'bundle' => 'hipay_user_account',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => 'Additional currencies this Hipay user account can support. For each selected currency a new Hipay user sub-account will be created inside the principal user account.',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'list',
+        'settings' => array(),
+        'type' => 'list_default',
+        'weight' => 6,
+      ),
+    ),
+    'entity_type' => 'commerce_hipay_ws_user_account',
+    'field_name' => 'hipay_ws_user_currencies',
+    'label' => 'Additional currencies',
+    'required' => 0,
+    'settings' => array(),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'options',
+      'settings' => array(),
+      'type' => 'options_select',
+      'weight' => 6,
     ),
   );
 
@@ -1020,7 +1168,7 @@ function commerce_hipay_ws_user_account_field_instances() {
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
     'field_name' => 'hipay_ws_user_currency',
-    'label' => 'Currency',
+    'label' => 'Principal currency',
     'required' => 1,
     'settings' => array(),
     'widget' => array(
@@ -1043,7 +1191,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'text',
         'settings' => array(),
         'type' => 'text_default',
-        'weight' => 10,
+        'weight' => 11,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1060,7 +1208,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'size' => 60,
       ),
       'type' => 'text_textfield',
-      'weight' => 10,
+      'weight' => 11,
     ),
   );
 
@@ -1107,7 +1255,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'text',
         'settings' => array(),
         'type' => 'text_default',
-        'weight' => 17,
+        'weight' => 18,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1124,7 +1272,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'size' => 60,
       ),
       'type' => 'text_textfield',
-      'weight' => 17,
+      'weight' => 18,
     ),
   );
 
@@ -1203,7 +1351,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'list',
         'settings' => array(),
         'type' => 'list_default',
-        'weight' => 7,
+        'weight' => 8,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1216,7 +1364,7 @@ function commerce_hipay_ws_user_account_field_instances() {
       'module' => 'options',
       'settings' => array(),
       'type' => 'options_select',
-      'weight' => 7,
+      'weight' => 8,
     ),
   );
 
@@ -1231,7 +1379,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'list',
         'settings' => array(),
         'type' => 'list_default',
-        'weight' => 6,
+        'weight' => 7,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1244,7 +1392,7 @@ function commerce_hipay_ws_user_account_field_instances() {
       'module' => 'options',
       'settings' => array(),
       'type' => 'options_select',
-      'weight' => 6,
+      'weight' => 7,
     ),
   );
 
@@ -1259,7 +1407,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'text',
         'settings' => array(),
         'type' => 'text_default',
-        'weight' => 16,
+        'weight' => 17,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1276,7 +1424,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'size' => 60,
       ),
       'type' => 'text_textfield',
-      'weight' => 16,
+      'weight' => 17,
     ),
   );
 
@@ -1291,7 +1439,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'text',
         'settings' => array(),
         'type' => 'text_default',
-        'weight' => 15,
+        'weight' => 16,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1308,7 +1456,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'size' => 60,
       ),
       'type' => 'text_textfield',
-      'weight' => 15,
+      'weight' => 16,
     ),
   );
 
@@ -1353,7 +1501,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'text',
         'settings' => array(),
         'type' => 'text_default',
-        'weight' => 8,
+        'weight' => 9,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1370,7 +1518,35 @@ function commerce_hipay_ws_user_account_field_instances() {
         'size' => 60,
       ),
       'type' => 'text_textfield',
-      'weight' => 8,
+      'weight' => 9,
+    ),
+  );
+
+  $field_instances['hipay_ws_user_sub_currency'] = array(
+    'bundle' => 'hipay_user_subaccount',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => '',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'list',
+        'settings' => array(),
+        'type' => 'list_default',
+        'weight' => 1,
+      ),
+    ),
+    'entity_type' => 'commerce_hipay_ws_user_account',
+    'field_name' => 'hipay_ws_user_currency',
+    'label' => 'Currency',
+    'required' => 1,
+    'settings' => array(),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'options',
+      'settings' => array(),
+      'type' => 'options_select',
+      'weight' => 1,
     ),
   );
 
@@ -1389,7 +1565,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'list',
         'settings' => array(),
         'type' => 'list_default',
-        'weight' => 12,
+        'weight' => 13,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1402,7 +1578,7 @@ function commerce_hipay_ws_user_account_field_instances() {
       'module' => 'options',
       'settings' => array(),
       'type' => 'options_select',
-      'weight' => 12,
+      'weight' => 13,
     ),
   );
 
@@ -1434,6 +1610,36 @@ function commerce_hipay_ws_user_account_field_instances() {
     ),
   );
 
+  $field_instances['hipay_ws_user_user_account'] = array(
+    'bundle' => 'hipay_user_subaccount',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => '',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'entityreference',
+        'settings' => array(
+          'link' => FALSE,
+        ),
+        'type' => 'entityreference_label',
+        'weight' => 0,
+      ),
+    ),
+    'entity_type' => 'commerce_hipay_ws_user_account',
+    'field_name' => 'hipay_ws_user_user_account',
+    'label' => 'Principal user account',
+    'required' => 1,
+    'settings' => array(),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'options',
+      'settings' => array(),
+      'type' => 'options_select',
+      'weight' => 0,
+    ),
+  );
+
   $field_instances['hipay_ws_user_vat_number'] = array(
     'bundle' => 'hipay_user_account',
     'default_value' => NULL,
@@ -1445,7 +1651,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'text',
         'settings' => array(),
         'type' => 'text_default',
-        'weight' => 18,
+        'weight' => 19,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1462,7 +1668,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'size' => 60,
       ),
       'type' => 'text_textfield',
-      'weight' => 18,
+      'weight' => 19,
     ),
   );
 
@@ -1475,7 +1681,7 @@ function commerce_hipay_ws_user_account_field_instances() {
  * @see commerce_hipay_ws_user_account_field_bases()
  * @see list_allowed_values()
  */
-function commerce_hipay_ws_allowed_values_user_business_line_id($field, $instance = NULL, $entity_type = NULL, $entity = NULL) {
+function commerce_hipay_ws_allowed_values_user_business_line_id() {
   $return = array();
 
   $hipay_response = commerce_hipay_ws_get_website_business_lines();
@@ -1494,7 +1700,7 @@ function commerce_hipay_ws_allowed_values_user_business_line_id($field, $instanc
  * @see commerce_hipay_ws_user_account_field_bases()
  * @see list_allowed_values()
  */
-function commerce_hipay_ws_allowed_values_user_currency($field, $instance = NULL, $entity_type = NULL, $entity = NULL) {
+function commerce_hipay_ws_allowed_values_user_currency() {
   return drupal_map_assoc(array_keys(commerce_hipay_get_supported_currencies()));
 }
 
@@ -1504,7 +1710,7 @@ function commerce_hipay_ws_allowed_values_user_currency($field, $instance = NULL
  * @see commerce_hipay_ws_user_account_field_bases()
  * @see list_allowed_values()
  */
-function commerce_hipay_ws_allowed_values_user_legal_status($field, $instance = NULL, $entity_type = NULL, $entity = NULL) {
+function commerce_hipay_ws_allowed_values_user_legal_status() {
   return array(
     COMMERCE_HIPAY_WS_LEGAL_STATUS_PERSONAL => t('Personal account'),
     COMMERCE_HIPAY_WS_LEGAL_STATUS_BUSINESS => t('Business account'),
@@ -1517,7 +1723,7 @@ function commerce_hipay_ws_allowed_values_user_legal_status($field, $instance = 
  * @see commerce_hipay_ws_user_account_field_bases()
  * @see list_allowed_values()
  */
-function commerce_hipay_ws_allowed_values_user_locale($field, $instance = NULL, $entity_type = NULL, $entity = NULL) {
+function commerce_hipay_ws_allowed_values_user_locale() {
   return drupal_map_assoc(array_keys(commerce_hipay_get_supported_languages()));
 }
 
@@ -1527,7 +1733,7 @@ function commerce_hipay_ws_allowed_values_user_locale($field, $instance = NULL, 
  * @see commerce_hipay_ws_user_account_field_bases()
  * @see list_allowed_values()
  */
-function commerce_hipay_ws_allowed_values_user_time_zone($field, $instance = NULL, $entity_type = NULL, $entity = NULL) {
+function commerce_hipay_ws_allowed_values_user_time_zone() {
   return drupal_map_assoc(array_keys(system_time_zones()));
 }
 
@@ -1537,7 +1743,7 @@ function commerce_hipay_ws_allowed_values_user_time_zone($field, $instance = NUL
  * @see commerce_hipay_ws_user_account_field_bases()
  * @see list_allowed_values()
  */
-function commerce_hipay_ws_allowed_values_user_title($field, $instance = NULL, $entity_type = NULL, $entity = NULL) {
+function commerce_hipay_ws_allowed_values_user_title() {
   return array(
     COMMERCE_HIPAY_WS_TITLE_MR => t('Mr'),
     COMMERCE_HIPAY_WS_TITLE_MRS => t('Mrs'),

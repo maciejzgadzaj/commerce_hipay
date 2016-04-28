@@ -32,60 +32,28 @@ function commerce_hipay_ws_views_default_views() {
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = '50';
   $handler->display->display_options['style_plugin'] = 'table';
+  /* Relationship: Entity Reference: Referenced Entity */
+  $handler->display->display_options['relationships']['hipay_ws_user_user_account_target_id']['id'] = 'hipay_ws_user_user_account_target_id';
+  $handler->display->display_options['relationships']['hipay_ws_user_user_account_target_id']['table'] = 'field_data_hipay_ws_user_user_account';
+  $handler->display->display_options['relationships']['hipay_ws_user_user_account_target_id']['field'] = 'hipay_ws_user_user_account_target_id';
   /* Field: Hipay Wallet user account: User account ID */
   $handler->display->display_options['fields']['user_account_id']['id'] = 'user_account_id';
   $handler->display->display_options['fields']['user_account_id']['table'] = 'commerce_hipay_ws_user_account';
   $handler->display->display_options['fields']['user_account_id']['field'] = 'user_account_id';
-  $handler->display->display_options['fields']['user_account_id']['label'] = 'Drupal account ID';
+  $handler->display->display_options['fields']['user_account_id']['label'] = 'ID';
   /* Field: Hipay Wallet user account: Hipay user account ID */
   $handler->display->display_options['fields']['hipay_account_id']['id'] = 'hipay_account_id';
   $handler->display->display_options['fields']['hipay_account_id']['table'] = 'commerce_hipay_ws_user_account';
   $handler->display->display_options['fields']['hipay_account_id']['field'] = 'hipay_account_id';
   $handler->display->display_options['fields']['hipay_account_id']['label'] = 'Hipay account ID';
-  /* Field: Hipay Wallet user account: Email */
-  $handler->display->display_options['fields']['hipay_ws_user_email']['id'] = 'hipay_ws_user_email';
-  $handler->display->display_options['fields']['hipay_ws_user_email']['table'] = 'field_data_hipay_ws_user_email';
-  $handler->display->display_options['fields']['hipay_ws_user_email']['field'] = 'hipay_ws_user_email';
-  $handler->display->display_options['fields']['hipay_ws_user_email']['element_type'] = '0';
-  $handler->display->display_options['fields']['hipay_ws_user_email']['element_wrapper_type'] = '0';
-  $handler->display->display_options['fields']['hipay_ws_user_email']['element_default_classes'] = FALSE;
-  $handler->display->display_options['fields']['hipay_ws_user_email']['field_api_classes'] = TRUE;
-  /* Field: Hipay Wallet user account: First name */
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['id'] = 'hipay_ws_user_first_name';
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['table'] = 'field_data_hipay_ws_user_first_name';
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['field'] = 'hipay_ws_user_first_name';
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['label'] = '';
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['exclude'] = TRUE;
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['element_type'] = '0';
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['element_label_colon'] = FALSE;
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['element_wrapper_type'] = '0';
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['element_default_classes'] = FALSE;
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['field_api_classes'] = TRUE;
-  /* Field: Hipay Wallet user account: Last name */
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['id'] = 'hipay_ws_user_last_name';
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['table'] = 'field_data_hipay_ws_user_last_name';
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['field'] = 'hipay_ws_user_last_name';
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['label'] = '';
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['exclude'] = TRUE;
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['element_type'] = '0';
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['element_label_colon'] = FALSE;
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['element_wrapper_type'] = '0';
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['element_default_classes'] = FALSE;
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['field_api_classes'] = TRUE;
-  /* Field: Global: Custom text */
-  $handler->display->display_options['fields']['nothing']['id'] = 'nothing';
-  $handler->display->display_options['fields']['nothing']['table'] = 'views';
-  $handler->display->display_options['fields']['nothing']['field'] = 'nothing';
-  $handler->display->display_options['fields']['nothing']['label'] = 'Name';
-  $handler->display->display_options['fields']['nothing']['alter']['text'] = '[hipay_ws_user_first_name] [hipay_ws_user_last_name]';
-  /* Field: Hipay Wallet user account: Company name */
-  $handler->display->display_options['fields']['hipay_ws_user_company_name']['id'] = 'hipay_ws_user_company_name';
-  $handler->display->display_options['fields']['hipay_ws_user_company_name']['table'] = 'field_data_hipay_ws_user_company_name';
-  $handler->display->display_options['fields']['hipay_ws_user_company_name']['field'] = 'hipay_ws_user_company_name';
-  $handler->display->display_options['fields']['hipay_ws_user_company_name']['element_type'] = '0';
-  $handler->display->display_options['fields']['hipay_ws_user_company_name']['element_wrapper_type'] = '0';
-  $handler->display->display_options['fields']['hipay_ws_user_company_name']['element_default_classes'] = FALSE;
-  $handler->display->display_options['fields']['hipay_ws_user_company_name']['field_api_classes'] = TRUE;
+  /* Field: Hipay Wallet user account: Rendered Hipay Wallet user account */
+  $handler->display->display_options['fields']['rendered_entity']['id'] = 'rendered_entity';
+  $handler->display->display_options['fields']['rendered_entity']['table'] = 'views_entity_commerce_hipay_ws_user_account';
+  $handler->display->display_options['fields']['rendered_entity']['field'] = 'rendered_entity';
+  $handler->display->display_options['fields']['rendered_entity']['label'] = 'Account';
+  $handler->display->display_options['fields']['rendered_entity']['link_to_entity'] = 1;
+  $handler->display->display_options['fields']['rendered_entity']['view_mode'] = 'full';
+  $handler->display->display_options['fields']['rendered_entity']['bypass_access'] = 0;
   /* Field: Hipay Wallet user account: Currency */
   $handler->display->display_options['fields']['hipay_ws_user_currency']['id'] = 'hipay_ws_user_currency';
   $handler->display->display_options['fields']['hipay_ws_user_currency']['table'] = 'field_data_hipay_ws_user_currency';
@@ -100,18 +68,85 @@ function commerce_hipay_ws_views_default_views() {
   $handler->display->display_options['fields']['operations']['field'] = 'operations';
   $handler->display->display_options['fields']['operations']['label'] = '';
   $handler->display->display_options['fields']['operations']['element_label_colon'] = FALSE;
+  /* Filter criterion: Hipay Wallet user account: Type */
+  $handler->display->display_options['filters']['type']['id'] = 'type';
+  $handler->display->display_options['filters']['type']['table'] = 'commerce_hipay_ws_user_account';
+  $handler->display->display_options['filters']['type']['field'] = 'type';
+  $handler->display->display_options['filters']['type']['value'] = array(
+    'hipay_user_account' => 'hipay_user_account',
+  );
 
-  /* Display: Page: Admin */
-  $handler = $view->new_display('page', 'Page: Admin', 'page_user_accounts_admin');
-  $handler->display->display_options['path'] = 'admin/commerce/config/hipay-wallet/user-accounts/list';
+  /* Display: Page: Admin: Accounts */
+  $handler = $view->new_display('page', 'Page: Admin: Accounts', 'page_user_accounts_admin');
+  $handler->display->display_options['path'] = 'admin/commerce/hipay-wallet/user-accounts/list';
   $handler->display->display_options['menu']['type'] = 'default tab';
   $handler->display->display_options['menu']['title'] = 'List';
   $handler->display->display_options['menu']['description'] = 'Find and manage Hipay Wallet user accounts.';
-  $handler->display->display_options['menu']['weight'] = '-10';
+  $handler->display->display_options['menu']['weight'] = '-30';
   $handler->display->display_options['menu']['context'] = 0;
   $handler->display->display_options['menu']['context_only_inline'] = 0;
   $handler->display->display_options['tab_options']['type'] = 'normal';
   $handler->display->display_options['tab_options']['title'] = 'User accounts';
+  $handler->display->display_options['tab_options']['description'] = 'Manage Hipay Wallet user accounts.';
+  $handler->display->display_options['tab_options']['weight'] = '0';
+  $handler->display->display_options['tab_options']['name'] = 'management';
+
+  /* Display: Page: Admin: Sub-accounts */
+  $handler = $view->new_display('page', 'Page: Admin: Sub-accounts', 'page_user_subaccounts_admin');
+  $handler->display->display_options['defaults']['title'] = FALSE;
+  $handler->display->display_options['title'] = 'Hipay Wallet user sub-accounts';
+  $handler->display->display_options['defaults']['fields'] = FALSE;
+  /* Field: Hipay Wallet user account: User account ID */
+  $handler->display->display_options['fields']['user_account_id']['id'] = 'user_account_id';
+  $handler->display->display_options['fields']['user_account_id']['table'] = 'commerce_hipay_ws_user_account';
+  $handler->display->display_options['fields']['user_account_id']['field'] = 'user_account_id';
+  $handler->display->display_options['fields']['user_account_id']['label'] = 'ID';
+  /* Field: Hipay Wallet user account: Hipay user account ID */
+  $handler->display->display_options['fields']['hipay_account_id']['id'] = 'hipay_account_id';
+  $handler->display->display_options['fields']['hipay_account_id']['table'] = 'commerce_hipay_ws_user_account';
+  $handler->display->display_options['fields']['hipay_account_id']['field'] = 'hipay_account_id';
+  $handler->display->display_options['fields']['hipay_account_id']['label'] = 'Hipay account ID';
+  /* Field: Hipay Wallet user account: Rendered Hipay Wallet user account */
+  $handler->display->display_options['fields']['rendered_entity']['id'] = 'rendered_entity';
+  $handler->display->display_options['fields']['rendered_entity']['table'] = 'views_entity_commerce_hipay_ws_user_account';
+  $handler->display->display_options['fields']['rendered_entity']['field'] = 'rendered_entity';
+  $handler->display->display_options['fields']['rendered_entity']['relationship'] = 'hipay_ws_user_user_account_target_id';
+  $handler->display->display_options['fields']['rendered_entity']['label'] = 'Principal account';
+  $handler->display->display_options['fields']['rendered_entity']['link_to_entity'] = 1;
+  $handler->display->display_options['fields']['rendered_entity']['view_mode'] = 'full';
+  $handler->display->display_options['fields']['rendered_entity']['bypass_access'] = 0;
+  /* Field: Hipay Wallet user account: Currency */
+  $handler->display->display_options['fields']['hipay_ws_user_currency']['id'] = 'hipay_ws_user_currency';
+  $handler->display->display_options['fields']['hipay_ws_user_currency']['table'] = 'field_data_hipay_ws_user_currency';
+  $handler->display->display_options['fields']['hipay_ws_user_currency']['field'] = 'hipay_ws_user_currency';
+  $handler->display->display_options['fields']['hipay_ws_user_currency']['element_type'] = '0';
+  $handler->display->display_options['fields']['hipay_ws_user_currency']['element_wrapper_type'] = '0';
+  $handler->display->display_options['fields']['hipay_ws_user_currency']['element_default_classes'] = FALSE;
+  $handler->display->display_options['fields']['hipay_ws_user_currency']['field_api_classes'] = TRUE;
+  /* Field: Hipay Wallet user account: Operations links */
+  $handler->display->display_options['fields']['operations']['id'] = 'operations';
+  $handler->display->display_options['fields']['operations']['table'] = 'commerce_hipay_ws_user_account';
+  $handler->display->display_options['fields']['operations']['field'] = 'operations';
+  $handler->display->display_options['fields']['operations']['label'] = '';
+  $handler->display->display_options['fields']['operations']['element_label_colon'] = FALSE;
+  $handler->display->display_options['defaults']['filter_groups'] = FALSE;
+  $handler->display->display_options['defaults']['filters'] = FALSE;
+  /* Filter criterion: Hipay Wallet user account: Type */
+  $handler->display->display_options['filters']['type']['id'] = 'type';
+  $handler->display->display_options['filters']['type']['table'] = 'commerce_hipay_ws_user_account';
+  $handler->display->display_options['filters']['type']['field'] = 'type';
+  $handler->display->display_options['filters']['type']['value'] = array(
+    'hipay_user_subaccount' => 'hipay_user_subaccount',
+  );
+  $handler->display->display_options['path'] = 'admin/commerce/hipay-wallet/user-subaccounts/list';
+  $handler->display->display_options['menu']['type'] = 'default tab';
+  $handler->display->display_options['menu']['title'] = 'List';
+  $handler->display->display_options['menu']['description'] = 'Find and manage Hipay Wallet user accounts.';
+  $handler->display->display_options['menu']['weight'] = '-20';
+  $handler->display->display_options['menu']['context'] = 0;
+  $handler->display->display_options['menu']['context_only_inline'] = 0;
+  $handler->display->display_options['tab_options']['type'] = 'normal';
+  $handler->display->display_options['tab_options']['title'] = 'User sub-accounts';
   $handler->display->display_options['tab_options']['description'] = 'Manage Hipay Wallet user accounts.';
   $handler->display->display_options['tab_options']['weight'] = '0';
   $handler->display->display_options['tab_options']['name'] = 'management';
@@ -162,16 +197,17 @@ function commerce_hipay_ws_views_default_views() {
     t('‹ previous'),
     t('next ›'),
     t('last »'),
-    t('Drupal account ID'),
+    t('Hipay Wallet user account entity referenced from hipay_ws_user_user_account'),
+    t('ID'),
     t('.'),
     t(','),
     t('Hipay account ID'),
-    t('Email'),
-    t('Name'),
-    t('[hipay_ws_user_first_name] [hipay_ws_user_last_name]'),
-    t('Company name'),
+    t('Account'),
     t('Currency'),
-    t('Page: Admin'),
+    t('Page: Admin: Accounts'),
+    t('Page: Admin: Sub-accounts'),
+    t('Hipay Wallet user sub-accounts'),
+    t('Principal account'),
     t('Page: Store'),
     t('The Hipay Wallet user account has not yet been created for this store.'),
     t('All'),
@@ -209,50 +245,21 @@ function commerce_hipay_ws_views_default_views() {
   $handler->display->display_options['fields']['bank_account_id']['id'] = 'bank_account_id';
   $handler->display->display_options['fields']['bank_account_id']['table'] = 'commerce_hipay_ws_bank_account';
   $handler->display->display_options['fields']['bank_account_id']['field'] = 'bank_account_id';
+  $handler->display->display_options['fields']['bank_account_id']['label'] = 'ID';
   /* Field: Hipay Wallet user account: Hipay user account ID */
   $handler->display->display_options['fields']['hipay_account_id']['id'] = 'hipay_account_id';
   $handler->display->display_options['fields']['hipay_account_id']['table'] = 'commerce_hipay_ws_user_account';
   $handler->display->display_options['fields']['hipay_account_id']['field'] = 'hipay_account_id';
   $handler->display->display_options['fields']['hipay_account_id']['relationship'] = 'hipay_ws_bank_user_account_target_id';
-  /* Field: Hipay Wallet user account: First name */
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['id'] = 'hipay_ws_user_first_name';
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['table'] = 'field_data_hipay_ws_user_first_name';
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['field'] = 'hipay_ws_user_first_name';
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['relationship'] = 'hipay_ws_bank_user_account_target_id';
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['label'] = '';
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['exclude'] = TRUE;
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['element_type'] = '0';
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['element_label_colon'] = FALSE;
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['element_wrapper_type'] = '0';
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['element_default_classes'] = FALSE;
-  $handler->display->display_options['fields']['hipay_ws_user_first_name']['field_api_classes'] = TRUE;
-  /* Field: Hipay Wallet user account: Last name */
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['id'] = 'hipay_ws_user_last_name';
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['table'] = 'field_data_hipay_ws_user_last_name';
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['field'] = 'hipay_ws_user_last_name';
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['relationship'] = 'hipay_ws_bank_user_account_target_id';
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['label'] = '';
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['exclude'] = TRUE;
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['element_type'] = '0';
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['element_label_colon'] = FALSE;
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['element_wrapper_type'] = '0';
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['element_default_classes'] = FALSE;
-  $handler->display->display_options['fields']['hipay_ws_user_last_name']['field_api_classes'] = TRUE;
-  /* Field: Global: Custom text */
-  $handler->display->display_options['fields']['nothing']['id'] = 'nothing';
-  $handler->display->display_options['fields']['nothing']['table'] = 'views';
-  $handler->display->display_options['fields']['nothing']['field'] = 'nothing';
-  $handler->display->display_options['fields']['nothing']['label'] = 'Name';
-  $handler->display->display_options['fields']['nothing']['alter']['text'] = '[hipay_ws_user_first_name] [hipay_ws_user_last_name]';
-  /* Field: Hipay Wallet user account: Company name */
-  $handler->display->display_options['fields']['hipay_ws_user_company_name']['id'] = 'hipay_ws_user_company_name';
-  $handler->display->display_options['fields']['hipay_ws_user_company_name']['table'] = 'field_data_hipay_ws_user_company_name';
-  $handler->display->display_options['fields']['hipay_ws_user_company_name']['field'] = 'hipay_ws_user_company_name';
-  $handler->display->display_options['fields']['hipay_ws_user_company_name']['relationship'] = 'hipay_ws_bank_user_account_target_id';
-  $handler->display->display_options['fields']['hipay_ws_user_company_name']['element_type'] = '0';
-  $handler->display->display_options['fields']['hipay_ws_user_company_name']['element_wrapper_type'] = '0';
-  $handler->display->display_options['fields']['hipay_ws_user_company_name']['element_default_classes'] = FALSE;
-  $handler->display->display_options['fields']['hipay_ws_user_company_name']['field_api_classes'] = TRUE;
+  /* Field: Hipay Wallet user account: Rendered Hipay Wallet user account */
+  $handler->display->display_options['fields']['rendered_entity']['id'] = 'rendered_entity';
+  $handler->display->display_options['fields']['rendered_entity']['table'] = 'views_entity_commerce_hipay_ws_user_account';
+  $handler->display->display_options['fields']['rendered_entity']['field'] = 'rendered_entity';
+  $handler->display->display_options['fields']['rendered_entity']['relationship'] = 'hipay_ws_bank_user_account_target_id';
+  $handler->display->display_options['fields']['rendered_entity']['label'] = 'Hipay user account';
+  $handler->display->display_options['fields']['rendered_entity']['link_to_entity'] = 1;
+  $handler->display->display_options['fields']['rendered_entity']['view_mode'] = 'full';
+  $handler->display->display_options['fields']['rendered_entity']['bypass_access'] = 0;
   /* Field: Hipay Wallet bank account: Bank name */
   $handler->display->display_options['fields']['hipay_ws_bank_name']['id'] = 'hipay_ws_bank_name';
   $handler->display->display_options['fields']['hipay_ws_bank_name']['table'] = 'field_data_hipay_ws_bank_name';
@@ -261,6 +268,15 @@ function commerce_hipay_ws_views_default_views() {
   $handler->display->display_options['fields']['hipay_ws_bank_name']['element_wrapper_type'] = '0';
   $handler->display->display_options['fields']['hipay_ws_bank_name']['element_default_classes'] = FALSE;
   $handler->display->display_options['fields']['hipay_ws_bank_name']['field_api_classes'] = TRUE;
+  /* Field: Hipay Wallet user account: Currency */
+  $handler->display->display_options['fields']['hipay_ws_user_currency']['id'] = 'hipay_ws_user_currency';
+  $handler->display->display_options['fields']['hipay_ws_user_currency']['table'] = 'field_data_hipay_ws_user_currency';
+  $handler->display->display_options['fields']['hipay_ws_user_currency']['field'] = 'hipay_ws_user_currency';
+  $handler->display->display_options['fields']['hipay_ws_user_currency']['relationship'] = 'hipay_ws_bank_user_account_target_id';
+  $handler->display->display_options['fields']['hipay_ws_user_currency']['element_type'] = '0';
+  $handler->display->display_options['fields']['hipay_ws_user_currency']['element_wrapper_type'] = '0';
+  $handler->display->display_options['fields']['hipay_ws_user_currency']['element_default_classes'] = FALSE;
+  $handler->display->display_options['fields']['hipay_ws_user_currency']['field_api_classes'] = TRUE;
   /* Field: Hipay Wallet bank account: Operations links */
   $handler->display->display_options['fields']['operations']['id'] = 'operations';
   $handler->display->display_options['fields']['operations']['table'] = 'commerce_hipay_ws_bank_account';
@@ -270,7 +286,7 @@ function commerce_hipay_ws_views_default_views() {
 
   /* Display: Page: Admin */
   $handler = $view->new_display('page', 'Page: Admin', 'page_bank_accounts_admin');
-  $handler->display->display_options['path'] = 'admin/commerce/config/hipay-wallet/bank-accounts/list';
+  $handler->display->display_options['path'] = 'admin/commerce/hipay-wallet/bank-accounts/list';
   $handler->display->display_options['menu']['type'] = 'default tab';
   $handler->display->display_options['menu']['title'] = 'List';
   $handler->display->display_options['menu']['description'] = 'Find and manage Hipay Wallet bank accounts.';
@@ -328,14 +344,13 @@ function commerce_hipay_ws_views_default_views() {
     t('next ›'),
     t('last »'),
     t('Hipay Wallet user account entity referenced from hipay_ws_bank_user_account'),
-    t('Bank account ID'),
+    t('ID'),
     t('.'),
     t(','),
     t('Hipay user account ID'),
-    t('Name'),
-    t('[hipay_ws_user_first_name] [hipay_ws_user_last_name]'),
-    t('Company name'),
+    t('Hipay user account'),
     t('Bank name'),
+    t('Currency'),
     t('Page: Admin'),
     t('Page: Store'),
     t('The Hipay Wallet bank account has not yet been created for this store.'),

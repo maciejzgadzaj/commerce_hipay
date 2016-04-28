@@ -10,6 +10,7 @@ class commerce_hipay_ws_user_account_handler_operations_field extends views_hand
     parent::construct();
 
     $this->additional_fields['user_account_id'] = 'user_account_id';
+    $this->additional_fields['type'] = 'type';
   }
 
   function query() {
@@ -18,7 +19,8 @@ class commerce_hipay_ws_user_account_handler_operations_field extends views_hand
   }
 
   function render($values) {
-    $links = menu_contextual_links('commerce_hipay_ws_user_account', 'admin/commerce/config/hipay-wallet/user-accounts', array($this->get_value($values, 'user_account_id')));
+    $account_path = ($values->commerce_hipay_ws_user_account_type == 'hipay_user_subaccount') ? 'user-subaccounts' : 'user-accounts';
+    $links = menu_contextual_links('commerce_hipay_ws_user_account', 'admin/commerce/hipay-wallet/' . $account_path, array($this->get_value($values, 'user_account_id')));
 
     if (!empty($links)) {
       return theme('links', array('links' => $links, 'attributes' => array('class' => array('links', 'inline', 'operations'))));

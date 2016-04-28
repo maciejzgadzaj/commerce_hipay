@@ -41,6 +41,6 @@ class commerce_hipay_ws_user_account_handler_link_field extends views_handler_fi
     $text = !empty($this->options['text']) ? $this->options['text'] : t('view');
     $user_account_id = $values->{$this->aliases['user_account_id']};
 
-    return l($text, 'admin/commerce/config/hipay-wallet/user-accounts/' . $user_account_id);
+    return l($text, 'admin/commerce/hipay-wallet/user-accounts/' . $user_account_id);
   }
 }
