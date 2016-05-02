@@ -429,9 +429,7 @@ function commerce_hipay_ws_bank_account_field_bases() {
           ),
         ),
         'sort' => array(
-          'direction' => 'ASC',
-          'field' => 'hipay_ws_user_email:value',
-          'type' => 'field',
+          'type' => 'none',
         ),
         'target_bundles' => array(),
       ),
