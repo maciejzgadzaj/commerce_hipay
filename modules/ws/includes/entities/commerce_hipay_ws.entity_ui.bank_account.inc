@@ -144,6 +144,54 @@ function commerce_hipay_ws_bank_account_form($form, &$form_state, $bank_account)
  * Validation handler for bpost_accounting_reference_form form.
  */
 function commerce_hipay_ws_bank_account_form_validate($form, &$form_state) {
+  $bank_account = $form_state['values']['commerce_hipay_ws_bank_account'];
+
+  // Validate that the bank account for this user account does not exist yet.
+  if (
+    ($existing_bank_accounts = commerce_hipay_ws_user_account_load_bank_accounts($form_state['values']['hipay_ws_bank_user_account'][LANGUAGE_NONE][0]['target_id']))
+    && !in_array($bank_account->bank_account_id, array_keys($existing_bank_accounts))
+  ) {
+    form_set_error('hipay_ws_bank_user_account', t('A bank account for the selected user account already exists.'));
+  }
+
+  // Validate other required fields based on the country the bank account
+  // is to be created in.
+  if (!$response = commerce_hipay_ws_get_bank_fields($form_state['values']['hipay_ws_bank_address'][LANGUAGE_NONE][0]['country'])) {
+    form_set_error('hipay_ws_bank_address[country', t('Error fetching required bank fields for country !country from Hipay API.', array(
+      '!country' => $form_state['values']['hipay_ws_bank_address'][LANGUAGE_NONE][0]['country'],
+    )));
+  }
+  if (!empty($response['fields']['item'])) {
+    // If only the bank country element is required, the required element
+    // returned in the response will not be an array - so we need to convert
+    // it into the array ourselves.
+    if (!empty($response['fields']['item']['code'])) {
+      $response['fields']['item'] = array($response['fields']['item']);
+    }
+    // Mapping between Hipay API elements and our elements.
+    $field_mapping = commerce_hipay_ws_bank_account_get_field_mapping();
+    // Validate we have all required values.
+    foreach ($response['fields']['item'] as $item) {
+      $required_element = $field_mapping[$item['code']];
+      if (empty($form_state['values'][$required_element][LANGUAGE_NONE][0]['value']) && empty($form_state['values']['hipay_ws_bank_address'][LANGUAGE_NONE][0][$required_element])) {
+        // Get field title for displaying from the relevant form element.
+        $field_title = (!empty($form[$required_element][LANGUAGE_NONE][0]['#title'])) ? $form[$required_element][LANGUAGE_NONE][0]['#title'] : $required_element;
+
+        // We need custom handling for the address fields - as form elements
+        // are nested deeper in the structure.
+        // @TODO: Nice $field_title value.
+        if (isset($form_state['values']['hipay_ws_bank_address'][LANGUAGE_NONE][0][$required_element])) {
+          $required_element = 'hipay_ws_bank_address][und][0][' . $required_element;
+        }
+
+        form_set_error($required_element, t('!field_title field is required for country !country.', array(
+          '!field_title' => $field_title,
+          '!country' => $form_state['values']['hipay_ws_bank_address'][LANGUAGE_NONE][0]['country'],
+        )));
+      }
+    }
+  }
+
   // Validate the 'Owned by' field.
   if (!empty($form_state['values']['name']) && !($account = user_load_by_name($form_state['values']['name']))) {
     // The use of empty() is mandatory in the context of usernames as the empty
@@ -212,4 +260,25 @@ function commerce_hipay_ws_bank_account_delete_form_submit($form, &$form_state) 
 
   drupal_set_message(t('The bank account has been deleted.'));
   $form_state['redirect'] = 'admin/commerce/hipay-wallet/bank-accounts';
+}
+
+/**
+ * Returns mapping between Hipay bank API parameters and Drupal field names.
+ *
+ * @return array
+ *   The mapping between Hipay bank API parameters and Drupal field names.
+ */
+function commerce_hipay_ws_bank_account_get_field_mapping() {
+  return array(
+    'bankName' => 'hipay_ws_bank_name',
+    'bankAddress' => 'thoroughfare',
+    'bankZipCode' => 'postal_code',
+    'bankCity' => 'locality',
+    'bankCountry' => 'country',
+    'iban' => 'hipay_ws_bank_iban',
+    'swift' => 'hipay_ws_bank_swift',
+    'acct_num' => '	hipay_ws_bank_account_number',
+    'aba_num' => 'hipay_ws_bank_aba_number',
+    'transit_num' => 'hipay_ws_bank_transit_number',
+  );
 }
