@@ -88,6 +88,10 @@ function commerce_hipay_ws_bank_account_form($form, &$form_state, $bank_account)
   // Add the field related form elements.
   field_attach_form('commerce_hipay_ws_bank_account', $bank_account, $form, $form_state);
 
+  // Bank address country must be required, so that we can call Hipay API
+  // to check which other bank fields are required for this country.
+  $form['hipay_ws_bank_address'][LANGUAGE_NONE][0]['country']['#required'] = TRUE;
+
   $form['additional_settings'] = array(
     '#type' => 'vertical_tabs',
     '#weight' => 99,
