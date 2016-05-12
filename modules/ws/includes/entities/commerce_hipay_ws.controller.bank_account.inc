@@ -43,32 +43,6 @@ class CommerceHipayWSBankAccountEntityController extends EntityAPIController {
       }
     }
 
-    // Invoke hook_entity_presave().
-    module_invoke_all('entity_presave', $entity, 'commerce_hipay_ws_bank_account');
-    // The 'primary_keys' argument determines whether this will be an insert
-    // or an update. So if the entity already has an ID, we'll specify
-    // basic_id as the key.
-    $primary_keys = !empty($entity->bank_account_id) ? 'bank_account_id' : array();
-    // Write out the entity record.
-    drupal_write_record('commerce_hipay_ws_bank_account', $entity, $primary_keys);
-    // We're going to invoke either hook_entity_update() or
-    // hook_entity_insert(), depending on whether or not this is a
-    // new entity. We'll just store the name of hook_entity_insert()
-    // and change it if we need to.
-    $invocation = 'entity_insert';
-    // Now we need to either insert or update the fields which are
-    // attached to this entity. We use the same primary_keys logic
-    // to determine whether to update or insert, and which hook we
-    // need to invoke.
-    if (empty($primary_keys)) {
-      field_attach_insert('commerce_hipay_ws_bank_account', $entity);
-    }
-    else {
-      field_attach_update('commerce_hipay_ws_bank_account', $entity);
-      $invocation = 'entity_update';
-    }
-    // Invoke either hook_entity_update() or hook_entity_insert().
-    module_invoke_all($invocation, $entity, 'commerce_hipay_ws_bank_account');
-    return $entity;
+    return parent::save($entity);
   }
 }
