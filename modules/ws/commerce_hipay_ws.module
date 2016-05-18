@@ -15,6 +15,7 @@ require_once 'includes/entities/commerce_hipay_ws.entity.bank_account.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity_ui.user_account.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity_ui.bank_account.inc';
 require_once 'includes/api/commerce_hipay_ws.api.user_account.inc';
+require_once 'includes/api/commerce_hipay_ws.api.bank_account.inc';
 
 /**
  * Implements hook_entity_info().
