@@ -45,6 +45,7 @@ function commerce_hipay_ws_website_settings_form($form, $form_state) {
   $form['commerce_hipay_ws_website_contact_email'] = array(
     '#type' => 'textfield',
     '#title' => t('Website contact email'),
+    '#description' => t('Contact email displayed on payment page.'),
     '#default_value' => variable_get('commerce_hipay_ws_website_contact_email', variable_get('site_mail')),
     '#required' => TRUE,
   );
@@ -59,7 +60,16 @@ function commerce_hipay_ws_website_settings_form($form, $form_state) {
   $form['commerce_hipay_ws_website_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Website URL'),
-    '#default_value' => $GLOBALS['base_url'],
+    '#description' => t('Full HTTP URL of website (http://www.merchant.com).'),
+    '#default_value' => variable_get('commerce_hipay_ws_website_url', $GLOBALS['base_url']),
+    '#required' => TRUE,
+  );
+
+  $form['commerce_hipay_ws_website_merchant_password'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Website merchant password'),
+    '#description' => t('Merchant password to use with MAPI KIT on payment buttons only.'),
+    '#default_value' => variable_get('commerce_hipay_ws_website_merchant_password'),
     '#required' => TRUE,
   );
 
