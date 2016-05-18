@@ -200,7 +200,16 @@ function commerce_hipay_ws_bank_account_title($entity) {
  */
 function commerce_hipay_ws_bank_account_label($entity, $entity_type) {
   $wrapper = entity_metadata_wrapper('commerce_hipay_ws_bank_account', $entity);
-  return $wrapper->hipay_ws_bank_name->value();
+  $label_sources = array(
+    'hipay_ws_bank_name',
+    'hipay_ws_bank_swift',
+    'hipay_ws_bank_transit_number',
+  );
+  foreach ($label_sources as $label_source) {
+    if ($label = $wrapper->$label_source->value()) {
+      return $label;
+    }
+  }
 }
 
 /**

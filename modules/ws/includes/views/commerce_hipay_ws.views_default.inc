@@ -260,14 +260,14 @@ function commerce_hipay_ws_views_default_views() {
   $handler->display->display_options['fields']['rendered_entity']['link_to_entity'] = 1;
   $handler->display->display_options['fields']['rendered_entity']['view_mode'] = 'full';
   $handler->display->display_options['fields']['rendered_entity']['bypass_access'] = 0;
-  /* Field: Hipay Wallet bank account: Bank name */
-  $handler->display->display_options['fields']['hipay_ws_bank_name']['id'] = 'hipay_ws_bank_name';
-  $handler->display->display_options['fields']['hipay_ws_bank_name']['table'] = 'field_data_hipay_ws_bank_name';
-  $handler->display->display_options['fields']['hipay_ws_bank_name']['field'] = 'hipay_ws_bank_name';
-  $handler->display->display_options['fields']['hipay_ws_bank_name']['element_type'] = '0';
-  $handler->display->display_options['fields']['hipay_ws_bank_name']['element_wrapper_type'] = '0';
-  $handler->display->display_options['fields']['hipay_ws_bank_name']['element_default_classes'] = FALSE;
-  $handler->display->display_options['fields']['hipay_ws_bank_name']['field_api_classes'] = TRUE;
+  /* Field: Hipay Wallet bank account: Rendered Hipay Wallet bank account */
+  $handler->display->display_options['fields']['rendered_entity_1']['id'] = 'rendered_entity_1';
+  $handler->display->display_options['fields']['rendered_entity_1']['table'] = 'views_entity_commerce_hipay_ws_bank_account';
+  $handler->display->display_options['fields']['rendered_entity_1']['field'] = 'rendered_entity';
+  $handler->display->display_options['fields']['rendered_entity_1']['label'] = 'Bank';
+  $handler->display->display_options['fields']['rendered_entity_1']['link_to_entity'] = 1;
+  $handler->display->display_options['fields']['rendered_entity_1']['view_mode'] = 'full';
+  $handler->display->display_options['fields']['rendered_entity_1']['bypass_access'] = 0;
   /* Field: Hipay Wallet user account: Currency */
   $handler->display->display_options['fields']['hipay_ws_user_currency']['id'] = 'hipay_ws_user_currency';
   $handler->display->display_options['fields']['hipay_ws_user_currency']['table'] = 'field_data_hipay_ws_user_currency';
@@ -349,7 +349,7 @@ function commerce_hipay_ws_views_default_views() {
     t(','),
     t('Hipay user account ID'),
     t('Hipay user account'),
-    t('Bank name'),
+    t('Bank'),
     t('Currency'),
     t('Page: Admin'),
     t('Page: Store'),
