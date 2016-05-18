@@ -184,6 +184,39 @@ function commerce_hipay_ws_views_api() {
 }
 
 /**
+ * Implements hook_entity_insert().
+ */
+function commerce_hipay_ws_entity_insert($entity, $type) {
+  // Create new user account in Hipay Wallet.
+  if ($type == 'commerce_hipay_ws_user_account') {
+    if (variable_get('commerce_hipay_ws_create_immediately', COMMERCE_HIPAY_WS_CREATE_ACCOUNTS_IMMEDIATELY)) {
+      $hipay_user_account = commerce_hipay_ws_user_account_load($entity->user_account_id);
+      $response = commerce_hipay_ws_api_user_account_create($hipay_user_account);
+      if (!isset($response['code']) || $response['code'] !== 0) {
+        drupal_set_message(t('Error creating a new user account in Hipay Wallet: @error.', array('@error' => $response['description'])), 'error');
+      }
+      else {
+        drupal_set_message(t('User account created in Hipay Wallet.'));
+      }
+    }
+  }
+
+  // Create new bank account in Hipay Wallet.
+  if ($type == 'commerce_hipay_ws_bank_account') {
+    if (variable_get('commerce_hipay_ws_create_immediately', COMMERCE_HIPAY_WS_CREATE_ACCOUNTS_IMMEDIATELY)) {
+      $hipay_bank_account = commerce_hipay_ws_bank_account_load($entity->bank_account_id);
+      $response = commerce_hipay_ws_api_bank_account_create($hipay_bank_account);
+      if (!isset($response['code']) || $response['code'] !== 0) {
+        drupal_set_message(t('Error creating a new bank account in Hipay Wallet: @error.', array('@error' => $response['description'])), 'error');
+      }
+      else {
+        drupal_set_message(t('Bank account created in Hipay Wallet.'));
+      }
+    }
+  }
+}
+
+/**
  * Returns default settings for the Hipay Wallet payment method.
  *
  * @see commerce_hipay_ws_settings_form()
