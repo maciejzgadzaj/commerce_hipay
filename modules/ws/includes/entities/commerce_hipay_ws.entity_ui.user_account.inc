@@ -29,6 +29,25 @@ function commerce_hipay_ws_user_account_menu() {
     'file' => 'includes/entities/commerce_hipay_ws.entity_ui.user_account.inc',
   );
 
+  $items['admin/commerce/hipay-wallet/user-accounts/%commerce_hipay_ws_user_account/view/entity'] = array(
+    'title' => 'local',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'file' => 'includes/entities/commerce_hipay_ws.entity_ui.user_account.inc',
+  );
+
+  $items['admin/commerce/hipay-wallet/user-accounts/%commerce_hipay_ws_user_account/view/hipay'] = array(
+    'title' => 'Hipay Wallet',
+    'page callback' => 'commerce_hipay_ws_user_account_view_hipay_info',
+    'page arguments' => array(4),
+    'access arguments' => array('view any commerce_hipay_ws_user_account entity'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -5,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'file' => 'includes/entities/commerce_hipay_ws.entity_ui.user_account.inc',
+  );
+
   $items['admin/commerce/hipay-wallet/user-accounts/%commerce_hipay_ws_user_account/edit'] = array(
     'title' => 'edit',
     'page callback' => 'drupal_get_form',
@@ -104,10 +123,161 @@ function commerce_hipay_ws_user_account_menu() {
 }
 
 /**
- * Menu callback to display an entity.
+ * Menu callback: displays entity information.
+ *
+ * @param object $entity
+ *   An entity to render.
+ * @param string $view_mode
+ *   A view mode as used by this entity type, e.g. 'full', 'teaser'...
+ *
+ * @return
+ *   The renderable array, keyed by the entity type and by entity identifiers,
+ *   for which the entity name is used if existing - see entity_id(). If there
+ *   is no information on how to view an entity, FALSE is returned.
+ *
+ * @see commerce_hipay_ws_user_account_menu()
  */
 function commerce_hipay_ws_user_account_view($entity, $view_mode = 'full') {
   return entity_view('commerce_hipay_ws_user_account', array($entity->user_account_id => $entity), $view_mode, NULL, TRUE);
+}
+
+/**
+ * Menu callback: fetches and displays Hipay User Account information.
+ *
+ * @param object $entity
+ *   An entity to render.
+ * @param string $view_mode
+ *   A view mode as used by this entity type, e.g. 'full', 'teaser'...
+ *
+ * @return mixed
+ *   A renderable array, or a rendered HTML.
+ *
+ * @see commerce_hipay_ws_user_account_menu()
+ */
+function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'full') {
+//  dpm($entity, '$entity');
+
+  if (!empty($entity->hipay_account_id)) {
+    $return = '';
+
+    // Fetch: getAccountInfos.
+    $parameters = array('accountId' => $entity->hipay_account_id);
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_ACCOUNT_INFOS, $parameters);
+//    dpm($response, 'getAccountInfos');
+    if (isset($response['code']) && $response['code'] === 0) {
+
+      // Display: getAccountInfos.
+      $return .= '<p><strong>getAccountInfos</strong></p>';
+      $exclude = array('code', 'description', 'websites', 'subAccounts');
+      $header = $row = array();
+      foreach (array_diff_key($response, array_flip($exclude)) as $key => $value) {
+        $header[$key] = check_plain($key);
+        $row[$key] = check_plain($value);
+      }
+      $return .= theme('table', array(
+        'header' => $header,
+        'rows' => array($row)
+      ));
+
+      // Display: getAccountInfos: websites.
+      if (!empty($response['websites'])) {
+        $return .= '<p><strong>getAccountInfos: websites</strong></p>';
+        $header = $rows = array();
+        foreach ($response['websites'] as $item) {
+          $row = array();
+          foreach ($item as $key => $value) {
+            $header[$key] = check_plain($key);
+            $row[$key] = check_plain($value);
+          }
+          $rows[] = $row;
+        }
+        $return .= theme('table', array(
+          'header' => $header,
+          'rows' => array($row)
+        ));
+      }
+
+      // @TODO: Display: getAccountInfos: subAccounts.
+      if (!empty($response['subAccounts'])) {
+        $return .= '<p><strong>getAccountInfos: subAccounts</strong></p>';
+      }
+    }
+
+    // Fetch: getBalance.
+    $parameters = array('wsSubAccountId' => $entity->hipay_account_id);
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_BALANCE, $parameters);
+
+    // Display: getBalance.
+    if (!empty($response['balances'])) {
+      $return .= '<p><strong>getBalance</strong></p>';
+      $header = $rows = array();
+      foreach ($response['balances'] as $item) {
+        $row = array();
+        foreach ($item as $key => $value) {
+          $header[$key] = check_plain($key);
+          $row[$key] = check_plain($value);
+        }
+        $rows[] = $row;
+      }
+      $return .= theme('table', array('header' => $header, 'rows' => array($row)));
+    }
+
+    // Fetch: getTransactions.
+    $parameters = array(
+      'wsSubAccountId' => $entity->hipay_account_id,
+      'startDate' => date('Y-m-d H:i:s', $entity->created),
+      'endDate' => date('Y-m-d H:i:s', REQUEST_TIME),
+      'pageNumber' => 1,
+    );
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_TRANSACTIONS, $parameters);
+//    dpm($response, 'getTransactions');
+
+    // @TODO: Display: getTransactions.
+    if (!empty($response['transactions'])) {
+      $return .= '<p><strong>getTransactions</strong></p>';
+    }
+
+    return $return;
+  }
+  else {
+    return drupal_get_form('commerce_hipay_ws_user_account_view_hipay_create_form', $entity);
+  }
+}
+
+/**
+ * Returns a form to create a Hipay User Account if it doesn't exist yet.
+ *
+ * @see commerce_hipay_ws_user_account_view_hipay_info()
+ * @see commerce_hipay_ws_user_account_view_hipay_create_form_submit()
+ */
+function commerce_hipay_ws_user_account_view_hipay_create_form($form, &$form_state, $entity) {
+  $form_state['commerce_hipay_ws_user_account'] = $entity;
+
+  $form['info'] = array(
+    '#markup' => '<p>' . t('The user account has not yet been created for this entity in Hipay Wallet.') . '</p>',
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Create user account in Hipay Wallet'),
+  );
+
+  return $form;
+}
+
+/**
+ * Form submit handler: created a Hipay User Account for an entity.
+ *
+ * @see commerce_hipay_ws_user_account_view_hipay_create_form()
+ */
+function commerce_hipay_ws_user_account_view_hipay_create_form_submit($form, $form_state) {
+  $user_account = $form_state['commerce_hipay_ws_user_account'];
+
+  $response = commerce_hipay_ws_api_user_account_create($user_account);
+
+  if ($response['code'] !== 0) {
+    drupal_set_message(t('Error creating a new user account in Hipay Wallet: @error.', array('@error' => $response['description'])), 'error');
+  }
 }
 
 /**
