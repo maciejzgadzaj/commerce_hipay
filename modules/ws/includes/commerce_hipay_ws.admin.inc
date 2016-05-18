@@ -1,5 +1,28 @@
 <?php
 
+/**
+ * Menu callback: admin settings form.
+ *
+ * @see commerce_hipay_ws_menu()
+ */
+function commerce_hipay_ws_admin_settings_form($form, $form_state) {
+  $form = array();
+
+  $form['commerce_hipay_ws_create_immediately'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Create Hipay accounts immediately'),
+    '#description' => t('When enabled, the relevant Hipay Wallet API to create a user or bank account will be called immediately after the relevant entity is created in Drupal.'),
+    '#default_value' => variable_get('commerce_hipay_ws_create_immediately', COMMERCE_HIPAY_WS_CREATE_ACCOUNTS_IMMEDIATELY),
+  );
+
+  return system_settings_form($form);
+}
+
+/**
+ * Menu callback: admin website settings form.
+ *
+ * @see commerce_hipay_ws_menu()
+ */
 function commerce_hipay_ws_website_settings_form($form, $form_state) {
   $form = array(
     '#prefix' => '<div id="hipay_ws_website_settings">',

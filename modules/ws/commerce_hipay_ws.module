@@ -74,6 +74,15 @@ function commerce_hipay_ws_menu() {
     'file path' => drupal_get_path('module', 'system'),
   );
 
+  $items['admin/commerce/hipay-wallet/settings'] = array(
+    'title' => 'Settings',
+    'description' => 'Manage Hipay Wallet configuration.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('commerce_hipay_ws_admin_settings_form'),
+    'access arguments' => array('administer Hipay Wallet configuration'),
+    'file' => 'includes/commerce_hipay_ws.admin.inc',
+  );
+
   $items['admin/commerce/hipay-wallet/website'] = array(
     'title' => 'Website configuration',
     'description' => 'Manage Hipay Wallet website configuration.',
