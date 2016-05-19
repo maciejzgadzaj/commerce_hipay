@@ -1,6 +1,31 @@
 <?php
 
 /**
+ * Implements hook_requirements().
+ */
+function commerce_hipay_ws_requirements($phase) {
+  $t = get_t();
+  $requirements = array();
+
+  // Verify that the SoapClient class is found.
+  $has_soap = class_exists('SoapClient');
+
+  $requirements['commerce_hipay_ws_soap'] = array(
+    'title' => $t('Hipay WS: SoapClient'),
+    'value' => $has_soap ? $t('SoapClient class found') : $t('SoapClient class not found'),
+  );
+
+  if (!$has_soap) {
+    $requirements['commerce_hipay_ws_soap'] += array(
+      'severity' => REQUIREMENT_ERROR,
+      'description' => $t("Hipay WS requires the PHP <a href='!soap_url'>SoapClient</a> extension.", array('!soap_url' => 'http://php.net/manual/en/soap.setup.php')),
+    );
+  }
+
+  return $requirements;
+}
+
+/**
  * Implements hook_schema().
  */
 function commerce_hipay_ws_schema() {
