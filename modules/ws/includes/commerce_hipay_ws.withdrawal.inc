@@ -47,7 +47,7 @@ function commerce_hipay_ws_api_withdrawal($account_id, $amount, $currency_code, 
   );
 
   // Call Hipay API.
-  if (!$response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_WITHDRAWAL, $parameters)) {
+  if (!$response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_WITHDRAWAL, $parameters)) {
     watchdog('commerce_hipay_ws', 'Withdrawal: error when calling Hipay API', array(), WATCHDOG_ERROR);
     return FALSE;
   }

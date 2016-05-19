@@ -15,10 +15,10 @@
  *   An array of parameters being sent to Hipay Wallet API.
  * @param string $resource
  *   An API resource which the request is being sent to.
- * @param array $payment_method_instance
- *   The payment method instance used for the operation.
+ * @param array $context
+ *   An associative array containing additional information about the request.
  */
-function hook_commerce_hipay_ws_api_request_alter(&$parameters, $resource, $payment_method_instance) {
+function hook_commerce_hipay_ws_api_request_alter(&$parameters, $resource, $context) {
   // No example.
 }
 
@@ -31,10 +31,10 @@ function hook_commerce_hipay_ws_api_request_alter(&$parameters, $resource, $paym
  *   An array of parameters being sent to Hipay Wallet API.
  * @param string $resource
  *   An API resource which the request is being sent to.
- * @param array $payment_method_instance
- *   The payment method instance used for the operation.
+ * @param array $context
+ *   An associative array containing additional information about the request.
  */
-function hook_commerce_hipay_ws_api_response($response, $parameters, $resource, $payment_method_instance) {
+function hook_commerce_hipay_ws_api_response($response, $parameters, $resource, $context) {
   // No example.
 }
 

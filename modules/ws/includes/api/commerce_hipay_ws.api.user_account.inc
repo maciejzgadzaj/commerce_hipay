@@ -48,7 +48,7 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
       'entity' => $payment_method_instance['settings']['entity'],
     ),
     'userAccountDetails' => array(
-      'address' => $address['thoroughfare'],
+      'address' => commerce_hipay_ws_combine_address_lines($address, array('thoroughfare', 'premise')),
       'zipCode' => $address['postal_code'],
       'city' => $address['locality'],
       'country' => $address['country'],
@@ -97,8 +97,12 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
     );
   }
 
+  $context = array(
+    'hipay_user_account' => $account,
+  );
+
   // Perform the call to Hipay Wallet API.
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_CREATE_FULL_USER_ACCOUNT, $parameters);
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_CREATE_FULL_USER_ACCOUNT, $parameters, $context);
 
   // If everything went fine, add new Hipay user account data to the entity.
   if (isset($response['code']) && $response['code'] === 0) {

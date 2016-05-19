@@ -64,7 +64,7 @@ function commerce_hipay_ws_api_transfer($sender_account_id, $recipient_account_i
   );
 
   // Call Hipay API.
-  if (!$response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_TRANSFER, $parameters)) {
+  if (!$response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_TRANSFER, $parameters)) {
     watchdog('commerce_hipay_ws', 'Transfer: error when calling Hipay API', array(), WATCHDOG_ERROR);
     return FALSE;
   }

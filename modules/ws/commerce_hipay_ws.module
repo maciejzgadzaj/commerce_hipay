@@ -14,6 +14,7 @@ require_once 'includes/entities/commerce_hipay_ws.entity.user_account.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity.bank_account.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity_ui.user_account.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity_ui.bank_account.inc';
+require_once 'includes/api/commerce_hipay_ws.api.inc';
 require_once 'includes/api/commerce_hipay_ws.api.user_account.inc';
 require_once 'includes/api/commerce_hipay_ws.api.bank_account.inc';
 
@@ -268,7 +269,7 @@ function commerce_hipay_ws_settings_form($settings = array()) {
     '#title' => t('Environment'),
     '#options' => array(
       COMMERCE_HIPAY_WS_TEST => t('Test - process test operations on the test account'),
-      COMMERCE_HIPAY_WS_PRODUCTION => t('Production - process real operations on the production account'),
+      COMMERCE_HIPAY_WS_PROD => t('Production - process real operations on the production account'),
     ),
     '#default_value' => $settings['endpoint'],
     '#required' => TRUE,
@@ -345,7 +346,7 @@ function commerce_hipay_ws_settings_form($settings = array()) {
     $rows = array();
 
     // Balance.
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_BALANCE, array());
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BALANCE);
     if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
       $rows[] = array(
         t('Account ID'),
@@ -380,7 +381,7 @@ function commerce_hipay_ws_settings_form($settings = array()) {
   // Check current bank information status only if API username and password
   // have already been provided - otherwise we won't be able to make API call.
   if (!empty($settings['api_password'])) {
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_STATUS);
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS);
     if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
       // Display current status of bank account information.
       $form['bank_account']['current_status'] = array(
@@ -406,7 +407,7 @@ function commerce_hipay_ws_settings_form($settings = array()) {
         // fetch all the information and display them in the form, overriding
         // whatever settings has been saved locally before.
         if ($response['status'] != COMMERCE_HIPAY_WS_ACCOUNT_BANK_INFO_VALIDATED) {
-          $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_CHECK, array());
+          $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_CHECK);
           if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
             // Alter existing payment method instance settings.
             $settings['bank_account'] = $response;
@@ -590,7 +591,7 @@ function commerce_hipay_ws_settings_form_submit(&$form, &$form_state) {
   }
 
   // Do the API call.
-  if (!$response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_REGISTER, $bank_account)) {
+  if (!$response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_REGISTER, $bank_account)) {
     drupal_set_message(t('There was an error calling Hipay Wallet API. See log for more details.'), 'error');
       return FALSE;
   }
@@ -626,24 +627,24 @@ function commerce_hipay_ws_soap($resource) {
 }
 
 /**
- * Performs a call to Hipay Wallet SOAP API.
+ * Performs a call to Hipay Wallet API.
  *
  * @param string $resource
- *   Hipay SOAP API resource.
+ *   Hipay Wallet API resource.
  * @param array $request_data
- *   A string of parameters to be sent to Hipay TPP API.
- * @param array $payment_method
- *   The payment method being used.
+ *   A string of parameters to be sent to Hipay Wallet API.
+ * @param array $context
+ *   An associative array containing additional information about the request.
  *
  * @return array
- *   An array of Hipay TPP API response parameters.
+ *   An array of Hipay Wallet API response parameters.
  */
-function commerce_hipay_ws_api_request($resource, $parameters = array(), $payment_method_instance = NULL) {
+function commerce_hipay_ws_api_request($resource, $parameters = array(), $context = array()) {
   // If no specific payment method instance was requested in function parameter,
   // load and use the first active 'commerce_hipay_ws' payment method instance.
-  if (empty($payment_method_instance)) {
+  if (empty($context['payment_method_instance'])) {
     if ($instances = commerce_hipay_ws_payment_method_instances('commerce_hipay_ws', TRUE)) {
-      $payment_method_instance = reset($instances);
+      $context['payment_method_instance'] = reset($instances);
     }
     // Return if Hipay Wallet payment method instance has not been enabled yet.
     else {
@@ -653,7 +654,7 @@ function commerce_hipay_ws_api_request($resource, $parameters = array(), $paymen
   }
 
   // Return if Hipay Wallet payment method instance has not been configured yet.
-  if (empty($payment_method_instance['settings'])) {
+  if (empty($context['payment_method_instance']['settings'])) {
     watchdog('commerce_hipay_ws', 'Unable to call Hipay API: payment method instance is not configured.', array(), WATCHDOG_ERROR);
     return FALSE;
   }
@@ -661,18 +662,21 @@ function commerce_hipay_ws_api_request($resource, $parameters = array(), $paymen
   // Add API access credentials to API call parameters, allowing them
   // to be overriden by parameters provided in the function call.
   $parameters = array_replace_recursive(array(
-    'wsLogin' => $payment_method_instance['settings']['api_username'],
-    'wsPassword' => $payment_method_instance['settings']['api_password'],
-    'entity' => $payment_method_instance['settings']['entity'],
-    'locale' => $payment_method_instance['settings']['locale'],
+    'wsLogin' => $context['payment_method_instance']['settings']['api_username'],
+    'wsPassword' => $context['payment_method_instance']['settings']['api_password'],
+    'entity' => $context['payment_method_instance']['settings']['entity'],
+    'locale' => $context['payment_method_instance']['settings']['locale'],
   ), $parameters);
 
   // Allow other modules to alter the $parameters array.
-  drupal_alter('commerce_hipay_ws_api_request', $parameters, $resource, $payment_method_instance);
+  drupal_alter('commerce_hipay_ws_api_request', $parameters, $resource, $context);
+
+  $api_type = commerce_hipay_ws_get_api_type($resource);
 
   // Log the request data if request logging is enabled.
-  if (!empty($payment_method_instance['settings']['api_logging']['request'])) {
-    watchdog('commerce_hipay_ws', '@resource: request: !parameters', array(
+  if (!empty($context['payment_method_instance']['settings']['api_logging']['request'])) {
+    watchdog('commerce_hipay_ws', '@api_type @resource: request: !parameters', array(
+      '@api_type' => $api_type,
       '@resource' => $resource,
       '!parameters' => '<pre>' . var_export($parameters, TRUE) . '</pre>',
     ), WATCHDOG_DEBUG);
@@ -686,8 +690,46 @@ function commerce_hipay_ws_api_request($resource, $parameters = array(), $paymen
   $resource_elements = explode('/', $resource_path);
   $resource = array_pop($resource_elements);
 
-  // Prepare API request details.
-  $url = commerce_hipay_ws_get_server_url($payment_method_instance) . commerce_hipay_ws_get_resource_type($resource_path) . $resource;
+  $url = commerce_hipay_ws_get_server_url($context['payment_method_instance'], $api_type) . commerce_hipay_ws_get_resource_type($resource_path) . $resource;
+
+  // Call the relevant Hipay Wallet API type.
+  $callback = __FUNCTION__ . '_' . $api_type;
+  if (function_exists($callback)) {
+    $response = $callback($url, $resource, $parameters, $context);
+  }
+  else {
+    watchdog('commerce_hipay_ws', 'Unable to call Hipay Wallet API: unable to find a function to call @api_type API: @callback().', array(
+      '@api_type' => $api_type,
+      '@callback' => $callback,
+    ), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  // Allow other modules to process the response.
+  foreach (module_implements('commerce_hipay_ws_api_response') as $module) {
+    $function = $module . '_commerce_hipay_ws_api_response';
+    $function($response, $parameters, $resource, $context);
+  }
+
+  return $response;
+}
+
+/**
+ * Performs a call to Hipay Wallet SOAP API.
+ *
+ * @param string $url
+ *   Hipay Wallet SOAP API URL.
+ * @param string $resource
+ *   Hipay Wallet SOAP API resource.
+ * @param array $parameters
+ *   An array of parameters to be sent to Hipay Wallet SOAP API.
+ * @param array $context
+ *   An associative array containing additional information about the request.
+ *
+ * @return array
+ *   An array of Hipay Wallet SOAP API response parameters.
+ */
+function commerce_hipay_ws_api_request_soap($url, $resource, $parameters, $context) {
   $options = array(
     'compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP,
     'cache_wsdl' => WSDL_CACHE_NONE,
@@ -702,7 +744,8 @@ function commerce_hipay_ws_api_request($resource, $parameters = array(), $paymen
   }
   // If there was any kind of error calling the API...
   catch (SoapFault $fault) {
-    watchdog('commerce_hipay_ws', '@resource: SOAPFault: @faultstring<br />Request URL: @request_url<br />Request parameters: !parameters', array(
+    watchdog('commerce_hipay_ws', '@api_type @resource: SOAPFault: @faultstring<br />Request URL: @request_url<br />Request parameters: !parameters', array(
+      '@api_type' => COMMERCE_HIPAY_WS_API_TYPE_SOAP,
       '@resource' => $resource,
       '@faultstring' => $fault->faultstring,
       '@request_url' => $url,
@@ -713,8 +756,9 @@ function commerce_hipay_ws_api_request($resource, $parameters = array(), $paymen
   }
 
   // Log the request data if request logging is enabled.
-  if (!empty($payment_method_instance['settings']['api_logging']['response'])) {
-    watchdog('commerce_hipay_ws', '@resource: response: !response', array(
+  if (!empty($context['payment_method_instance']['settings']['api_logging']['response'])) {
+    watchdog('commerce_hipay_ws', '@api_type @resource: response: !response', array(
+      '@api_type' => COMMERCE_HIPAY_WS_API_TYPE_SOAP,
       '@resource' => $resource,
       '!response' => '<pre>' . var_export($result, TRUE) . '</pre>',
     ), WATCHDOG_DEBUG);
@@ -722,7 +766,8 @@ function commerce_hipay_ws_api_request($resource, $parameters = array(), $paymen
 
   $response_key = $resource . 'Result';
   if (!isset($result->$response_key)) {
-    watchdog('commerce_hipay_ws', '@resource: Unable to find @response_key parameter in API response: !response', array(
+    watchdog('commerce_hipay_ws', '@api_type @resource: Unable to find @response_key parameter in API response: !response', array(
+      '@api_type' => COMMERCE_HIPAY_WS_API_TYPE_SOAP,
       '@resource' => $resource,
       '@response_key' => $response_key,
       '!response' => '<pre>' . var_export($result, TRUE) . '</pre>',
@@ -731,13 +776,83 @@ function commerce_hipay_ws_api_request($resource, $parameters = array(), $paymen
     return FALSE;
   }
 
-  $response = json_decode(json_encode($result->$response_key), TRUE);
+  return json_decode(json_encode($result->$response_key), TRUE);
+}
 
-  // Allow other modules to process the response.
-  foreach (module_implements('commerce_hipay_ws_api_response') as $module) {
-    $function = $module . '_commerce_hipay_ws_api_response';
-    $function($response, $parameters, $resource, $payment_method_instance);
+/**
+ * Performs a call to Hipay Wallet REST API.
+ *
+ * @param string $url
+ *   Hipay Wallet REST API URL.
+ * @param string $resource
+ *   Not really used in case of REST API (just for logging).
+ * @param array $parameters
+ *   An array of parameters to be sent to Hipay Wallet REST API.
+ * @param array $context
+ *   An associative array containing additional information about the request.
+ *
+ * @return array
+ *   An array of Hipay Wallet REST API response parameters.
+ */
+function commerce_hipay_ws_api_request_rest($url, $resource, $parameters, $context) {
+  $ch = curl_init($url);
+
+  curl_setopt($ch, CURLOPT_USERPWD, $context['payment_method_instance']['settings']['api_username'] . ':' . $context['payment_method_instance']['settings']['api_password']);
+  curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+    'Accept: application/json',
+  ));
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+  curl_setopt($ch, CURLOPT_FAILONERROR, FALSE);
+  curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+  curl_setopt($ch, CURLOPT_HEADER, FALSE);
+  curl_setopt($ch, CURLOPT_POST, TRUE);
+  curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($parameters));
+
+  // Execute the request.
+  $result = curl_exec($ch);
+
+  // Log the cURL response if response logging is enabled.
+  if (!empty($context['payment_method_instance']['settings']['api_logging']['response'])) {
+    watchdog('commerce_hipay_ws', '@api_type @resource: cURL response: !response', array(
+      '@api_type' => COMMERCE_HIPAY_WS_API_TYPE_REST,
+      '@resource' => $resource,
+      '!response' => '<pre>' . var_export($result, TRUE) . '</pre>',
+    ), WATCHDOG_DEBUG);
   }
+
+  // If there was an error performing cURL request.
+  if ($error = curl_error($ch)) {
+    // Log cURL error.
+    watchdog('commerce_hipay_ws', '@api_type @resource: cURL error: @error', array(
+      '@api_type' => COMMERCE_HIPAY_WS_API_TYPE_REST,
+      '@resource' => $resource,
+      '@error' => $error,
+    ), WATCHDOG_ERROR);
+
+    // Create response object in the same format as decoded Hipay API exception
+    // response.
+    $response = array(
+      'code' => curl_errno($ch),
+      'message' => 'cURL error',
+      'description' => $error,
+    );
+  }
+  // No cURL errors, the request worked fine.
+  else {
+    // Decode JSON response into array.
+    $response = json_decode($result, TRUE);
+
+    // Log the response if response logging is enabled.
+    if (!empty($context['payment_method_instance']['settings']['api_logging']['response'])) {
+      watchdog('commerce_hipay_ws', '@api_type @resource: response: !response', array(
+        '@api_type' => COMMERCE_HIPAY_WS_API_TYPE_REST,
+        '@resource' => $resource,
+        '!response' => '<pre>' . var_export($response, TRUE) . '</pre>',
+      ), WATCHDOG_DEBUG);
+    }
+  }
+
+  curl_close($ch);
 
   return $response;
 }
@@ -809,35 +924,77 @@ function commerce_hipay_ws_get_feedback() {
  *
  * @param array $payment_method
  *   Payment method instance definition array.
+ * @param array $api_type
+ *   API type to use for the call.
  *
  * @return string
  *   The full URL of Hipay Wallet API endpoint.
  */
-function commerce_hipay_ws_get_server_url($payment_method) {
-  switch ($payment_method['settings']['endpoint']) {
-    case COMMERCE_HIPAY_WS_PRODUCTION:
-      return COMMERCE_HIPAY_WS_ENDPOINT_PRODUCTION;
-    case COMMERCE_HIPAY_WS_TEST:
-      return COMMERCE_HIPAY_WS_ENDPOINT_TEST;
+function commerce_hipay_ws_get_server_url($payment_method, $api_type) {
+  $constant_name = 'COMMERCE_HIPAY_WS_ENDPOINT_' . $api_type . '_' . $payment_method['settings']['endpoint'];
+  return constant(strtoupper($constant_name));
+}
+
+/**
+ * Returns the API type to call based on the requested resource.
+ *
+ * @param string $resource
+ *   A resource to call.
+ *
+ * @return string
+ *   An API type to use for the call.
+ */
+function commerce_hipay_ws_get_api_type($resource) {
+  switch ($resource) {
+    case COMMERCE_HIPAY_WS_RESOURCE_REST_BUSINESS_LINES:
+    case COMMERCE_HIPAY_WS_RESOURCE_REST_WEBSITE_TOPICS:
+    case COMMERCE_HIPAY_WS_RESOURCE_REST_LOCALE_CODES:
+    case COMMERCE_HIPAY_WS_RESOURCE_REST_LOCALE_COUNTRIES:
+    case COMMERCE_HIPAY_WS_RESOURCE_REST_LOCALE_TIMEZONES:
+    case COMMERCE_HIPAY_WS_RESOURCE_REST_UPLOAD:
+      return COMMERCE_HIPAY_WS_API_TYPE_REST;
+    default:
+      return COMMERCE_HIPAY_WS_API_TYPE_SOAP;
   }
 }
 
+/**
+ * Returns the resource type to call based on the requested resource.
+ *
+ * @param string $resource
+ *   A resource to call.
+ *
+ * @return string
+ *   A resource type to use for the call.
+ */
 function commerce_hipay_ws_get_resource_type($resource) {
   switch ($resource) {
-    case COMMERCE_HIPAY_WS_RESOURCE_TRANSFER:
-      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_TRANSFER;
-    case COMMERCE_HIPAY_WS_RESOURCE_WITHDRAWAL:
-      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_WITHDRAWAL;
-    case COMMERCE_HIPAY_WS_RESOURCE_LOCALE_CODES:
-    case COMMERCE_HIPAY_WS_RESOURCE_LOCALE_TIMEZONES:
-    case COMMERCE_HIPAY_WS_RESOURCE_LOCALE_COUNTRIES:
-      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_LOCALE;
-    case COMMERCE_HIPAY_WS_RESOURCE_GET_BUSINESS_LINES:
-      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_BUSINESS_LINES;
-    case COMMERCE_HIPAY_WS_RESOURCE_GET_WEBSITE_TOPICS:
-      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_WEBSITE_TOPICS;
+    // SOAP.
+    case COMMERCE_HIPAY_WS_RESOURCE_SOAP_TRANSFER:
+      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_SOAP_TRANSFER;
+    case COMMERCE_HIPAY_WS_RESOURCE_SOAP_WITHDRAWAL:
+      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_SOAP_WITHDRAWAL;
+    case COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_CODES:
+    case COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_TIMEZONES:
+    case COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_COUNTRIES:
+      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_SOAP_LOCALE;
+    case COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BUSINESS_LINES:
+      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_SOAP_BUSINESS_LINES;
+    case COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_WEBSITE_TOPICS:
+      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_SOAP_WEBSITE_TOPICS;
+    // REST.
+    case COMMERCE_HIPAY_WS_RESOURCE_REST_BUSINESS_LINES:
+    case COMMERCE_HIPAY_WS_RESOURCE_REST_WEBSITE_TOPICS:
+      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_REST_TOOLS;
+    case COMMERCE_HIPAY_WS_RESOURCE_REST_LOCALE_CODES:
+    case COMMERCE_HIPAY_WS_RESOURCE_REST_LOCALE_COUNTRIES:
+    case COMMERCE_HIPAY_WS_RESOURCE_REST_LOCALE_TIMEZONES:
+      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_REST_LOCALE;
+    case COMMERCE_HIPAY_WS_RESOURCE_REST_UPLOAD:
+      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_REST_IDENTIFICATION;
+    // SOAP again.
     default:
-      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_ACCOUNT;
+      return COMMERCE_HIPAY_WS_RESOURCE_TYPE_SOAP_ACCOUNT;
   }
 }
 
@@ -903,255 +1060,24 @@ function commerce_hipay_ws_payment_method_instances($method_id, $include_disable
 }
 
 /**
- * Returns Hipay Wallet country code for provided country label.
+ * Combines multiple non-empty address elements into one string.
  *
- * @param string $country_label
- *   A country label to return the country code for.
+ * $param array $address
+ *   An array of address values.
+ * $param array $element_names
+ *   An array of address element names ($address keys) which values to combine.
  *
  * @return string
- *   A country code for provided country label.
+ *   A string containing multiple non-empty address elements combined.
  */
-function commerce_hipay_ws_get_code_from_country($country_label) {
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_LOCALE_COUNTRIES);
+function commerce_hipay_ws_combine_address_lines($address, $element_names) {
+  $nonempty_elements = array();
 
-  if (!empty($response['countries']['item']) && is_array($response['countries']['item'])) {
-    foreach ($response['countries']['item'] as $item) {
-      if ($item['label'] == $country_label) {
-        return $item['code'];
-      }
-    }
-  }
-}
-
-/**
- * Check the balance of a sender account.
- *
- * @param array $sender_account
- *   The sender account to check the balance of.
- *
- * @param float $amount
- *   The amount the account should have.
- *
- * @param string $item_name
- *   The balance item to check.
- *   Should be either "balance" or "moneyAvailableForWithdrawal"
- *
- * @return bool
- *   True if there is the necessary amount.
- */
-function commerce_hipay_ws_check_balance($sender_account, $amount, $item_name = 'balance') {
-
-  static $balances = array();
-
-  $ws_login = $sender_account['hipay_vendor_account']['wsLogin'];
-
-  if (isset($balances[$ws_login])) {
-    $response = $balances[$ws_login];
-  } else {
-    $parameters = array(
-      'wsLogin' => $sender_account['hipay_vendor_account']['wsLogin'],
-      'wsPassword' => $sender_account['hipay_vendor_account']['wsPassword'],
-    );
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_BALANCE, $parameters);
-
-    $balances[$ws_login] = $response;
-  }
-
-  $balance = 0;
-  if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-    $balance = $response['balances']['item'][$item_name];
-  }
-
-  return $amount < $balance;
-}
-
-/**
- * Check the balance to see if it has the funds for the transfer.
- *
- * @param array $sender_account
- *   The sender account to check the balance of.
- *
- * @param float $amount
- *   The amount the account should have.
- *
- * @return bool
- *   True if there is the necessary amount.
- */
-function commerce_hipay_ws_check_transfer_balance($sender_account, $amount) {
-  return commerce_hipay_ws_check_balance($sender_account, $amount);
-}
-
-/**
- * Check the balance to see if it has the funds for the witdraw.
- *
- * @param array $sender_account
- *   The sender account to check the balance of.
- *
- * @param float $amount
- *   The amount the account should have.
- *
- * @return bool
- *   True if there is the necessary amount.
- */
-function commerce_hipay_ws_check_withdraw_balance($sender_account, $amount) {
-  return commerce_hipay_ws_check_balance($sender_account, $amount, 'moneyAvailableForWithdrawal');
-}
-
-/**
- * Get the bank information of an account
- *
- * @param string $ws_login
- *   Login for the account to get the information of.
- *
- * @param string $ws_password
- *   Login for the account to get the information of.
- *
- * @return array|object
- *   Empty if no information, if not bank information.
- */
-function commerce_hipay_ws_get_bank_info($ws_login, $ws_password) {
-  // Bank account status.
-  $parameters = array(
-    'wsLogin' => $ws_login,
-    'wsPassword' => $ws_password,
-  );
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_STATUS, $parameters);
-  if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-    return $response;
-  }
-
-  return array();
-}
-
-/**
- * Get the required bank field needed for an Hipay account.
- *
- * @param string $country
- *   Country code of the bank account.
- *
- * @return array
- *   Empty if no information, if not required bank fields information.
- */
-function commerce_hipay_ws_get_bank_fields($country) {
-  // Bank account status.
-  $parameters = array(
-    'country' => $country,
-  );
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_FIELDS, $parameters);
-  if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-    return $response;
-  }
-
-  return array();
-}
-
-/**
- * Get information on an account.
- *
- * @param string $user_account_id
- *   The hipay id of the account we wish to get the information of.
- *
- * @return array
- *   The information or empty array.
- */
-function commerce_hipay_ws_get_account_infos($user_account_id) {
-  $parameters = array('accountId' => $user_account_id);
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_ACCOUNT_INFOS, $parameters);
-  if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-    return $response;
-  }
-
-  return array();
-}
-
-/**
- * Check if an account is identified.
- *
- * @param string $user_account_id
- *   The hipay id of the account we wish to check.
- *
- * @return bool
- *   True if the account is identified, false if not.
- */
-function commerce_hipay_ws_check_account_identified($user_account_id) {
-  $account_info = commerce_hipay_ws_get_account_infos($user_account_id);
-
-  if (empty($account_info) || empty($account_info['identified']) || $account_info['identified'] == 'no') {
-    return FALSE;
-  }
-
-  return TRUE;
-}
-
-/**
- * Returns an array of available business lines formatted as select options.
- *
- * @return array
- *   An array of available business lines formatted as select options.
- */
-function commerce_hipay_ws_get_website_business_line_options() {
-  $return = array();
-
-  $response = commerce_hipay_ws_get_website_business_lines();
-  if (!empty($response['businessLines']['item'])) {
-    foreach ($response['businessLines']['item'] as $item) {
-      $return[$item['id']] = t($item['label']);
+  foreach ($element_names as $element_name) {
+    if (!empty($address[$element_name])) {
+      $nonempty_elements[] = $address[$element_name];
     }
   }
 
-  return $return;
-}
-
-/**
- * Returns the list of available business lines.
- *
- * @return array
- *   An array of Hipay TPP API response parameters, where 'businessLines ' key
- *   includes the list of available business lines.
- */
-function commerce_hipay_ws_get_website_business_lines() {
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_BUSINESS_LINES);
-  if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-    return $response;
-  }
-
-  return array();
-}
-
-/**
- * Returns an array of available website topics formatted as select options
- * for provided business line ID.
- *
- * @return array
- *   An array of available website topics formatted as select options
- *   for provided business line ID.
- */
-function commerce_hipay_ws_get_website_topic_options($business_line_id) {
-  $return = array();
-
-  $response = commerce_hipay_ws_get_website_topics($business_line_id);
-  if (!empty($response['websiteTopics']['item'])) {
-    foreach ($response['websiteTopics']['item'] as $item) {
-      $return[$item['id']] = t($item['label']);
-    }
-  }
-
-  return $return;
-}
-
-/**
- * Returns the list of available website topics.
- *
- * @return array
- *   An array of Hipay TPP API response parameters, where 'websiteTopics' key
- *   includes the list of available website topics.
- */
-function commerce_hipay_ws_get_website_topics($business_line_id) {
-  $parameters = array('businessLineId' => $business_line_id);
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_WEBSITE_TOPICS, $parameters);
-  if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-    return $response;
-  }
-
-  return array();
+  return implode(', ', $nonempty_elements);
 }

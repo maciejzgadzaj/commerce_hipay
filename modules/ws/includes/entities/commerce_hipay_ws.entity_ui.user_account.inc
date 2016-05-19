@@ -155,15 +155,13 @@ function commerce_hipay_ws_user_account_view($entity, $view_mode = 'full') {
  * @see commerce_hipay_ws_user_account_menu()
  */
 function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'full') {
-//  dpm($entity, '$entity');
-
   if (!empty($entity->hipay_account_id)) {
     $return = '';
 
     // Fetch: getAccountInfos.
     $parameters = array('accountId' => $entity->hipay_account_id);
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_ACCOUNT_INFOS, $parameters);
-//    dpm($response, 'getAccountInfos');
+    $context = array('commerce_hipay_ws_user_account' => $entity);
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_ACCOUNT_INFOS, $parameters, NULL, $context);
     if (isset($response['code']) && $response['code'] === 0) {
 
       // Display: getAccountInfos.
@@ -205,7 +203,8 @@ function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'f
 
     // Fetch: getBalance.
     $parameters = array('wsSubAccountId' => $entity->hipay_account_id);
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_BALANCE, $parameters);
+    $context = array('commerce_hipay_ws_user_account' => $entity);
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BALANCE, $parameters, NULL, $context);
 
     // Display: getBalance.
     if (!empty($response['balances'])) {
@@ -229,8 +228,8 @@ function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'f
       'endDate' => date('Y-m-d H:i:s', REQUEST_TIME),
       'pageNumber' => 1,
     );
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_TRANSACTIONS, $parameters);
-//    dpm($response, 'getTransactions');
+    $context = array('commerce_hipay_ws_user_account' => $entity);
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_TRANSACTIONS, $parameters, NULL, $context);
 
     // @TODO: Display: getTransactions.
     if (!empty($response['transactions'])) {

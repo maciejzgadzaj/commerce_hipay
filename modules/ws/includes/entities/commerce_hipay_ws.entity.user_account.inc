@@ -1724,7 +1724,7 @@ function commerce_hipay_ws_allowed_values_user_legal_status() {
  * @see list_allowed_values()
  */
 function commerce_hipay_ws_allowed_values_user_locale() {
-  return drupal_map_assoc(array_keys(commerce_hipay_get_supported_languages()));
+  return commerce_hipay_ws_get_locales_options();
 }
 
 /**
@@ -1734,7 +1734,7 @@ function commerce_hipay_ws_allowed_values_user_locale() {
  * @see list_allowed_values()
  */
 function commerce_hipay_ws_allowed_values_user_time_zone() {
-  return drupal_map_assoc(array_keys(system_time_zones()));
+  return commerce_hipay_ws_get_timezones_options();
 }
 
 /**

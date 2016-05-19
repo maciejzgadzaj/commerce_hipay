@@ -106,16 +106,14 @@ function commerce_hipay_ws_bank_account_view($entity, $view_mode = 'full') {
 function commerce_hipay_ws_bank_account_view_hipay_info($entity, $view_mode = 'full') {
   $return = '';
 
-//  dpm($entity, '$entity');
   $wrapper = entity_metadata_wrapper('commerce_hipay_ws_bank_account', $entity);
   $hipay_user_account = $wrapper->hipay_ws_bank_user_account->value();
-//  dpm($hipay_user_account, '$hipay_user_account');
 
   if (!empty($hipay_user_account->hipay_account_id)) {
     // Fetch: bankInfosStatus.
     $parameters = array('wsSubAccountId' => $hipay_user_account->hipay_account_id);
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_STATUS, $parameters);
-//    dpm($response, 'bankInfosStatus');
+    $context = array('commerce_hipay_ws_bank_account' => $entity);
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS, $parameters, NULL, $context);
 
     if ($response['status'] == 'No bank information') {
       $return = drupal_get_form('commerce_hipay_ws_bank_account_view_hipay_create_form', $entity);
@@ -129,8 +127,8 @@ function commerce_hipay_ws_bank_account_view_hipay_info($entity, $view_mode = 'f
 
       // Fetch: bankInfosCheck.
       $parameters = array('wsSubAccountId' => $hipay_user_account->hipay_account_id);
-      $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_CHECK, $parameters);
-//      dpm($response, 'bankInfosCheck');
+      $context = array('commerce_hipay_ws_bank_account' => $entity);
+      $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_CHECK, $parameters, NULL, $context);
 
       // Display: bankInfosCheck.
       if (isset($response['code'])) {

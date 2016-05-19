@@ -45,7 +45,7 @@ function commerce_hipay_ws_website_settings_form($form, $form_state) {
     '#type' => 'select',
     '#title' => t('Business line ID'),
     '#description' => t('Main website theme.'),
-    '#options' => commerce_hipay_ws_get_website_business_line_options(),
+    '#options' => commerce_hipay_ws_get_website_business_lines_options(),
     '#default_value' => variable_get('commerce_hipay_ws_website_business_line_id'),
     '#ajax' => array(
       'callback' => 'commerce_hipay_ws_website_settings_form_ajax_callback',
@@ -60,7 +60,7 @@ function commerce_hipay_ws_website_settings_form($form, $form_state) {
     '#type' => 'select',
     '#title' => t('Topic ID'),
     '#description' => t('Secondary website theme.'),
-    '#options' => commerce_hipay_ws_get_website_topic_options($selected_business_line_id),
+    '#options' => commerce_hipay_ws_get_website_topics_options($selected_business_line_id),
     '#default_value' => variable_get('commerce_hipay_ws_website_topic_id'),
     '#required' => TRUE,
   );
@@ -147,7 +147,10 @@ function commerce_hipay_ws_store_overview($store) {
       'wsPassword' => $account['hipay_vendor_account']['wsPassword'],
       'locale' => 'en_GB',
     );
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_STATUS, $parameters);
+    $context = array(
+      'commerce_store' => $store,
+    );
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS, $parameters, $context);
     if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
       $rows[] = array(
         t('Bank info status'),
@@ -160,7 +163,10 @@ function commerce_hipay_ws_store_overview($store) {
       'wsLogin' => $account['hipay_vendor_account']['wsLogin'],
       'wsPassword' => $account['hipay_vendor_account']['wsPassword'],
     );
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_CHECK, $parameters);
+    $context = array(
+      'commerce_store' => $store,
+    );
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_CHECK, $parameters, $context);
     if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
       unset($response['code']);
       unset($response['description']);
@@ -179,7 +185,10 @@ function commerce_hipay_ws_store_overview($store) {
       'wsLogin' => $account['hipay_vendor_account']['wsLogin'],
       'wsPassword' => $account['hipay_vendor_account']['wsPassword'],
     );
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_GET_BALANCE, $parameters);
+    $context = array(
+      'commerce_store' => $store,
+    );
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BALANCE, $parameters, $context);
     if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
       $rows[] = array(
         t('Balance'),

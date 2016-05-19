@@ -42,7 +42,7 @@ function commerce_hipay_ws_api_bank_account_create($account, $payment_method_ins
   $parameters = array(
     'wsSubAccountId' => $hipay_user_account->hipay_account_id,
     'bankName' => $wrapper->hipay_ws_bank_name->value(),
-    'bankAddress' => $address['thoroughfare'],
+    'bankAddress' => commerce_hipay_ws_combine_address_lines($address, array('thoroughfare', 'premise')),
     'bankZipCode' => $address['postal_code'],
     'bankCity' => $address['locality'],
     'bankCountry' => $address['country'],
@@ -53,8 +53,13 @@ function commerce_hipay_ws_api_bank_account_create($account, $payment_method_ins
     'transit_num' => $wrapper->hipay_ws_bank_transit_number->value(),
   );
 
+  $context = array(
+    'hipay_user_account' => $hipay_user_account,
+    'hipay_bank_account' => $account,
+  );
+
   // Perform the call to Hipay Wallet API.
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_BANK_INFOS_REGISTER, $parameters);
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_REGISTER, $parameters, $context);
 
   return $response;
 }
