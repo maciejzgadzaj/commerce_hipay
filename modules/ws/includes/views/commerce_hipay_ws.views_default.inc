@@ -82,7 +82,7 @@ function commerce_hipay_ws_views_default_views() {
   $handler->display->display_options['menu']['type'] = 'default tab';
   $handler->display->display_options['menu']['title'] = 'List';
   $handler->display->display_options['menu']['description'] = 'Find and manage Hipay Wallet user accounts.';
-  $handler->display->display_options['menu']['weight'] = '-30';
+  $handler->display->display_options['menu']['weight'] = '-10';
   $handler->display->display_options['menu']['context'] = 0;
   $handler->display->display_options['menu']['context_only_inline'] = 0;
   $handler->display->display_options['tab_options']['type'] = 'normal';
@@ -142,13 +142,13 @@ function commerce_hipay_ws_views_default_views() {
   $handler->display->display_options['menu']['type'] = 'default tab';
   $handler->display->display_options['menu']['title'] = 'List';
   $handler->display->display_options['menu']['description'] = 'Find and manage Hipay Wallet user accounts.';
-  $handler->display->display_options['menu']['weight'] = '-20';
+  $handler->display->display_options['menu']['weight'] = '-10';
   $handler->display->display_options['menu']['context'] = 0;
   $handler->display->display_options['menu']['context_only_inline'] = 0;
   $handler->display->display_options['tab_options']['type'] = 'normal';
   $handler->display->display_options['tab_options']['title'] = 'User sub-accounts';
   $handler->display->display_options['tab_options']['description'] = 'Manage Hipay Wallet user accounts.';
-  $handler->display->display_options['tab_options']['weight'] = '0';
+  $handler->display->display_options['tab_options']['weight'] = '10';
   $handler->display->display_options['tab_options']['name'] = 'management';
 
   /* Display: Page: Store */
@@ -296,7 +296,7 @@ function commerce_hipay_ws_views_default_views() {
   $handler->display->display_options['tab_options']['type'] = 'normal';
   $handler->display->display_options['tab_options']['title'] = 'Bank accounts';
   $handler->display->display_options['tab_options']['description'] = 'Manage Hipay Wallet bank accounts.';
-  $handler->display->display_options['tab_options']['weight'] = '0';
+  $handler->display->display_options['tab_options']['weight'] = '20';
   $handler->display->display_options['tab_options']['name'] = 'management';
 
   /* Display: Page: Store */
