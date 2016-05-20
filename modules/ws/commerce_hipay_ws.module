@@ -902,7 +902,11 @@ function commerce_hipay_ws_api_request_soap($url, $resource, $parameters, $conte
       '!parameters' => '<pre>' . var_export($parameters, TRUE) . '</pre>',
     ), WATCHDOG_ERROR);
 
-    return FALSE;
+    // Create response object in the same format as decoded Hipay API response.
+    return array(
+      'code' => $fault->faultcode,
+      'description' => t($fault->faultstring),
+    );
   }
 
   // Log the request data if request logging is enabled.
@@ -923,7 +927,11 @@ function commerce_hipay_ws_api_request_soap($url, $resource, $parameters, $conte
       '!response' => '<pre>' . var_export($result, TRUE) . '</pre>',
     ), WATCHDOG_ERROR);
 
-    return FALSE;
+    // Create response object in the same format as decoded Hipay API response.
+    return array(
+      'code' => 'Response',
+      'description' => t('Unable to parse Hipay Wallet API response.'),
+    );
   }
 
   return json_decode(json_encode($result->$response_key), TRUE);
