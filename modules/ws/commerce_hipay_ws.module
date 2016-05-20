@@ -226,6 +226,7 @@ function commerce_hipay_ws_settings_default() {
   return array(
     'endpoint' => COMMERCE_HIPAY_WS_TEST,
     'account_id' => '',
+    'email' => '',
     'entity' => '',
     'api_username' => '',
     'api_password' => '',
@@ -453,6 +454,7 @@ function commerce_hipay_ws_settings_form($settings = array()) {
     '#disabled' => !empty($disable_bank_form_elements),
   );
 
+  require_once DRUPAL_ROOT . '/includes/locale.inc';
   $options = array('' => '- select -') + country_get_list();
   $form['bank_account']['bankCountry'] = array(
     '#type' => 'select',
@@ -506,7 +508,7 @@ function commerce_hipay_ws_settings_form($settings = array()) {
  * Adds custom validation callback for Hipay Wallet payment method settings form.
  */
 function commerce_hipay_ws_form_rules_ui_edit_element_alter(&$form, &$form_state) {
-  if ($form_state['element_settings']['payment_method']['method_id'] == 'commerce_hipay_ws') {
+  if ($form_state['element_settings']['payment_method'] == 'commerce_hipay_ws') {
 
     $form['#submit'][] = 'commerce_hipay_ws_settings_form_submit_save_vendor_account';
 
