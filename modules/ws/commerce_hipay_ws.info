@@ -1,7 +1,15 @@
 name = Commerce Hipay Wallet
 description = Provides integration with Hipay Wallet.
 package = Commerce (contrib)
+dependencies[] = addressfield
 dependencies[] = commerce_hipay
+dependencies[] = commerce_store
+dependencies[] = date
+dependencies[] = date_popup
+dependencies[] = entityreference
+dependencies[] = list
+dependencies[] = options
+dependencies[] = text
 core = 7.x
 files[] = includes/entities/commerce_hipay_ws.controller.user_account.inc
 files[] = includes/entities/commerce_hipay_ws.controller.bank_account.inc
