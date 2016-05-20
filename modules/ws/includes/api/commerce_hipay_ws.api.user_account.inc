@@ -93,7 +93,7 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
         'websiteName' => variable_get('commerce_hipay_ws_website_name', variable_get('site_name', 'Drupal')),
         'websiteUrl' => variable_get('commerce_hipay_ws_website_url', $GLOBALS['base_url']),
         'websiteMerchantPassword' => variable_get('commerce_hipay_ws_website_merchant_password', ''),
-      )
+      ),
     );
   }
 

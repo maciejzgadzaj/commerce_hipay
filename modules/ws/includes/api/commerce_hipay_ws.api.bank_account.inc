@@ -53,6 +53,13 @@ function commerce_hipay_ws_api_bank_account_create($account, $payment_method_ins
     'transit_num' => $wrapper->hipay_ws_bank_transit_number->value(),
   );
 
+  // Do not send empty parameters to the API.
+  foreach ($parameters as $key => $value) {
+    if (empty($value)) {
+      unset($parameters[$key]);
+    }
+  }
+
   $context = array(
     'hipay_user_account' => $hipay_user_account,
     'hipay_bank_account' => $account,
