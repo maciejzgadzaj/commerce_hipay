@@ -77,24 +77,6 @@ function commerce_hipay_ws_menu() {
     'file path' => drupal_get_path('module', 'system'),
   );
 
-  $items['admin/commerce/hipay-wallet/settings'] = array(
-    'title' => 'Settings',
-    'description' => 'Manage Hipay Wallet configuration.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('commerce_hipay_ws_admin_settings_form'),
-    'access arguments' => array('administer Hipay Wallet configuration'),
-    'file' => 'includes/commerce_hipay_ws.admin.inc',
-  );
-
-  $items['admin/commerce/hipay-wallet/website'] = array(
-    'title' => 'Website configuration',
-    'description' => 'Manage Hipay Wallet website configuration.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('commerce_hipay_ws_website_settings_form'),
-    'access arguments' => array('administer Hipay Wallet configuration'),
-    'file' => 'includes/commerce_hipay_ws.admin.inc',
-  );
-
   // Server-to-server notification URL.
   $items['commerce-hipay-ws/notify'] = array(
     'page callback' => 'commerce_hipay_ws_callback_notification',
@@ -190,7 +172,10 @@ function commerce_hipay_ws_views_api() {
 function commerce_hipay_ws_entity_insert($entity, $type) {
   // Create new user account in Hipay Wallet.
   if ($type == 'commerce_hipay_ws_user_account') {
-    if (variable_get('commerce_hipay_ws_create_immediately', COMMERCE_HIPAY_WS_CREATE_ACCOUNTS_IMMEDIATELY)) {
+    $payment_method_instance = commerce_hipay_ws_payment_method_instance();
+    // Only if payment method is enabled (otherwise the instance would be empty)
+    // and configured to create accounts in Hipay Wallet immediately.
+    if (!empty($payment_method_instance['settings']['api']['create_account_immediately'])) {
       $hipay_user_account = commerce_hipay_ws_user_account_load($entity->user_account_id);
       $response = commerce_hipay_ws_api_user_account_create($hipay_user_account);
       if (!isset($response['code']) || $response['code'] !== 0) {
@@ -204,7 +189,10 @@ function commerce_hipay_ws_entity_insert($entity, $type) {
 
   // Create new bank account in Hipay Wallet.
   if ($type == 'commerce_hipay_ws_bank_account') {
-    if (variable_get('commerce_hipay_ws_create_immediately', COMMERCE_HIPAY_WS_CREATE_ACCOUNTS_IMMEDIATELY)) {
+    $payment_method_instance = commerce_hipay_ws_payment_method_instance();
+    // Only if payment method is enabled (otherwise the instance would be empty)
+    // and configured to create accounts in Hipay Wallet immediately.
+    if (!empty($payment_method_instance['settings']['api']['create_account_immediately'])) {
       $hipay_bank_account = commerce_hipay_ws_bank_account_load($entity->bank_account_id);
       $response = commerce_hipay_ws_api_bank_account_create($hipay_bank_account);
       if (!isset($response['code']) || $response['code'] !== 0) {
@@ -231,9 +219,21 @@ function commerce_hipay_ws_settings_default() {
     'api_username' => '',
     'api_password' => '',
     'locale' => 'en_GB',
-    'api_logging' => array(
-      'request' => FALSE,
-      'response' => FALSE,
+    'api' => array(
+      'create_account_immediately' => TRUE,
+      'test_mode' => FALSE,
+      'logging' => array(
+        'request' => FALSE,
+        'response' => FALSE,
+      ),
+    ),
+    'website' => array(
+      'business_line_id' => '',
+      'topic_id' => '',
+      'contact_email' => variable_get('site_mail'),
+      'name' => variable_get('site_name'),
+      'url' => $GLOBALS['base_url'],
+      'merchant_password' => '',
     ),
     'bank_account' => array(
       'bankName' => '',
@@ -263,7 +263,22 @@ function commerce_hipay_ws_settings_form($settings = array()) {
   // just add new array elements instead of overriding existing ones).
   $settings = array_replace_recursive(commerce_hipay_ws_settings_default(), $settings);
 
+  // When the payment method is configured for the very first time, only part
+  // of the settings form is displayed - as for the remaining part we need to
+  // have API credentials provided first, to be able to make few API requests
+  // to get data required for form element options etc.
+  if (empty($settings['api_password'])) {
+    drupal_set_message(t('Please note that this is only a part of the Hipay Wallet payment method settings form. After providing the Hipay Wallet API credentials below, the form will be refreshed to show all remaining options.'), 'warning');
+  }
+
   $form = array();
+
+  // Pass the original settings to the submit callback, so that we are know
+  // if it is the very first time the payment method is being configured or not.
+  $form['settings'] = array(
+    '#type' => 'value',
+    '#value' => $settings,
+  );
 
   $form['endpoint'] = array(
     '#type' => 'radios',
@@ -320,12 +335,33 @@ function commerce_hipay_ws_settings_form($settings = array()) {
     '#type' => 'select',
     '#title' => t('Locale'),
     '#description' => t('Default API locale.'),
-    '#options' => commerce_hipay_get_supported_languages(),
+    '#options' => commerce_hipay_ws_get_supported_languages(),
     '#default_value' => $settings['locale'],
     '#required' => TRUE,
   );
 
-  $form['api_logging'] = array(
+  // API settings.
+  $form['api'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('API settings'),
+    '#collapsible' => TRUE,
+  );
+
+  $form['api']['create_account_immediately'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Create Hipay Wallet accounts immediately'),
+    '#description' => t('When enabled, after each new Hipay user or bank account entity is created in Drupal, a relevant API will be called immediately to create it in the Hipay Wallet as well.'),
+    '#default_value' => $settings['api']['create_account_immediately'],
+  );
+
+  $form['api']['test_mode'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Test mode'),
+    '#description' => t('When enabled, the email address of each vendor account created in Hipay Wallet will be altered with current timestamp (for example, when creating a user account for <em>email@domain.net</em>, it will be altered to <em>email+1463740832@domain.net</em>). This could be useful when testing Hipay Wallet integration - when creating a user account for the same email address multiple times, or from multiple environments - to avoid Hipay complaining that the user account for a provided email address has already been created.'),
+    '#default_value' => $settings['api']['test_mode'],
+  );
+
+  $form['api']['logging'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Log the following messages for debugging'),
     '#description' => t('Enabling this option will save full information on each API request and/or response in the dblog.'),
@@ -333,17 +369,90 @@ function commerce_hipay_ws_settings_form($settings = array()) {
       'request' => t('API request messages'),
       'response' => t('API response messages'),
     ),
-    '#default_value' => $settings['api_logging'],
-  );
-
-  // Vendor account details.
-  $form['vendor_account'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Vendor account details'),
-    '#collapsible' => TRUE,
+    '#default_value' => $settings['api']['logging'],
   );
 
   if (!empty($settings['api_password'])) {
+
+    // Website configuration.
+    $form['website'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Website settings'),
+      '#description' => t('The settings below will be used for the <code>websites</code> item of each <code>createFullUseraccount</code> API call.'),
+      '#collapsible' => TRUE,
+      '#prefix' => '<div id="website_settings">',
+      '#suffix' => '</div>',
+    );
+
+    $form['website']['business_line_id'] = array(
+      '#type' => 'select',
+      '#title' => t('Business line ID'),
+      '#description' => t('Main website theme.'),
+      '#options' => array('' => t('- select -')) + commerce_hipay_ws_get_website_business_lines_options(),
+      '#default_value' => $settings['website']['business_line_id'],
+      // Ajax callback to populate the 'Topic ID' select options.
+      '#ajax' => array(
+        'callback' => 'commerce_hipay_ws_settings_form_ajax_callback',
+        'wrapper' => 'website_settings',
+      ),
+      '#required' => TRUE,
+    );
+
+    $topic_options = array('' => t('- select -'));
+    if (!empty($settings['website']['business_line_id'])) {
+      $topic_options += commerce_hipay_ws_get_website_topics_options($settings['website']['business_line_id']);
+    }
+
+    $form['website']['topic_id'] = array(
+      '#type' => 'select',
+      '#title' => t('Topic ID'),
+      '#description' => t('Secondary website theme.'),
+      // When the Business Line ID is selected, real options will be added
+      // in commerce_hipay_ws_form_rules_ui_edit_element_alter()
+      // (as here we don't have access to $form_state values).
+      '#options' => $topic_options,
+      '#default_value' => $settings['website']['topic_id'],
+      '#required' => TRUE,
+    );
+
+    $form['website']['contact_email'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Contact email'),
+      '#description' => t('Contact email displayed on payment page.'),
+      '#default_value' => $settings['website']['contact_email'],
+      '#required' => TRUE,
+    );
+
+    $form['website']['name'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Website name'),
+      '#default_value' => $settings['website']['name'],
+      '#required' => TRUE,
+    );
+
+    $form['website']['url'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Website URL'),
+      '#description' => t('Full HTTP URL of website (http://www.merchant.com).'),
+      '#default_value' => $settings['website']['url'],
+      '#required' => TRUE,
+    );
+
+    $form['website']['merchant_password'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Merchant password'),
+      '#description' => t('Merchant password to use with MAPI KIT on payment buttons only.'),
+      '#default_value' => $settings['website']['merchant_password'],
+      '#required' => TRUE,
+    );
+
+    // Vendor account details.
+    $form['vendor_account'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Vendor account details'),
+      '#collapsible' => TRUE,
+    );
+
     $rows = array();
 
     // Balance.
@@ -367,21 +476,19 @@ function commerce_hipay_ws_settings_form($settings = array()) {
       '#type' => 'markup',
       '#markup' => theme('table', array('rows' => $rows)),
     );
-  }
 
-  // Bank account details.
-  $form['bank_account'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Bank account details'),
-    '#description' => '<p>' . t('Note that once the bank details are saved, and the bank account gets created in your Hipay Wallet account, they cannot be changed anymore. The only way to change or delete them is to contact Hipay support.') . '</p>'
-      . '<p>' . t('To avoid creating the bank account in your Hipay Wallet account after submitting this form you can leave the <em>Bank country</em> field empty - then the Hipay Wallet API will not be called when you submit the form, and the bank account will not be created (even if all other bank-related fields are filled).') . '</p>'
-      . '<p>' . t('Note that the required fields are different for different countries. To see which fields are required for your country, please select relevant <em>Bank country</em> value (leaving all other bank fields empty) and submit the form.') . '</p>',
-    '#collapsible' => TRUE,
-  );
+    // Bank account details.
+    $form['bank_account'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Bank account details'),
+      '#description' => '<p>' . t('Note that once the bank details are saved, and the bank account gets created in your Hipay Wallet account, they cannot be changed anymore. The only way to change or delete them is to contact Hipay support.') . '</p>'
+        . '<p>' . t('To avoid creating the bank account in your Hipay Wallet account after submitting this form you can leave the <em>Bank country</em> field empty - then the Hipay Wallet API will not be called when you submit the form, and the bank account will not be created (even if all other bank-related fields are filled).') . '</p>'
+        . '<p>' . t('Note that the required fields are different for different countries. To see which fields are required for your country, please select relevant <em>Bank country</em> value (leaving all other bank fields empty) and submit the form.') . '</p>',
+      '#collapsible' => TRUE,
+    );
 
-  // Check current bank information status only if API username and password
-  // have already been provided - otherwise we won't be able to make API call.
-  if (!empty($settings['api_password'])) {
+    // Check current bank information status only if API username and password
+    // have already been provided - otherwise we won't be able to make API call.
     $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS);
     if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
       // Display current status of bank account information.
@@ -424,138 +531,152 @@ function commerce_hipay_ws_settings_form($settings = array()) {
         }
       }
     }
+
+    $form['bank_account']['bankName'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Bank name'),
+      '#default_value' => $settings['bank_account']['bankName'],
+      '#disabled' => !empty($disable_bank_form_elements),
+    );
+
+    $form['bank_account']['bankAddress'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Bank address'),
+      '#default_value' => $settings['bank_account']['bankAddress'],
+      '#disabled' => !empty($disable_bank_form_elements),
+    );
+
+    $form['bank_account']['bankZipCode'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Bank zip code'),
+      '#default_value' => $settings['bank_account']['bankZipCode'],
+      '#disabled' => !empty($disable_bank_form_elements),
+    );
+
+    $form['bank_account']['bankCity'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Bank city'),
+      '#default_value' => $settings['bank_account']['bankCity'],
+      '#disabled' => !empty($disable_bank_form_elements),
+    );
+
+    require_once DRUPAL_ROOT . '/includes/locale.inc';
+    $options = array('' => '- select -') + country_get_list();
+    $form['bank_account']['bankCountry'] = array(
+      '#type' => 'select',
+      '#title' => t('Bank country'),
+      '#options' => $options,
+      '#default_value' => $settings['bank_account']['bankCountry'],
+      '#disabled' => !empty($disable_bank_form_elements),
+    );
+
+    $form['bank_account']['iban'] = array(
+      '#type' => 'textfield',
+      '#title' => t('IBAN'),
+      '#default_value' => $settings['bank_account']['iban'],
+      '#disabled' => !empty($disable_bank_form_elements),
+    );
+
+    $form['bank_account']['swift'] = array(
+      '#type' => 'textfield',
+      '#title' => t('SWIFT / BIC'),
+      '#default_value' => $settings['bank_account']['swift'],
+      '#disabled' => !empty($disable_bank_form_elements),
+    );
+
+    $form['bank_account']['acct_num'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Account number'),
+      '#default_value' => $settings['bank_account']['acct_num'],
+      '#disabled' => !empty($disable_bank_form_elements),
+    );
+
+    $form['bank_account']['aba_num'] = array(
+      '#type' => 'textfield',
+      '#title' => t('ABA number'),
+      '#default_value' => $settings['bank_account']['aba_num'],
+      '#disabled' => !empty($disable_bank_form_elements),
+    );
+
+    $form['bank_account']['transit_num'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Transit number'),
+      '#default_value' => $settings['bank_account']['transit_num'],
+      '#disabled' => !empty($disable_bank_form_elements),
+    );
+
   }
-
-  $form['bank_account']['bankName'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Bank name'),
-    '#default_value' => $settings['bank_account']['bankName'],
-    '#disabled' => !empty($disable_bank_form_elements),
-  );
-
-  $form['bank_account']['bankAddress'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Bank address'),
-    '#default_value' => $settings['bank_account']['bankAddress'],
-    '#disabled' => !empty($disable_bank_form_elements),
-  );
-
-  $form['bank_account']['bankZipCode'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Bank zip code'),
-    '#default_value' => $settings['bank_account']['bankZipCode'],
-    '#disabled' => !empty($disable_bank_form_elements),
-  );
-
-  $form['bank_account']['bankCity'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Bank city'),
-    '#default_value' => $settings['bank_account']['bankCity'],
-    '#disabled' => !empty($disable_bank_form_elements),
-  );
-
-  require_once DRUPAL_ROOT . '/includes/locale.inc';
-  $options = array('' => '- select -') + country_get_list();
-  $form['bank_account']['bankCountry'] = array(
-    '#type' => 'select',
-    '#title' => t('Bank country'),
-    '#options' => $options,
-    '#default_value' => $settings['bank_account']['bankCountry'],
-    '#disabled' => !empty($disable_bank_form_elements),
-  );
-
-  $form['bank_account']['iban'] = array(
-    '#type' => 'textfield',
-    '#title' => t('IBAN'),
-    '#default_value' => $settings['bank_account']['iban'],
-    '#disabled' => !empty($disable_bank_form_elements),
-  );
-
-  $form['bank_account']['swift'] = array(
-    '#type' => 'textfield',
-    '#title' => t('SWIFT / BIC'),
-    '#default_value' => $settings['bank_account']['swift'],
-    '#disabled' => !empty($disable_bank_form_elements),
-  );
-
-  $form['bank_account']['acct_num'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Account number'),
-    '#default_value' => $settings['bank_account']['acct_num'],
-    '#disabled' => !empty($disable_bank_form_elements),
-  );
-
-  $form['bank_account']['aba_num'] = array(
-    '#type' => 'textfield',
-    '#title' => t('ABA number'),
-    '#default_value' => $settings['bank_account']['aba_num'],
-    '#disabled' => !empty($disable_bank_form_elements),
-  );
-
-  $form['bank_account']['transit_num'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Transit number'),
-    '#default_value' => $settings['bank_account']['transit_num'],
-    '#disabled' => !empty($disable_bank_form_elements),
-  );
 
   return $form;
 }
 
 /**
- * Implements hook_form_FORM_ID_alter() for rules_ui_edit_element.
+ * Implements hook_form_FORM_ID_alter() for rules_ui_edit_element().
  *
- * Adds custom validation callback for Hipay Wallet payment method settings form.
+ * Adds custom validation for Hipay Wallet payment method settings form.
  */
 function commerce_hipay_ws_form_rules_ui_edit_element_alter(&$form, &$form_state) {
-  if ($form_state['element_settings']['payment_method'] == 'commerce_hipay_ws') {
+  if (
+    !empty($form_state['element_settings']['payment_method']['method_id'])
+    && $form_state['element_settings']['payment_method']['method_id'] == 'commerce_hipay_ws'
+    || !empty($form_state['element_settings']['payment_method'])
+    && $form_state['element_settings']['payment_method'] == 'commerce_hipay_ws'
+  ) {
 
+    if (!empty($form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings']['website']['business_line_id'])) {
+      $form['parameter']['payment_method']['settings']['payment_method']['settings']['website']['topic_id']['#options'] += commerce_hipay_ws_get_website_topics_options($form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings']['website']['business_line_id']);
+    }
+
+    $form['#submit'][] = 'commerce_hipay_ws_settings_form_submit';
     $form['#submit'][] = 'commerce_hipay_ws_settings_form_submit_save_vendor_account';
 
     // Submitted bank details.
-    $bank_account = $form['parameter']['payment_method']['settings']['payment_method']['settings']['bank_account'];
+    if (!empty($form['parameter']['payment_method']['settings']['payment_method']['settings']['bank_account'])) {
+      $bank_account = $form['parameter']['payment_method']['settings']['payment_method']['settings']['bank_account'];
 
-    // Add custom validate and submit callbacks only
-    // if bank account hasn't been created yet.
-    if (
-      isset($bank_account['status'])
-      && $bank_account['status'] == COMMERCE_HIPAY_WS_ACCOUNT_NO_BANK_INFO
-    ) {
-      $form['#validate'][] = 'commerce_hipay_ws_settings_form_validate';
-      $form['#submit'][] = 'commerce_hipay_ws_settings_form_submit';
+      // Add custom validate and submit callbacks only
+      // if bank account hasn't been created yet.
+      if (
+        isset($bank_account['status'])
+        && $bank_account['status'] == COMMERCE_HIPAY_WS_ACCOUNT_NO_BANK_INFO
+      ) {
+        $form['#validate'][] = 'commerce_hipay_ws_settings_form_validate_bank_account';
+        $form['#submit'][] = 'commerce_hipay_ws_settings_form_submit_create_bank_account';
+      }
     }
   }
 }
 
-function commerce_hipay_ws_settings_form_submit_save_vendor_account(&$form, &$form_state) {
-  // Submitted payment method settings.
-  $settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
-
-  $record = array(
-    'account_id' => $settings['account_id'],
-    'store_id' => 0,
-    'email' => $settings['email'],
-    'hipay_vendor_account' => array(
-      'userAccountId' => $settings['account_id'],
-      'wsLogin' => $settings['api_username'],
-      'wsPassword' => $settings['api_password'],
-    ),
-  );
-
-  if ($account = commerce_hipay_ws_account_load_by_account_id($settings['account_id'])) {
-    $record = array_merge_recursive($account, $record);
-  }
-
-  commerce_hipay_ws_account_save($record);
+/**
+ * Form ajax callback for Website section of commerce_hipay_ws_settings_form().
+ *
+ * @see commerce_hipay_ws_settings_form()
+ */
+function commerce_hipay_ws_settings_form_ajax_callback($form, $form_state) {
+  return $form['parameter']['payment_method']['settings']['payment_method']['settings']['website'];
 }
 
 /**
- * Custom payment method settings form validation callback.
+ * Custom payment method settings form submit callback.
+ *
+ * @see commerce_hipay_ws_settings_form()
+ * @see  commerce_hipay_ws_form_rules_ui_edit_element_alter().
+ */
+function commerce_hipay_ws_settings_form_submit(&$form, &$form_state) {
+  $original_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings']['settings'];
+  if (empty($original_settings['api_password'])) {
+    drupal_set_message(t("But wait! There's more!"), 'warning');
+    $form_state['redirect'] = current_path();
+  }
+}
+
+/**
+ * Validates submitted bank account details.
  *
  * @see commerce_hipay_ws_settings_form()
  * @see commerce_hipay_ws_form_rules_ui_edit_element_alter().
  */
-function commerce_hipay_ws_settings_form_validate(&$form, &$form_state) {
+function commerce_hipay_ws_settings_form_validate_bank_account(&$form, &$form_state) {
   // Submitted bank details.
   $bank_account = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings']['bank_account'];
 
@@ -578,13 +699,14 @@ function commerce_hipay_ws_settings_form_validate(&$form, &$form_state) {
 }
 
 /**
- * Custom payment method settings form submit callback.
+ * Creates a bank account in Hipay Wallet.
  *
- * @see commerce_hipay_ws_settings_form()
- * @see  commerce_hipay_ws_form_rules_ui_edit_element_alter().
+ * @param array $bank_account
+ *   An array of bank account details.
+ *
+ * @return bool|void
  */
-function commerce_hipay_ws_settings_form_submit(&$form, &$form_state) {
-  // Submitted bank details.
+function commerce_hipay_ws_settings_form_submit_create_bank_account(&$form, &$form_state) {
   $bank_account = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings']['bank_account'];
 
   // If bank country was not selected, do not try to create the bank account.
@@ -595,7 +717,7 @@ function commerce_hipay_ws_settings_form_submit(&$form, &$form_state) {
   // Do the API call.
   if (!$response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_REGISTER, $bank_account)) {
     drupal_set_message(t('There was an error calling Hipay Wallet API. See log for more details.'), 'error');
-      return FALSE;
+    return FALSE;
   }
 
   // If an error code was returned in the response.
@@ -608,6 +730,32 @@ function commerce_hipay_ws_settings_form_submit(&$form, &$form_state) {
   }
 
   drupal_set_message(t('Bank details have been successfully registered in your Hipay Wallet account.'));
+  return $response;
+}
+
+/**
+ * @TODO: Get rid of this.
+ */
+function commerce_hipay_ws_settings_form_submit_save_vendor_account(&$form, &$form_state) {
+  // Submitted payment method settings.
+  $settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
+
+  $record = array(
+    'account_id' => $settings['account_id'],
+    'store_id' => 0,
+    'email' => $settings['email'],
+    'hipay_vendor_account' => array(
+      'userAccountId' => $settings['account_id'],
+      'wsLogin' => $settings['api_username'],
+      'wsPassword' => $settings['api_password'],
+    ),
+  );
+
+  if ($account = commerce_hipay_ws_account_load_by_account_id($settings['account_id'])) {
+    $record = array_replace_recursive($account, $record);
+  }
+
+  commerce_hipay_ws_account_save($record);
 }
 
 /**
@@ -676,7 +824,7 @@ function commerce_hipay_ws_api_request($resource, $parameters = array(), $contex
   $api_type = commerce_hipay_ws_get_api_type($resource);
 
   // Log the request data if request logging is enabled.
-  if (!empty($context['payment_method_instance']['settings']['api_logging']['request'])) {
+  if (!empty($context['payment_method_instance']['settings']['api']['logging']['request'])) {
     watchdog('commerce_hipay_ws', '@api_type @resource: request: !parameters', array(
       '@api_type' => $api_type,
       '@resource' => $resource,
@@ -758,7 +906,7 @@ function commerce_hipay_ws_api_request_soap($url, $resource, $parameters, $conte
   }
 
   // Log the request data if request logging is enabled.
-  if (!empty($context['payment_method_instance']['settings']['api_logging']['response'])) {
+  if (!empty($context['payment_method_instance']['settings']['api']['logging']['response'])) {
     watchdog('commerce_hipay_ws', '@api_type @resource: response: !response', array(
       '@api_type' => COMMERCE_HIPAY_WS_API_TYPE_SOAP,
       '@resource' => $resource,
@@ -814,7 +962,7 @@ function commerce_hipay_ws_api_request_rest($url, $resource, $parameters, $conte
   $result = curl_exec($ch);
 
   // Log the cURL response if response logging is enabled.
-  if (!empty($context['payment_method_instance']['settings']['api_logging']['response'])) {
+  if (!empty($context['payment_method_instance']['settings']['api']['logging']['response'])) {
     watchdog('commerce_hipay_ws', '@api_type @resource: cURL response: !response', array(
       '@api_type' => COMMERCE_HIPAY_WS_API_TYPE_REST,
       '@resource' => $resource,
@@ -845,7 +993,7 @@ function commerce_hipay_ws_api_request_rest($url, $resource, $parameters, $conte
     $response = json_decode($result, TRUE);
 
     // Log the response if response logging is enabled.
-    if (!empty($context['payment_method_instance']['settings']['api_logging']['response'])) {
+    if (!empty($context['payment_method_instance']['settings']['api']['logging']['response'])) {
       watchdog('commerce_hipay_ws', '@api_type @resource: response: !response', array(
         '@api_type' => COMMERCE_HIPAY_WS_API_TYPE_REST,
         '@resource' => $resource,
@@ -857,6 +1005,25 @@ function commerce_hipay_ws_api_request_rest($url, $resource, $parameters, $conte
   curl_close($ch);
 
   return $response;
+}
+
+/**
+ * Implements hook_commerce_hipay_ws_api_request_alter().
+ */
+function commerce_hipay_ws_commerce_hipay_ws_api_request_alter(&$parameters, $resource, $context) {
+  // If API test mode is enabled, when creating new user accounts in Hipay
+  // Wallet, alter the email address with current timestamp, to avoid Hipay
+  // complaining that a user account with this email address has already
+  // been created.
+  if (
+    !empty($context['payment_method_instance']['settings']['api']['test_mode'])
+    && $resource == COMMERCE_HIPAY_WS_RESOURCE_SOAP_CREATE_FULL_USER_ACCOUNT
+    && !empty($parameters['userAccountBasic']['email'])
+  ) {
+    $email_elements = explode('@', $parameters['userAccountBasic']['email']);
+    $email_elements[0] .= '+' . REQUEST_TIME;
+    $parameters['userAccountBasic']['email'] = implode('@', $email_elements);
+  }
 }
 
 function commerce_hipay_ws_get_notification_feedback() {
@@ -1011,7 +1178,7 @@ function commerce_hipay_ws_get_resource_type($resource) {
  * @return
  *   An array of all loaded payment method instances keyed by instance_id
  */
-function commerce_hipay_ws_payment_method_instances($method_id, $include_disabled = FALSE) {
+function commerce_hipay_ws_payment_method_instances($method_id = 'commerce_hipay_ws', $include_disabled = FALSE) {
   $cached_ids = &drupal_static(__FUNCTION__, array());
   $include_disabled = !empty($include_disabled);
 
@@ -1062,6 +1229,23 @@ function commerce_hipay_ws_payment_method_instances($method_id, $include_disable
 }
 
 /**
+ * Returns first payment method instance for a given payment method id.
+ *
+ * @param $method_id
+ *   A payment method id
+ * @param $include_disabled
+ *   Return enabled and disabled instances
+ *
+ * @return
+ *   An array of payment method instance details.
+ */
+function commerce_hipay_ws_payment_method_instance($method_id = 'commerce_hipay_ws', $include_disabled = FALSE) {
+  if ($instances = commerce_hipay_ws_payment_method_instances($method_id, $include_disabled)) {
+    return reset($instances);
+  }
+}
+
+/**
  * Combines multiple non-empty address elements into one string.
  *
  * $param array $address
@@ -1082,4 +1266,23 @@ function commerce_hipay_ws_combine_address_lines($address, $element_names) {
   }
 
   return implode(', ', $nonempty_elements);
+}
+
+/**
+ * Returns a list of locale identifiers supported by Hipay Wallet.
+ *
+ * @return array
+ *   An array of locale identifiers supported by Hipay Wallet.
+ */
+function commerce_hipay_ws_get_supported_languages() {
+  return array(
+    'de_DE' => t('deutsch'),
+    'en_GB' => t('english'),
+    'es_ES' => t('español'),
+    'fr_FR' => t('français'),
+    'it_IT' => t('italiano'),
+    'nl_BE' => t('nederlands'),
+    'pt_PT' => t('português'),
+    'pt_BR' => t('português (Brasil)'),
+  );
 }
