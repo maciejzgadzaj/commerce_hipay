@@ -800,7 +800,7 @@ function commerce_hipay_ws_api_request($resource, $parameters = array(), $contex
     }
     // Return if Hipay Wallet payment method instance has not been enabled yet.
     else {
-      watchdog('commerce_hipay_ws', 'Unable to call Hipay API: payment method instance does not exist.', array(), WATCHDOG_ERROR);
+      watchdog('commerce_hipay_ws', 'Unable to call Hipay API: payment method instance does not exist or is not enabled.', array(), WATCHDOG_ERROR);
       return FALSE;
     }
   }
