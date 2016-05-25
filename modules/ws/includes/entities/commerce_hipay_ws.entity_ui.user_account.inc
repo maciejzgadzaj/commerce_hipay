@@ -308,6 +308,12 @@ function commerce_hipay_ws_user_account_form($form, &$form_state, $user_account)
   // Add the field related form elements.
   field_attach_form('commerce_hipay_ws_user_account', $user_account, $form, $form_state);
 
+  // Add custom processing function to each uploaded file, so that we can
+  // replace its description field with own KYC type dropdown.
+  foreach (element_children($form['hipay_ws_user_kyc_documents'][LANGUAGE_NONE], TRUE) as $delta => $key) {
+    $form['hipay_ws_user_kyc_documents'][LANGUAGE_NONE][$key]['#process'][] = 'commerce_hipay_ws_user_account_field_widget_process';
+  }
+
   $form['additional_settings'] = array(
     '#type' => 'vertical_tabs',
     '#weight' => 99,
@@ -354,6 +360,27 @@ function commerce_hipay_ws_user_account_form($form, &$form_state, $user_account)
   );
 
   return $form;
+}
+
+/**
+ * Replaces file field description field with KYC type dropdown.
+ *
+ * @see commerce_hipay_ws_user_account_form()
+ * @see file_field_widget_process()
+ */
+function commerce_hipay_ws_user_account_field_widget_process($element, &$form_state, $form) {
+  // Only if the description field already exists (which means that a file
+  // was uploaded).
+  if (isset($element['description'])) {
+    $element['description'] = array(
+      '#type' => 'select',
+      '#title' => t('Document type'),
+      '#options' => commerce_hipay_ws_api_upload_kyc_document_types(),
+      '#default_value' => isset($element['#value']['description']) ? $element['#value']['description'] : '',
+    );
+  }
+
+  return $element;
 }
 
 /**
