@@ -641,6 +641,28 @@ function commerce_hipay_ws_user_account_field_bases() {
     'type' => 'text',
   );
 
+  $field_bases['hipay_ws_user_kyc_documents'] = array(
+    'active' => 1,
+    'cardinality' => -1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'hipay_ws_user_kyc_documents',
+    'indexes' => array(
+      'fid' => array(
+        0 => 'fid',
+      ),
+    ),
+    'locked' => 0,
+    'module' => 'file',
+    'settings' => array(
+      'display_default' => 0,
+      'display_field' => 0,
+      'uri_scheme' => 'private',
+    ),
+    'translatable' => 0,
+    'type' => 'file',
+  );
+
   $field_bases['hipay_ws_user_last_name'] = array(
     'active' => 1,
     'cardinality' => 1,
@@ -1305,6 +1327,41 @@ function commerce_hipay_ws_user_account_field_instances() {
       ),
       'type' => 'text_textfield',
       'weight' => 3,
+    ),
+  );
+
+  $field_instances['hipay_ws_user_kyc_documents'] = array(
+    'bundle' => 'hipay_user_account',
+    'deleted' => 0,
+    'description' => 'A <em>KYC document</em> file is a "Know Your Customer" document used for preventing identity theft, financial fraud, money laundering and terrorist financing.',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'file',
+        'settings' => array(),
+        'type' => 'file_default',
+        'weight' => 22,
+      ),
+    ),
+    'entity_type' => 'commerce_hipay_ws_user_account',
+    'field_name' => 'hipay_ws_user_kyc_documents',
+    'label' => 'KYC documents',
+    'required' => 0,
+    'settings' => array(
+      'description_field' => 1,
+      'file_directory' => 'kyc_documents',
+      'file_extensions' => 'pdf doc docx jpg jpeg png',
+      'max_filesize' => '2 MB',
+      'user_register_form' => FALSE,
+    ),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'file',
+      'settings' => array(
+        'progress_indicator' => 'throbber',
+      ),
+      'type' => 'file_generic',
+      'weight' => 22,
     ),
   );
 
