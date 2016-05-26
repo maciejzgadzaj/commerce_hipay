@@ -12,6 +12,7 @@ require_once 'includes/commerce_hipay_ws.transfer.inc';
 require_once 'includes/commerce_hipay_ws.withdrawal.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity.user_account.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity.bank_account.inc';
+require_once 'includes/entities/commerce_hipay_ws.entity.file.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity_ui.user_account.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity_ui.bank_account.inc';
 require_once 'includes/api/commerce_hipay_ws.api.inc';
