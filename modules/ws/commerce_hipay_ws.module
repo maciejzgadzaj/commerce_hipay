@@ -787,11 +787,14 @@ function commerce_hipay_ws_soap($resource) {
  *   A string of parameters to be sent to Hipay Wallet API.
  * @param array $context
  *   An associative array containing additional information about the request.
+ * @param bool $add_default_parameters
+ *   A boolean indicating whether the default API access credentials should be
+ *   automatically added to the API call parameters.
  *
  * @return array
  *   An array of Hipay Wallet API response parameters.
  */
-function commerce_hipay_ws_api_request($resource, $parameters = array(), $context = array()) {
+function commerce_hipay_ws_api_request($resource, $parameters = array(), $context = array(), $add_default_parameters = TRUE) {
   // If no specific payment method instance was requested in function parameter,
   // load and use the first active 'commerce_hipay_ws' payment method instance.
   if (empty($context['payment_method_instance'])) {
@@ -811,14 +814,16 @@ function commerce_hipay_ws_api_request($resource, $parameters = array(), $contex
     return FALSE;
   }
 
-  // Add API access credentials to API call parameters, allowing them
-  // to be overriden by parameters provided in the function call.
-  $parameters = array_replace_recursive(array(
-    'wsLogin' => $context['payment_method_instance']['settings']['api_username'],
-    'wsPassword' => $context['payment_method_instance']['settings']['api_password'],
-    'entity' => $context['payment_method_instance']['settings']['entity'],
-    'locale' => $context['payment_method_instance']['settings']['locale'],
-  ), $parameters);
+  // By default, add API access credentials to API call parameters, allowing
+  // them to be overriden by parameters provided in the function call.
+  if ($add_default_parameters) {
+    $parameters = array_replace_recursive(array(
+      'wsLogin' => $context['payment_method_instance']['settings']['api_username'],
+      'wsPassword' => $context['payment_method_instance']['settings']['api_password'],
+      'entity' => $context['payment_method_instance']['settings']['entity'],
+      'locale' => $context['payment_method_instance']['settings']['locale'],
+    ), $parameters);
+  }
 
   // Allow other modules to alter the $parameters array.
   drupal_alter('commerce_hipay_ws_api_request', $parameters, $resource, $context);
