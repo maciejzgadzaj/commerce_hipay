@@ -971,7 +971,7 @@ function commerce_hipay_ws_api_request_rest($url, $resource, $parameters, $conte
   curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
   curl_setopt($ch, CURLOPT_HEADER, FALSE);
   curl_setopt($ch, CURLOPT_POST, TRUE);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($parameters));
+  curl_setopt($ch, CURLOPT_POSTFIELDS, $parameters);
 
   // Execute the request.
   $result = curl_exec($ch);
