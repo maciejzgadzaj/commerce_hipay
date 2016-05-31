@@ -1,9 +1,327 @@
 <?php
 
 /**
+ * Implements hook_schema_alter().
+ *
+ * Adds KYC document-related properties to the Hipay user account entity
+ * KYC document file field.
+ */
+function commerce_hipay_ws_schema_alter(&$schema) {
+  foreach (commerce_hipay_ws_file_schema_tables() as $table_name => $fields) {
+    if (isset($schema[$table_name]['fields'])) {
+      foreach ($fields as $field_name => $field_spec) {
+        $schema[$table_name]['fields'][$field_name] = $field_spec;
+      }
+    }
+  }
+}
+
+/**
+ * Returns tables to be updated with new KYC document-related properties.
+ *
+ * @return array
+ *   An array of tables to be updated with new KYC document-related properties.
+ *
+ * @see commerce_hipay_ws_schema_alter()
+ */
+function commerce_hipay_ws_file_schema_tables() {
+  $schema_fields = commerce_hipay_ws_file_schema_fields();
+  return array(
+    'field_data_hipay_ws_user_kyc_documents' => $schema_fields,
+    'field_revision_hipay_ws_user_kyc_documents' => $schema_fields,
+  );
+}
+
+/**
+ * Returns new KYC document-related properties for the KYC document file field.
+ *
+ * @return array
+ *   An array of new KYC document-related properties for the KYC document
+ *   file field.
+ *
+ * @see commerce_hipay_ws_file_schema_tables()
+ * @see commerce_hipay_ws_schema_alter()
+ */
+function commerce_hipay_ws_file_schema_fields() {
+  return array(
+    'kyc_type' => array(
+      'description' => 'The type of this KYC document.',
+      'type' => 'varchar',
+      'length' => 10,
+      'not null' => TRUE,
+      'default' => '',
+    ),
+    'kyc_validity' => array(
+      'description' => 'The Unix timestamp when this KYC document expires.',
+      'type' => 'int',
+      'not null' => FALSE,
+      'unsigned' => TRUE,
+    ),
+    'kyc_uploaded' => array(
+      'description' => 'The Unix timestamp when this KYC document expires.',
+      'type' => 'int',
+      'not null' => FALSE,
+      'unsigned' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Module install callback to add KYC document-related properties to the Hipay
+ * user account entity KYC document file field.
+ *
+ * @see commerce_hipay_ws_install()
+ */
+function commerce_hipay_ws_file_schema_create_fields() {
+  foreach (commerce_hipay_ws_file_schema_tables() as $table_name => $fields) {
+    foreach ($fields as $field_name => $field_spec) {
+      db_add_field($table_name, $field_name, $field_spec);
+    }
+  }
+}
+
+/**
+ * Module uninstall callback to delete KYC document-related properties
+ * from the Hipay user account entity KYC document file field.
+ *
+ * @see commerce_hipay_ws_uninstall()
+ */
+function commerce_hipay_ws_file_schema_delete_fields() {
+  foreach (commerce_hipay_ws_file_schema_tables() as $table_name => $fields) {
+    foreach ($fields as $field_name => $field_spec) {
+      db_drop_field($table_name, $field_name);
+    }
+  }
+}
+
+/**
+ * Adds 'KYC type' and 'KYC validity' fields to the attached file upload form.
+ *
+ * @see commerce_hipay_ws_user_account_form()
+ * @see file_field_widget_process()
+ */
+function commerce_hipay_ws_file_field_widget_process($element, &$form_state, $form) {
+  $item = $element['#value'];
+
+  // Only if a file has already been uploaded.
+  if ($item['fid']) {
+    $default_value = (!empty($item['kyc_type'])) ? $item['kyc_type'] : '';
+    $element['kyc_type'] = array(
+      '#type' => 'select',
+      '#title' => t('Document type'),
+      '#description' => t('Type of the KYC document.'),
+      '#options' => array('' => t('- select -')) + commerce_hipay_ws_api_upload_kyc_document_types(),
+      '#default_value' => $default_value,
+      // Mark this as required only when a file is already uploaded.
+      '#states' => array(
+        'required' => array(
+          ':input[name="' . $element['#name'] . '[fid]"]' => array('!value' => '0'),
+        ),
+      ),
+    );
+
+    $default_value = '';
+    // When the form is submitted, but file not yet saved, we get the
+    // 'kyc_validity' nested in a subarray with 'date' as a key.
+    if (isset($item['kyc_validity']['date'])) {
+      $item['kyc_validity'] = $item['kyc_validity']['date'];
+    }
+    // Again, when file is not yet saved, the 'kyc_validity' is formatted
+    // as a date, not as a timestamp.
+    if (!empty($item['kyc_validity']) && ($validity = strtotime($item['kyc_validity']))) {
+      $item['kyc_validity'] = $validity;
+    }
+    // Convert the value to the format the 'date' field expects.
+    if (!empty($item['kyc_validity'])) {
+      $default_value = date('Y-m-d', $item['kyc_validity']);
+    }
+    $element['kyc_validity'] = array(
+      '#type' => 'date_popup',
+      '#title' => t('Validity date'),
+      '#description' => t('KYC document expiration date (only for identification documents).'),
+      '#date_format' => 'Y-m-d',
+      '#date_label_position' => 'none',
+      '#default_value' => $default_value,
+      // Mark this as visible and required only for specific KYC document types.
+      '#states' => array(
+        'visible' => array(
+          ':input[name="' . $element['#name'] . '[kyc_type]"]' => array(
+            array('value' => 1),
+            array('value' => 3),
+            array('value' => 7),
+          ),
+        ),
+        'required' => array(
+          ':input[name="' . $element['#name'] . '[kyc_type]"]' => array(
+            array('value' => 1),
+            array('value' => 3),
+            array('value' => 7),
+          ),
+        ),
+      ),
+    );
+
+    // We cannot use 'value' as type here, as then its value gets lost.
+    $element['kyc_uploaded'] = array(
+      '#type' => 'hidden',
+      '#value' => (!empty($item['kyc_uploaded'])) ? $item['kyc_uploaded'] : '',
+    );
+
+
+    // Custom validator to make sure we got all required values.
+    // (The #states 'required' on 'kyc_validity' above does not really work.)
+    $element['#element_validate'][] = 'commerce_hipay_ws_file_field_widget_validate';
+  }
+
+  return $element;
+}
+
+/**
+ * An #element_validate callback for the managed_file element.
+ *
+ * @see commerce_hipay_ws_file_field_widget_process()
+ * @see file_managed_file_validate()
+ */
+function commerce_hipay_ws_file_field_widget_validate(&$element, &$form_state) {
+  if (!empty($form_state['values']['hipay_ws_user_kyc_documents'][LANGUAGE_NONE])) {
+    $uploaded_types = array();
+    foreach ($form_state['values']['hipay_ws_user_kyc_documents'][LANGUAGE_NONE] as $delta => $kyc_file) {
+      // No validation if no file was uploaded.
+      if (empty($kyc_file['fid'])) {
+        continue;
+      }
+
+      // We always should have the KYC document type.
+      if (empty($kyc_file['kyc_type'])) {
+        form_set_error($element['#name'] . '[kyc_type]', 'KYC document type is required.');
+      }
+
+      // We can have only one file of each KYC document type.
+      if (in_array($kyc_file['kyc_type'], $uploaded_types)) {
+        form_set_error($element['#name'] . '[kyc_type]', 'There could be only one KYC document of each type.');
+      }
+      $uploaded_types[] = $kyc_file['kyc_type'];
+
+      // For some KYC document types, we need the document validity date.
+      if (in_array($kyc_file['kyc_type'], array(1, 3, 7)) && empty($kyc_file['kyc_validity'])) {
+        form_set_error($element['#name'] . '[kyc_validity]', 'KYC document validity date is required.');
+      }
+
+      // When the form is submitted, but file not yet saved, we get the
+      // 'kyc_validity' nested in a subarray with 'date' as a key.
+      if (isset($kyc_file['kyc_validity']['date'])) {
+        $kyc_file['kyc_validity'] = $kyc_file['kyc_validity']['date'];
+      }
+
+      // KYC document validity date should be grater than today.
+      if (!empty($kyc_file['kyc_validity']) && strtotime($kyc_file['kyc_validity']) < strtotime('tomorrow')) {
+        form_set_error($element['#name'] . '[kyc_validity]', 'KYC document validity date should be greater than today.');
+      }
+
+      // For the KYC documents which the validity date is not required for,
+      // if a date was provided (for example for the previous KYC document type
+      // value), let's remove it.
+      if (!in_array($kyc_file['kyc_type'], array(1, 3, 7)) && !empty($kyc_file['kyc_validity'])) {
+        $form_state['values']['hipay_ws_user_kyc_documents'][LANGUAGE_NONE][$delta]['kyc_validity'] = NULL;
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_field_attach_update().
+ *
+ * Saves the KYC document file data into 'commerce_hipay_ws_kyc_document' table.
+ */
+function commerce_hipay_ws_field_attach_update($entity_type, $entity) {
+  if ($entity_type == 'commerce_hipay_ws_user_account') {
+    commerce_hipay_ws_file_kyc_document_update($entity_type, $entity);
+  }
+}
+
+/**
+ * Updates the KYC document-related properties in the Hipay user account entity
+ * KYC document file field.
+ *
+ * @param $entity_type
+ *   The type of entity being updated.
+ * @param $entity
+ *   The entity object being updated.
+ *
+ * @see commerce_hipay_ws_field_attach_update()
+ */
+function commerce_hipay_ws_file_kyc_document_update($entity_type, $entity) {
+  $wrapper = entity_metadata_wrapper($entity_type, $entity);
+  $kyc_documents = $wrapper->hipay_ws_user_kyc_documents->value();
+
+  if (!empty($kyc_documents)) {
+    $table_name = 'field_data_hipay_ws_user_kyc_documents';
+    $table_schema = drupal_get_schema($table_name);
+    $kyc_fields = commerce_hipay_ws_file_schema_fields();
+
+    foreach ($kyc_documents as $delta => $kyc_document) {
+      // Combine KYC document-specific data with an array of primary keys.
+      $record = array_intersect_key($kyc_document, $kyc_fields) + array(
+        'entity_type' => $entity_type,
+        'entity_id' => $entity->user_account_id,
+        'deleted' => 0,
+        'delta' => $delta,
+        'language' => LANGUAGE_NONE,
+      );
+      if (!empty($record['kyc_validity']) && ($validity = strtotime($record['kyc_validity']))) {
+        $record['kyc_validity'] = $validity;
+      }
+      if (!empty($record['kyc_uploaded']) && ($uploaded = strtotime($record['kyc_uploaded']))) {
+        $record['kyc_uploaded'] = $uploaded;
+      }
+
+      // Save KYC document data.
+      drupal_write_record($table_name, $record, $table_schema['primary key']);
+    }
+
+    // Clear field cache to force reload of the new KYC document values.
+    cache_clear_all("field:$entity_type:" . $entity->user_account_id, 'cache_field');
+  }
+}
+
+/**
+ * Implements hook_field_attach_load().
+ *
+ * Loads the KYC document file data from 'commerce_hipay_ws_kyc_document' table.
+ */
+function commerce_hipay_ws_field_attach_load($entity_type, $entities, $age, $options) {
+  if ($entity_type == 'commerce_hipay_ws_user_account') {
+    foreach ($entities as $key => $entity) {
+      $wrapper = entity_metadata_wrapper($entity_type, $entity);
+      $kyc_documents = $wrapper->hipay_ws_user_kyc_documents->value();
+
+      if (!empty($kyc_documents)) {
+        foreach ($kyc_documents as $delta => $kyc_document) {
+          // Get KYC document data from 'commerce_hipay_ws_kyc_document' table.
+          $table_name = 'field_data_hipay_ws_user_kyc_documents';
+          $kyc_fields = commerce_hipay_ws_file_schema_fields();
+
+          $result = db_select($table_name, 'kyc')
+            ->fields('kyc', array_keys($kyc_fields))
+            ->condition('entity_type', $entity_type)
+            ->condition('entity_id', $entity->user_account_id)
+            ->condition('deleted', 0)
+            ->condition('delta', $delta)
+            ->condition('language', LANGUAGE_NONE)
+            ->execute()
+            ->fetchAssoc();
+          // Add fetched data to the entity being loaded.
+          $entity->hipay_ws_user_kyc_documents[LANGUAGE_NONE][$delta] += $result;
+        }
+      }
+    }
+  }
+}
+
+/**
  * Implements hook_field_formatter_info().
  *
- * Adds new file display formatter to KYC document files.
+ * Adds new file display formatter for KYC document files.
  *
  * @see commerce_hipay_ws_field_formatter_view()
  * @see file_field_formatter_info()
@@ -29,25 +347,49 @@ function commerce_hipay_ws_field_formatter_view($entity_type, $entity, $field, $
   $element = array();
 
   if ($display['type'] == 'file_kyc_document') {
-    foreach ($items as $delta => $item) {
-      // Remove the KYC document type from file description property.
-      $kyc_type = $item['description'];
-      unset($item['description']);
-
-      // More or less the same 'Generic file' formatting as in
-      // file_field_formatter_view().
-      $element[$delta] = array(
-        '#markup' => theme('file_link', array('file' => (object) $item)),
+    if (!empty($items)) {
+      // Display all values in a single element.
+      $element[0] = array(
+        '#theme' => 'kyc_documents_table',
+        '#items' => $items,
       );
-
-      // Now add the KYC document type information.
-      $kyc_types = options_array_flatten(commerce_hipay_ws_api_upload_kyc_document_types());
-      $element[$delta]['#markup'] .= strtr(' - !kyc_type_name (!kyc_type_id)', array(
-        '!kyc_type_id' => $kyc_type,
-        '!kyc_type_name' => $kyc_types[$kyc_type],
-      ));
     }
   }
 
   return $element;
+}
+
+/**
+ * Returns HTML for a KYC document file attachments table.
+ *
+ * @param array $variables
+ *   An associative array containing:
+ *   - items: An array of file attachments.
+ *
+ * @ingroup themeable
+ *
+ * @see commerce_hhipay_ws_theme()
+ * @see theme_file_formatter_table()
+ */
+function theme_kyc_documents_table($variables) {
+  $header = array(
+    t('KYC document'),
+    t('Document type'),
+    t('Validity'),
+    t('Uploaded date'),
+  );
+
+  $kyc_types = options_array_flatten(commerce_hipay_ws_api_upload_kyc_document_types());
+
+  $rows = array();
+  foreach ($variables['items'] as $delta => $item) {
+    $rows[] = array(
+      theme('file_link', array('file' => (object) $item)),
+      $kyc_types[$item['kyc_type']],
+      (!empty($item['kyc_validity'])) ? date('Y-m-d', $item['kyc_validity']) : '-',
+      (!empty($item['kyc_uploaded'])) ? date('Y-m-d H:i:s', $item['kyc_uploaded']) : '-'
+    );
+  }
+
+  return empty($rows) ? '' : theme('table', array('header' => $header, 'rows' => $rows));
 }

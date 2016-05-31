@@ -1348,7 +1348,7 @@ function commerce_hipay_ws_user_account_field_instances() {
     'label' => 'KYC documents',
     'required' => 0,
     'settings' => array(
-      'description_field' => 1,
+      'description_field' => 0,
       'file_directory' => 'kyc_documents',
       'file_extensions' => 'pdf doc docx jpg jpeg png',
       'max_filesize' => '2 MB',
