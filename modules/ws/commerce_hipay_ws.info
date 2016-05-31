@@ -12,6 +12,7 @@ dependencies[] = list
 dependencies[] = options
 dependencies[] = text
 core = 7.x
+php = 5.5
 files[] = includes/entities/commerce_hipay_ws.controller.user_account.inc
 files[] = includes/entities/commerce_hipay_ws.controller.bank_account.inc
 files[] = includes/views/commerce_hipay_ws.views.inc

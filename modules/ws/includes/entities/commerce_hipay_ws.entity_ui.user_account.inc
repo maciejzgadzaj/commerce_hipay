@@ -155,8 +155,14 @@ function commerce_hipay_ws_user_account_view($entity, $view_mode = 'full') {
  * @see commerce_hipay_ws_user_account_menu()
  */
 function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'full') {
+  $return = array(
+    'hipay_user_account_title' => array(
+      '#markup' => '<h2>' . t('Hipay user account') . '</h2>',
+    ),
+  );
+
   if (!empty($entity->hipay_account_id)) {
-    $return = '';
+    $output = '';
 
     // Fetch: getAccountInfos.
     $parameters = array('accountId' => $entity->hipay_account_id);
@@ -165,21 +171,21 @@ function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'f
     if (isset($response['code']) && $response['code'] === 0) {
 
       // Display: getAccountInfos.
-      $return .= '<p><strong>getAccountInfos</strong></p>';
+      $output .= '<h3>' . t('getAccountInfos') . '</h3>';
       $exclude = array('code', 'description', 'websites', 'subAccounts');
       $header = $row = array();
       foreach (array_diff_key($response, array_flip($exclude)) as $key => $value) {
         $header[$key] = check_plain($key);
         $row[$key] = check_plain($value);
       }
-      $return .= theme('table', array(
+      $output .= theme('table', array(
         'header' => $header,
         'rows' => array($row)
       ));
 
       // Display: getAccountInfos: websites.
       if (!empty($response['websites'])) {
-        $return .= '<p><strong>getAccountInfos: websites</strong></p>';
+        $output .= '<h3>' . t('getAccountInfos: websites') . '</h3>';
         $header = $rows = array();
         foreach ($response['websites'] as $item) {
           $row = array();
@@ -189,7 +195,7 @@ function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'f
           }
           $rows[] = $row;
         }
-        $return .= theme('table', array(
+        $output .= theme('table', array(
           'header' => $header,
           'rows' => array($row)
         ));
@@ -197,7 +203,7 @@ function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'f
 
       // @TODO: Display: getAccountInfos: subAccounts.
       if (!empty($response['subAccounts'])) {
-        $return .= '<p><strong>getAccountInfos: subAccounts</strong></p>';
+        $output .= '<h3>' . t('getAccountInfos: subAccounts') . '</h3>';
       }
     }
 
@@ -208,7 +214,7 @@ function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'f
 
     // Display: getBalance.
     if (!empty($response['balances'])) {
-      $return .= '<p><strong>getBalance</strong></p>';
+      $output .= '<h3>' . t('getBalance') . '</h3>';
       $header = $rows = array();
       foreach ($response['balances'] as $item) {
         $row = array();
@@ -218,7 +224,7 @@ function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'f
         }
         $rows[] = $row;
       }
-      $return .= theme('table', array('header' => $header, 'rows' => array($row)));
+      $output .= theme('table', array('header' => $header, 'rows' => array($row)));
     }
 
     // Fetch: getTransactions.
@@ -233,14 +239,45 @@ function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'f
 
     // @TODO: Display: getTransactions.
     if (!empty($response['transactions'])) {
-      $return .= '<p><strong>getTransactions</strong></p>';
+      $output .= '<h3>' . t('getTransactions') . '</h3>';
     }
 
-    return $return;
+    $return['hipay_user_account'] = array(
+      '#markup' => $output,
+    );
   }
   else {
-    return drupal_get_form('commerce_hipay_ws_user_account_view_hipay_create_form', $entity);
+    $return['hipay_user_account'] = drupal_get_form('commerce_hipay_ws_user_account_view_hipay_create_form', $entity);
   }
+
+  // KYC documents.
+  $wrapper = entity_metadata_wrapper('commerce_hipay_ws_user_account', $entity);
+  $kyc_documents = $wrapper->hipay_ws_user_kyc_documents->value();
+
+  if (!empty($kyc_documents)) {
+    $return['kyc_documents_title'] = array(
+      '#markup' => '<h2>' . t('KYC documents') . '</h2>',
+    );
+
+    $return['kyc_documents'] = array(
+      '#theme' => 'kyc_documents_table',
+      '#items' => $kyc_documents,
+    );
+
+    // Check if all KYC documents were uploaded to Hipay Wallet,
+    // and display an upload form if there is still something left.
+    $all_documents_uploaded = TRUE;
+    foreach ($kyc_documents as $kyc_document) {
+      if (empty($kyc_document['kyc_uploaded'])) {
+        $all_documents_uploaded = FALSE;
+      }
+    }
+    if (!$all_documents_uploaded) {
+      $return['kyc_documents_upload'] = drupal_get_form('commerce_hipay_ws_user_account_view_hipay_kyc_upload_form', $entity);
+    }
+  }
+
+  return $return;
 }
 
 /**
@@ -274,8 +311,71 @@ function commerce_hipay_ws_user_account_view_hipay_create_form_submit($form, $fo
 
   $response = commerce_hipay_ws_api_user_account_create($user_account);
 
-  if ($response['code'] !== 0) {
+  if (!isset($response['code']) || $response['code'] !== 0) {
     drupal_set_message(t('Error creating a new user account in Hipay Wallet: @error.', array('@error' => $response['description'])), 'error');
+  }
+}
+
+/**
+ * Returns a form to upload KYC documents if not uploaded yet.
+ *
+ * @see commerce_hipay_ws_user_account_view_hipay_info()
+ * @see commerce_hipay_ws_user_account_view_hipay_kyc_upload_form_submit()
+ */
+function commerce_hipay_ws_user_account_view_hipay_kyc_upload_form($form, &$form_state, $entity) {
+  $form_state['commerce_hipay_ws_user_account'] = $entity;
+
+  $form['info'] = array(
+    '#markup' => '<p>' . t('Not all KYC documents have been uploaded to Hipay Wallet yet.') . '</p>',
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Upload remaining KYC documents to Hipay Wallet'),
+  );
+
+  return $form;
+}
+
+/**
+ * Form submit handler: uploads KYC documents to Hipay Wallet.
+ *
+ * @see commerce_hipay_ws_user_account_view_hipay_kyc_upload_form()
+ */
+function commerce_hipay_ws_user_account_view_hipay_kyc_upload_form_submit($form, $form_state) {
+  $user_account = $form_state['commerce_hipay_ws_user_account'];
+  $wrapper = entity_metadata_wrapper('commerce_hipay_ws_user_account', $user_account);
+  $kyc_documents = $wrapper->hipay_ws_user_kyc_documents->value();
+
+  foreach ($kyc_documents as $delta => $kyc_document) {
+    if (empty($kyc_document['kyc_uploaded'])) {
+      $kyc_document['delta'] = $delta;
+      $response = commerce_hipay_ws_api_upload($user_account, $kyc_document);
+
+      // If there was an error uploading the KYC document.
+      if (!isset($response['code']) || $response['code'] !== 0) {
+        // Combine all error messages into one string.
+        $error_message = '';
+        if (!empty($response['errors'])) {
+          $error_messages = array();
+          foreach ($response['errors'] as $error) {
+            $error_messages[] = implode(': ', $error);
+          }
+          $error_message = ': ' . implode(', ', $error_messages);
+        }
+
+        drupal_set_message(t('Error uploading KYC document %filename to Hipay Wallet: @error.', array(
+          '%filename' => $kyc_document['filename'],
+          '@error' => $response['message'] . $error_message,
+        )), 'error');
+      }
+      // Everything was fine with the upload.
+      else {
+        drupal_set_message(t('Successfully uploaded KYC document %filename to Hipay Wallet.', array(
+          '%filename' => $kyc_document['filename'],
+        )));
+      }
+    }
   }
 }
 

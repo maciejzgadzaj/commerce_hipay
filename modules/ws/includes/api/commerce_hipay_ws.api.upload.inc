@@ -1,6 +1,68 @@
 <?php
 
 /**
+ * Uploads a KYC document file to Hipay Wallet.
+ *
+ * @param object $account
+ *   A Hipay user account to upload a KYC document for.
+ * @param array $kyc_document
+ *   A KYC document file entity to be uploaded to Hipay Wallet.
+ * @param array $payment_method_instance
+ *   A payment method instance to use when uploading a KYC document.
+ *
+ * @return array
+ *   An array of Hipay Wallet API response parameters.
+ */
+function commerce_hipay_ws_api_upload($account, $kyc_document, $payment_method_instance = NULL) {
+  // If no payment method instance was provided in the function parameter,
+  // try to load the first available one.
+  if (
+    !$payment_method_instance
+    && ($instances = commerce_hipay_ws_payment_method_instances('commerce_hipay_ws', TRUE))
+  ) {
+    $payment_method_instance = reset($instances);
+  }
+  // If still no payment method instance is available, we cannot continue.
+  if (empty($payment_method_instance)) {
+    // @TODO: watchdog.
+    return FALSE;
+  }
+
+  // This requires PHP 5.5 or later.
+  $file = new CURLFile(drupal_realpath($kyc_document['uri']),'application/octet-stream', $kyc_document['filename']);
+
+  $parameters = array(
+    'user_space' => $account->hipay_space_id,
+    'type' => $kyc_document['kyc_type'],
+    'file' => $file,
+  );
+  if (!empty($kyc_document['kyc_validity'])) {
+    $parameters['validity_date'] = date('Y-m-d', $kyc_document['kyc_validity']);
+  }
+
+  $context = array(
+    'hipay_user_account' => $account,
+    'kyc_document' => $kyc_document,
+  );
+
+  // Perform the call to Hipay Wallet API.
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_REST_UPLOAD, $parameters, $context, FALSE);
+
+  // If everything went fine, add new uploaded date to the KYC document
+  // file field.
+  if (isset($response['code']) && $response['code'] === 0) {
+    // In commerce_hipay_ws_user_account_view_hipay_kyc_upload_form_submit()
+    // we added the delta of the file currently being uploaded to $kyc_document
+    // array.
+    $delta = $kyc_document['delta'];
+    $account->hipay_ws_user_kyc_documents[LANGUAGE_NONE][$delta]['kyc_uploaded'] = time();
+    commerce_hipay_ws_file_kyc_document_update('commerce_hipay_ws_user_account', $account);
+  }
+
+  return $response;
+}
+
+/**
  * Returns types of KYC documents (classification numbers).
  *
  * @return array
