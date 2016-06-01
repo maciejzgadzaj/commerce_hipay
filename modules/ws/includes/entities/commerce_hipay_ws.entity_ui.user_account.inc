@@ -344,6 +344,16 @@ function commerce_hipay_ws_user_account_view_hipay_kyc_upload_form($form, &$form
  */
 function commerce_hipay_ws_user_account_view_hipay_kyc_upload_form_submit($form, $form_state) {
   $user_account = $form_state['commerce_hipay_ws_user_account'];
+  commerce_hipay_ws_user_account_upload_kyc_documents($user_account);
+}
+
+/**
+ * Uploads all not yet uploaded entity KYC documents to Hipay Wallet.
+ *
+ * @param object $user_account
+ *   A Hipay user account entity object which to upload the KYC documents for.
+ */
+function commerce_hipay_ws_user_account_upload_kyc_documents($user_account) {
   $wrapper = entity_metadata_wrapper('commerce_hipay_ws_user_account', $user_account);
   $kyc_documents = $wrapper->hipay_ws_user_kyc_documents->value();
 

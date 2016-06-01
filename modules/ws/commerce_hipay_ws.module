@@ -219,6 +219,22 @@ function commerce_hipay_ws_entity_insert($entity, $type) {
 }
 
 /**
+ * Implements hook_entity_update().
+ */
+function commerce_hipay_ws_entity_update($entity, $type) {
+  if ($type == 'commerce_hipay_ws_user_account') {
+    $payment_method_instance = commerce_hipay_ws_payment_method_instance();
+    // Only if payment method is enabled (otherwise the instance would be empty)
+    // and configured to create accounts in Hipay Wallet immediately.
+    if (!empty($payment_method_instance['settings']['api']['create_account_immediately'])) {
+      // Reload the entity to have fully populated KYC document file fields.
+      $hipay_user_account = commerce_hipay_ws_user_account_load($entity->user_account_id);
+      commerce_hipay_ws_user_account_upload_kyc_documents($hipay_user_account);
+    }
+  }
+}
+
+/**
  * Returns default settings for the Hipay Wallet payment method.
  *
  * @see commerce_hipay_ws_settings_form()
