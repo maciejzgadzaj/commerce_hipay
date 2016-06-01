@@ -1,97 +1,95 @@
 <?php
 
 /**
- * Implements hook_schema_alter().
- *
- * Adds KYC document-related properties to the Hipay user account entity
- * KYC document file field.
+ * A name of the database table for custom KYC document information.
  */
-function commerce_hipay_ws_schema_alter(&$schema) {
-  foreach (commerce_hipay_ws_file_schema_tables() as $table_name => $fields) {
-    if (isset($schema[$table_name]['fields'])) {
-      foreach ($fields as $field_name => $field_spec) {
-        $schema[$table_name]['fields'][$field_name] = $field_spec;
-      }
-    }
-  }
+define('COMMERCE_HIPAY_WS_KYC_DOCUMENTS_TABLE', 'commerce_hipay_ws_kyc_document');
+
+/**
+ * Defines the current version of the database schema for KYC documents info.
+ *
+ * @see commerce_hipay_ws_schema()
+ */
+function commerce_hipay_ws_file_schema() {
+  $schema = array();
+
+  $schema[COMMERCE_HIPAY_WS_KYC_DOCUMENTS_TABLE] = array(
+    'description' => 'Details of Hipay Wallet KYC documents.',
+    'fields' => array(
+      'entity_type' => array(
+        'description' => 'The entity type.',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+      ),
+      'deleted' => array(
+        'description' => 'Deleted?',
+        'type' => 'int',
+        'length' => 128,
+        'not null' => TRUE,
+      ),
+      'entity_id' => array(
+        'description' => 'The entity ID.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+      'language' => array(
+        'description' => 'The language.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+      ),
+      'delta' => array(
+        'description' => 'The delta.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+      'kyc_type' => array(
+        'description' => 'The type of this KYC document.',
+        'type' => 'varchar',
+        'length' => 10,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'kyc_validity' => array(
+        'description' => 'The Unix timestamp when this KYC document expires.',
+        'type' => 'int',
+        'not null' => FALSE,
+        'unsigned' => TRUE,
+        'default' => 0,
+      ),
+      'kyc_uploaded' => array(
+        'description' => 'The Unix timestamp when this KYC document expires.',
+        'type' => 'int',
+        'not null' => FALSE,
+        'unsigned' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array(
+      'entity_type',
+      'deleted',
+      'entity_id',
+      'language',
+      'delta',
+    ),
+  );
+
+  return $schema;
 }
 
 /**
- * Returns tables to be updated with new KYC document-related properties.
+ * Returns an array of custom KYC document properties.
  *
  * @return array
- *   An array of tables to be updated with new KYC document-related properties.
- *
- * @see commerce_hipay_ws_schema_alter()
+ *   An array of custom KYC document properties.
  */
-function commerce_hipay_ws_file_schema_tables() {
-  $schema_fields = commerce_hipay_ws_file_schema_fields();
-  return array(
-    'field_data_hipay_ws_user_kyc_documents' => $schema_fields,
-    'field_revision_hipay_ws_user_kyc_documents' => $schema_fields,
-  );
-}
-
-/**
- * Returns new KYC document-related properties for the KYC document file field.
- *
- * @return array
- *   An array of new KYC document-related properties for the KYC document
- *   file field.
- *
- * @see commerce_hipay_ws_file_schema_tables()
- * @see commerce_hipay_ws_schema_alter()
- */
-function commerce_hipay_ws_file_schema_fields() {
-  return array(
-    'kyc_type' => array(
-      'description' => 'The type of this KYC document.',
-      'type' => 'varchar',
-      'length' => 10,
-      'not null' => TRUE,
-      'default' => '',
-    ),
-    'kyc_validity' => array(
-      'description' => 'The Unix timestamp when this KYC document expires.',
-      'type' => 'int',
-      'not null' => FALSE,
-      'unsigned' => TRUE,
-    ),
-    'kyc_uploaded' => array(
-      'description' => 'The Unix timestamp when this KYC document expires.',
-      'type' => 'int',
-      'not null' => FALSE,
-      'unsigned' => TRUE,
-    ),
-  );
-}
-
-/**
- * Module install callback to add KYC document-related properties to the Hipay
- * user account entity KYC document file field.
- *
- * @see commerce_hipay_ws_install()
- */
-function commerce_hipay_ws_file_schema_create_fields() {
-  foreach (commerce_hipay_ws_file_schema_tables() as $table_name => $fields) {
-    foreach ($fields as $field_name => $field_spec) {
-      db_add_field($table_name, $field_name, $field_spec);
-    }
-  }
-}
-
-/**
- * Module uninstall callback to delete KYC document-related properties
- * from the Hipay user account entity KYC document file field.
- *
- * @see commerce_hipay_ws_uninstall()
- */
-function commerce_hipay_ws_file_schema_delete_fields() {
-  foreach (commerce_hipay_ws_file_schema_tables() as $table_name => $fields) {
-    foreach ($fields as $field_name => $field_spec) {
-      db_drop_field($table_name, $field_name);
-    }
-  }
+function commerce_hipay_ws_file_schema_kyc_fields() {
+  $schema = commerce_hipay_ws_file_schema();
+  $table_schema = $schema[COMMERCE_HIPAY_WS_KYC_DOCUMENTS_TABLE];
+  return array_keys(array_diff_key($table_schema['fields'], array_flip($table_schema['primary key'])));
 }
 
 /**
@@ -255,28 +253,33 @@ function commerce_hipay_ws_file_kyc_document_update($entity_type, $entity) {
   $kyc_documents = $wrapper->hipay_ws_user_kyc_documents->value();
 
   if (!empty($kyc_documents)) {
-    $table_name = 'field_data_hipay_ws_user_kyc_documents';
-    $table_schema = drupal_get_schema($table_name);
-    $kyc_fields = commerce_hipay_ws_file_schema_fields();
-
     foreach ($kyc_documents as $delta => $kyc_document) {
-      // Combine KYC document-specific data with an array of primary keys.
-      $record = array_intersect_key($kyc_document, $kyc_fields) + array(
+      // Get only custom KYC document properties.
+      $record = array_intersect_key($kyc_document, array_flip(commerce_hipay_ws_file_schema_kyc_fields()));
+      // Remove empty values.
+      $record = array_filter($record);
+      // Make sure kyc_validity is a timestamp (if set).
+      if (!empty($record['kyc_validity']) && ($validity = strtotime($record['kyc_validity']))) {
+        $record['kyc_validity'] = $validity;
+      }
+      // Make sure kyc_uploaded is a timestamp (if set).
+      if (!empty($record['kyc_uploaded']) && ($uploaded = strtotime($record['kyc_uploaded']))) {
+        $record['kyc_uploaded'] = $uploaded;
+      }
+
+      $where = array(
         'entity_type' => $entity_type,
         'entity_id' => $entity->user_account_id,
         'deleted' => 0,
         'delta' => $delta,
         'language' => LANGUAGE_NONE,
       );
-      if (!empty($record['kyc_validity']) && ($validity = strtotime($record['kyc_validity']))) {
-        $record['kyc_validity'] = $validity;
-      }
-      if (!empty($record['kyc_uploaded']) && ($uploaded = strtotime($record['kyc_uploaded']))) {
-        $record['kyc_uploaded'] = $uploaded;
-      }
 
       // Save KYC document data.
-      drupal_write_record($table_name, $record, $table_schema['primary key']);
+      db_merge(COMMERCE_HIPAY_WS_KYC_DOCUMENTS_TABLE)
+        ->fields($record)
+        ->key($where)
+        ->execute();
     }
 
     // Clear field cache to force reload of the new KYC document values.
@@ -296,13 +299,11 @@ function commerce_hipay_ws_field_attach_load($entity_type, $entities, $age, $opt
       $kyc_documents = $wrapper->hipay_ws_user_kyc_documents->value();
 
       if (!empty($kyc_documents)) {
-        foreach ($kyc_documents as $delta => $kyc_document) {
-          // Get KYC document data from 'commerce_hipay_ws_kyc_document' table.
-          $table_name = 'field_data_hipay_ws_user_kyc_documents';
-          $kyc_fields = commerce_hipay_ws_file_schema_fields();
+        $kyc_fields = commerce_hipay_ws_file_schema_kyc_fields();
 
-          $result = db_select($table_name, 'kyc')
-            ->fields('kyc', array_keys($kyc_fields))
+        foreach ($kyc_documents as $delta => $kyc_document) {
+          $result = db_select(COMMERCE_HIPAY_WS_KYC_DOCUMENTS_TABLE, 'kyc')
+            ->fields('kyc', $kyc_fields)
             ->condition('entity_type', $entity_type)
             ->condition('entity_id', $entity->user_account_id)
             ->condition('deleted', 0)
@@ -311,7 +312,9 @@ function commerce_hipay_ws_field_attach_load($entity_type, $entities, $age, $opt
             ->execute()
             ->fetchAssoc();
           // Add fetched data to the entity being loaded.
-          $entity->hipay_ws_user_kyc_documents[LANGUAGE_NONE][$delta] += $result;
+          if (!empty($result) && is_array($result)) {
+            $entity->hipay_ws_user_kyc_documents[LANGUAGE_NONE][$delta] += $result;
+          }
         }
       }
     }

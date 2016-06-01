@@ -356,6 +356,7 @@ function commerce_hipay_ws_user_account_view_hipay_kyc_upload_form_submit($form,
 function commerce_hipay_ws_user_account_upload_kyc_documents($user_account) {
   $wrapper = entity_metadata_wrapper('commerce_hipay_ws_user_account', $user_account);
   $kyc_documents = $wrapper->hipay_ws_user_kyc_documents->value();
+  $success = TRUE;
 
   foreach ($kyc_documents as $delta => $kyc_document) {
     if (empty($kyc_document['kyc_uploaded'])) {
@@ -378,6 +379,7 @@ function commerce_hipay_ws_user_account_upload_kyc_documents($user_account) {
           '%filename' => $kyc_document['filename'],
           '@error' => $response['message'] . $error_message,
         )), 'error');
+        $success = FALSE;
       }
       // Everything was fine with the upload.
       else {
@@ -387,6 +389,8 @@ function commerce_hipay_ws_user_account_upload_kyc_documents($user_account) {
       }
     }
   }
+
+  return $success;
 }
 
 /**

@@ -55,6 +55,9 @@ function commerce_hipay_ws_schema() {
   module_load_include('inc', 'commerce_hipay_ws', 'commerce_hipay_ws.entity.bank_account');
   $schema += commerce_hipay_ws_bank_account_schema();
 
+  module_load_include('inc', 'commerce_hipay_ws', 'commerce_hipay_ws.entity.file');
+  $schema += commerce_hipay_ws_file_schema();
+
   $schema['commerce_hipay_ws_account'] = array(
     'description' => 'Details of Hipay Wallet accounts.',
     'fields' => array(
@@ -318,9 +321,6 @@ function commerce_hipay_ws_install() {
 
   module_load_include('inc', 'commerce_hipay_ws', 'includes/entities/commerce_hipay_ws.entity.bank_account');
   commerce_hipay_ws_bank_account_create_fields();
-
-  module_load_include('inc', 'commerce_hipay_ws', 'includes/entities/commerce_hipay_ws.entity.file');
-  commerce_hipay_ws_file_schema_create_fields();
 }
 
 /**
@@ -332,7 +332,4 @@ function commerce_hipay_ws_uninstall() {
 
   module_load_include('inc', 'commerce_hipay_ws', 'includes/entities/commerce_hipay_ws.entity.bank_account');
   commerce_hipay_ws_bank_account_delete_fields();
-
-  module_load_include('inc', 'commerce_hipay_ws', 'includes/entities/commerce_hipay_ws.entity.file');
-  commerce_hipay_ws_file_schema_delete_fields();
 }
