@@ -1068,22 +1068,30 @@ function commerce_hipay_ws_commerce_hipay_ws_api_request_alter(&$parameters, $re
   }
 }
 
-function commerce_hipay_ws_get_notification_feedback() {
+/**
+ * Processes XML feedback.
+ *
+ * @param array $xml_string
+ *   A string containing XML feedback received from Hipay Wallet API.
+ */
+function commerce_hipay_ws_callback_notification_process_feedback_xml($xml_string) {
+  if ($xml = simplexml_load_string($xml_string)) {
+    $feedback_xml = json_decode(json_encode($xml->result), TRUE);
 
-  if (isset($_POST['xml']) && !empty($_POST['xml'])) {
-    $xml = simplexml_load_string($_POST['xml']);
+    if (!empty($feedback_xml['operation'])) {
+      switch ($feedback_xml['operation']) {
 
-    $result = array(
-      'operation' => (string) $xml->result->operation,
-      'status' => (string) $xml->result->status,
-      'transactionId' => (string) $xml->result->transid,
-    );
+        case 'withdraw_validation':
+          $withdrawal = commerce_hipay_ws_withdrawal_load_by_withdrawal_id($feedback_xml['transid']);
+          $withdrawal['notification'] = $feedback_xml;
+          $transfer['status'] = $feedback_xml['status'];
+          commerce_hipay_ws_withdrawal_save($withdrawal);
+          break;
 
-    return $result;
+      }
+    }
 
   }
-
-  return FALSE;
 }
 
 /**
@@ -1092,28 +1100,23 @@ function commerce_hipay_ws_get_notification_feedback() {
  * @see commerce_hipay_ws_menu().
  */
 function commerce_hipay_ws_callback_notification() {
-  // Get Hipay API notification feedback and process it.
-  $feedback = commerce_hipay_ws_get_notification_feedback();
+  // Get Hipay Wallet API notification feedback.
+  $feedback = commerce_hipay_ws_get_feedback();
 
-  if ($feedback) {
-    switch ($feedback['operation']) {
-      case 'withdraw_validation':
-        $withdrawal = commerce_hipay_ws_withdrawal_load_by_withdrawal_id($feedback['transactionId']);
-        $withdrawal['notification'] = $feedback;
-        $transfer['status'] = $feedback['status'];
-        commerce_hipay_ws_withdrawal_save($withdrawal);
-        break;
-    }
+  // Log the feedback.
+  watchdog('commerce_hipay_ws', 'Notification received: !feedback', array(
+    '!feedback' => '<pre>' . check_plain(var_export($feedback, TRUE)) . '</pre>',
+  ), WATCHDOG_DEBUG);
 
-    // Allow other modules to process the notification.
-    foreach (module_implements('commerce_hipay_ws_api_notification') as $module) {
-      $function = $module . '_commerce_hipay_ws_api_notification';
-      $function($feedback);
-    }
+  // Process received XML feedback.
+  if (!empty($feedback['xml'])) {
+    commerce_hipay_ws_callback_notification_process_feedback_xml($feedback['xml']);
+  }
 
-    watchdog('commerce_hipay_ws', 'Notification received: !feedback', array(
-      '!feedback' => '<pre>' . var_export($feedback, TRUE) . '</pre>',
-    ), WATCHDOG_DEBUG);
+  // Allow other modules to process the notification.
+  foreach (module_implements('commerce_hipay_ws_api_notification') as $module) {
+    $function = $module . '_commerce_hipay_ws_api_notification';
+    $function($feedback);
   }
 }
 
