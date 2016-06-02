@@ -49,13 +49,13 @@ function commerce_hipay_ws_requirements($phase) {
 function commerce_hipay_ws_schema() {
   $schema = array();
 
-  module_load_include('inc', 'commerce_hipay_ws', 'commerce_hipay_ws.entity.user_account');
+  module_load_include('inc', 'commerce_hipay_ws', 'includes/entities/commerce_hipay_ws.entity.user_account');
   $schema += commerce_hipay_ws_user_account_schema();
 
-  module_load_include('inc', 'commerce_hipay_ws', 'commerce_hipay_ws.entity.bank_account');
+  module_load_include('inc', 'commerce_hipay_ws', 'includes/entities/commerce_hipay_ws.entity.bank_account');
   $schema += commerce_hipay_ws_bank_account_schema();
 
-  module_load_include('inc', 'commerce_hipay_ws', 'commerce_hipay_ws.entity.file');
+  module_load_include('inc', 'commerce_hipay_ws', 'includes/entities/commerce_hipay_ws.entity.file');
   $schema += commerce_hipay_ws_file_schema();
 
   $schema['commerce_hipay_ws_account'] = array(
