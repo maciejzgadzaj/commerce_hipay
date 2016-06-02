@@ -180,71 +180,121 @@ function commerce_hipay_ws_check_account_identified($user_account_id) {
 }
 
 /**
+ * Returns a Hipay Wallet API response, fetched from cache or the API.
+ *
+ * @param string $resource
+ *   A Hipay Wallet API resource to call if cached value was not found.
+ * @param bool $reset
+ *   A boolean indicating whether a cached value should be reset or not.
+ *
+ * @return mixed|false
+ *   Returns a cached value of Hipay Wallet API response, or false if cached
+ *   value was not found and there was an error calling Hipay Wallet API.
+ */
+function commerce_hipay_ws_get_cached($resource, $reset = FALSE) {
+  $cached_response = &drupal_static(__FUNCTION__);
+
+  // Build cache key from provided function arguments.
+  $args = func_get_args();
+  $cache_key = sha1(drupal_json_encode($args));
+
+  // Get payment method instance to check if caching is enabled.
+  $instance = commerce_hipay_ws_payment_method_instance();
+
+  // If cache reset was requested, or caching is disabled, or the response
+  // is not in the local static cache.
+  if ($reset || empty($instance['settings']['api']['cache']) || !isset($cached_response[$resource])) {
+    // If no cache reset was requested, and caching is enabled, and we have
+    // our value in the cache, just add it to local static cache.
+    if (!$reset && !empty($instance['settings']['api']['cache']) && $cache = cache_get('commerce_hipay_ws:response:' . $cache_key)) {
+      $cached_response[$cache_key] = $cache->data;
+    }
+    // Otherwise we need to fetch the response from the Hipay Wallet API.
+    else {
+      array_shift($args);
+      array_shift($args);
+      array_unshift($args, $resource);
+      // Call the function to make a Hipay Wallet API request,
+      // passing all parameters we have received here.
+      $response = call_user_func_array('commerce_hipay_ws_api_request', $args);
+
+      if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+        // Store the response in static cache for this page execution.
+        // This is fine even if caching is disabled, as the next time this
+        // function will get called, if caching is disabled the response will
+        // be re-fetched from the API anyway.
+        $cached_response[$cache_key] = $response;
+        // Store it in persistent cache for future page executions
+        // (only if caching is enabled).
+        if (!empty($instance['settings']['api']['cache'])) {
+          cache_set('commerce_hipay_ws:response:' . $cache_key, $response, 'cache', REQUEST_TIME + $instance['settings']['api']['cache_lifetime']);
+        }
+      }
+      // If there was an error fetching response from Hipay Wallet API,
+      // just return FALSE, without storing the response anywhere.
+      else {
+        return FALSE;
+      }
+    }
+  }
+
+  return $cached_response[$cache_key];
+}
+
+/**
  * Returns the list of countries supported by Hipay Wallet.
+ *
+ * @param bool $reset
+ *   A boolean indicating whether a cached value should be reset or not.
  *
  * @return array|false
  *   An array of Hipay Wallet API response parameters, where 'countries' key
  *   contains the list of countries supported by Hipay Wallet, or FALSE on error.
  */
-function commerce_hipay_ws_get_countries() {
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_COUNTRIES);
-
-  if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-    return $response;
-  }
-
-  return FALSE;
+function commerce_hipay_ws_get_countries($reset = FALSE) {
+  return commerce_hipay_ws_get_cached(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_COUNTRIES, $reset);
 }
 
 /**
  * Returns the list of locales supported by Hipay Wallet.
  *
+ * @param bool $reset
+ *   A boolean indicating whether a cached value should be reset or not.
+ *
  * @return array|false
  *   An array of Hipay Wallet API response parameters, where 'locales' key
  *   contains the list of locales supported by Hipay Wallet, or FALSE on error.
  */
-function commerce_hipay_ws_get_locales() {
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_CODES);
-
-  if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-    return $response;
-  }
-
-  return FALSE;
+function commerce_hipay_ws_get_locales($reset = FALSE) {
+  return commerce_hipay_ws_get_cached(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_CODES, $reset);
 }
 
 /**
  * Returns the list of timezones supported by Hipay Wallet.
  *
+ * @param bool $reset
+ *   A boolean indicating whether a cached value should be reset or not.
+ *
  * @return array|false
  *   An array of Hipay Wallet API response parameters, where 'timezones' key
  *   contains the list of timezones supported by Hipay Wallet, or FALSE on error.
  */
-function commerce_hipay_ws_get_timezones() {
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_TIMEZONES);
-
-  if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-    return $response;
-  }
-
-  return FALSE;
+function commerce_hipay_ws_get_timezones($reset = FALSE) {
+  return commerce_hipay_ws_get_cached(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_TIMEZONES, $reset);
 }
 
 /**
  * Returns the list of available business lines.
  *
+ * @param bool $reset
+ *   A boolean indicating whether a cached value should be reset or not.
+ *
  * @return array|false
  *   An array of Hipay Wallet API response parameters, where 'businessLines' key
  *   contains the list of available business lines, or FALSE on error.
  */
-function commerce_hipay_ws_get_website_business_lines() {
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BUSINESS_LINES);
-
-  if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-    return $response;
-  }
-
-  return FALSE;
+function commerce_hipay_ws_get_website_business_lines($reset = FALSE) {
+  return commerce_hipay_ws_get_cached(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BUSINESS_LINES, $reset);
 }
 
 /**
@@ -252,20 +302,16 @@ function commerce_hipay_ws_get_website_business_lines() {
  *
  * @param int $business_line_id
  *   A business line ID to return the list of website topics for.
+ * @param bool $reset
+ *   A boolean indicating whether a cached value should be reset or not.
  *
  * @return array|false
  *   An array of Hipay Wallet API response parameters, where 'websiteTopics' key
  *   contains the list of available website topics, or FALSE on error.
  */
-function commerce_hipay_ws_get_website_topics($business_line_id) {
+function commerce_hipay_ws_get_website_topics($business_line_id, $reset = FALSE) {
   $parameters = array('businessLineId' => $business_line_id);
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_WEBSITE_TOPICS, $parameters);
-
-  if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-    return $response;
-  }
-
-  return FALSE;
+  return commerce_hipay_ws_get_cached(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_WEBSITE_TOPICS, $reset, $parameters);
 }
 
 /**

@@ -268,6 +268,8 @@ function commerce_hipay_ws_settings_default() {
         'request' => FALSE,
         'response' => FALSE,
       ),
+      'cache' => FALSE,
+      'cache_lifetime' => 0,
     ),
     'website' => array(
       'business_line_id' => '',
@@ -412,6 +414,31 @@ function commerce_hipay_ws_settings_form($settings = array()) {
       'response' => t('API response messages'),
     ),
     '#default_value' => $settings['api']['logging'],
+  );
+
+  // API response caching.
+  // Based on system_performance_settings().
+  $form['api']['cache'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Cache API responses'),
+    '#description' => t('Enable caching for generic API responses (countries, currencies, locales, timezones, business lines and website topics).'),
+    '#default_value' => $settings['api']['cache'],
+  );
+
+  $day = 86400;
+  $period = drupal_map_assoc(array($day, $day * 2, $day * 3, $day * 7, $day * 14, $day * 30), 'format_interval');
+  $period[0] = '<' . t('none') . '>';
+  $form['api']['cache_lifetime'] = array(
+    '#type' => 'select',
+    '#title' => t('Minimum cache lifetime'),
+    '#description' => t('Cached API responses will not be re-fetched until at least this much time has elapsed.'),
+    '#options' => $period,
+    '#default_value' => $settings['api']['cache_lifetime'],
+    '#states' => array(
+      'visible' => array(
+        ':input[name="parameter[payment_method][settings][payment_method][settings][api][cache]"]' => array('checked' => TRUE),
+      ),
+    ),
   );
 
   if (!empty($settings['api_password'])) {
@@ -838,11 +865,8 @@ function commerce_hipay_ws_api_request($resource, $parameters = array(), $contex
   // If no specific payment method instance was requested in function parameter,
   // load and use the first active 'commerce_hipay_ws' payment method instance.
   if (empty($context['payment_method_instance'])) {
-    if ($instances = commerce_hipay_ws_payment_method_instances('commerce_hipay_ws', TRUE)) {
-      $context['payment_method_instance'] = reset($instances);
-    }
     // Return if Hipay Wallet payment method instance has not been enabled yet.
-    else {
+    if (!$context['payment_method_instance'] = commerce_hipay_ws_payment_method_instance()) {
       watchdog('commerce_hipay_ws', 'Unable to call Hipay API: payment method instance does not exist or is not enabled.', array(), WATCHDOG_ERROR);
       return FALSE;
     }
