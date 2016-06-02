@@ -56,6 +56,13 @@ function commerce_hipay_ws_user_account_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
+      'hipay_identified' => array(
+        'description' => 'Status of this Hipay account.',
+        'type' => 'varchar',
+        'length' => 5,
+        'not null' => TRUE,
+        'default' => 'no',
+      ),
       'hipay_ws_login' => array(
         'description' => 'wsLogin of this Hipay account.',
         'type' => 'varchar',
@@ -217,6 +224,14 @@ function commerce_hipay_ws_user_account_entity_property_info() {
     'setter callback' => 'entity_property_verbatim_set',
     'setter permission' => 'administer commerce_hipay_ws_user_account entities',
     'schema field' => 'hipay_space_id',
+  );
+  $properties['hipay_identified'] = array(
+    'label' => t('Hipay account status'),
+    'description' => t('The validation status of the Hipay account.'),
+    'type' => 'text',
+    'setter callback' => 'entity_property_verbatim_set',
+    'setter permission' => 'administer commerce_hipay_ws_user_account entities',
+    'schema field' => 'hipay_identified',
   );
   $properties['hipay_ws_login'] = array(
     'label' => t('Hipay wsLogin'),
