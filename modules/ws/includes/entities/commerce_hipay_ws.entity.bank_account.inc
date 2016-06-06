@@ -42,6 +42,20 @@ function commerce_hipay_ws_bank_account_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'hipay_account_id' => array(
+        'description' => 'ID of related Hipay user account.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'hipay_status' => array(
+        'description' => 'Status of this Hipay bank account.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => COMMERCE_HIPAY_WS_ACCOUNT_NO_BANK_INFO,
+      ),
       'data' => array(
         'type' => 'blob',
         'not null' => FALSE,
@@ -166,6 +180,22 @@ function commerce_hipay_ws_bank_account_entity_property_info() {
     'query callback' => 'entity_metadata_table_query',
     'setter permission' => 'administer commerce_hipay_ws_bank_account entities',
     'schema field' => 'changed',
+  );
+  $properties['hipay_account_id'] = array(
+    'label' => t('Related Hipay user account ID'),
+    'description' => t('The ID of the related Hipay user account.'),
+    'type' => 'text',
+    'setter callback' => 'entity_property_verbatim_set',
+    'setter permission' => 'administer commerce_hipay_ws_user_account entities',
+    'schema field' => 'hipay_account_id',
+  );
+  $properties['hipay_status'] = array(
+    'label' => t('Hipay account status'),
+    'description' => t('The validation status of the Hipay account.'),
+    'type' => 'text',
+    'setter callback' => 'entity_property_verbatim_set',
+    'setter permission' => 'administer commerce_hipay_ws_user_account entities',
+    'schema field' => 'hipay_status',
   );
 
   return $info;

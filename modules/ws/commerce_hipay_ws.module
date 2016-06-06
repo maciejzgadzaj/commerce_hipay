@@ -180,6 +180,19 @@ function commerce_hipay_ws_views_api() {
 }
 
 /**
+ * Implements hook_entity_presave().
+ */
+function commerce_hipay_ws_entity_presave($entity, $type) {
+  // When saving a Hipay bank account entity, check if we already have its
+  // related Hipay user account ID, and set it if available.
+  if ($type == 'commerce_hipay_ws_bank_account' && empty($entity->hipay_account_id)) {
+    $wrapper = entity_metadata_wrapper($type, $entity);
+    $hipay_user_account = $wrapper->hipay_ws_bank_user_account->value();
+    $entity->hipay_account_id = $hipay_user_account->hipay_account_id;
+  }
+}
+
+/**
  * Implements hook_entity_insert().
  */
 function commerce_hipay_ws_entity_insert($entity, $type) {
