@@ -332,6 +332,28 @@ function commerce_hipay_ws_user_account_load_multiple($ids = FALSE, $conditions 
 }
 
 /**
+ * Loads Hipay user account entity for provided Hipay user account ID.
+ *
+ * @param int $hipay_account_id
+ *   A Hipay user account ID to load the Hipay user account entity for.
+ *
+ * @return array|false
+ *   A Hipay user account entity, or FALSE if not found.
+ */
+function commerce_hipay_ws_user_account_load_by_hipay_account_id($hipay_account_id) {
+  $query = new EntityFieldQuery();
+  $result = $query->entityCondition('entity_type', 'commerce_hipay_ws_user_account')
+    ->propertyCondition('hipay_account_id', $hipay_account_id, '=')
+    ->execute();
+  if (!empty($result['commerce_hipay_ws_user_account'])) {
+    $accounts = entity_load('commerce_hipay_ws_user_account', array_keys($result['commerce_hipay_ws_user_account']));
+    return reset($accounts);
+  }
+
+  return FALSE;
+}
+
+/**
  * Loads sub-accounts connected to the provided user account ID.
  *
  * @param int $user_account_id
