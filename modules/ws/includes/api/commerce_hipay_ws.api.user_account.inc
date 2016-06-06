@@ -115,3 +115,42 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
 
   return $response;
 }
+
+/**
+ * Processes Hipay Wallet user account identification notification.
+ *
+ * @param array $feedback
+ *   An array of XML parameters received in the notification.
+ *
+ * @return bool
+ *   An boolean indicating whether the notification was processed successfully.
+ */
+function commerce_hipay_ws_api_user_account_validate_notification($feedback) {
+  // Make sure we have received all required parameters.
+  $required_parameters = array('account_id', 'status');
+  foreach ($required_parameters as $required_parameter) {
+    if (empty($feedback[$required_parameter])) {
+      watchdog('commerce_hipay_ws', 'Notification: identification: !param_name parameter missing or empty.', array('!param_name' => $required_parameter), WATCHDOG_ERROR);
+      return FALSE;
+    }
+  }
+
+  // Try to load the Hipay user account from the received parameter.
+  if (!$user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($feedback['account_id'])) {
+    watchdog('commerce_hipay_ws', 'Notification: identification: unable to load a Hipay user account entity from account_id parameter: @account_id.', array('@account_id' => $feedback['account_id']), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  // Update the Hipay user account entity with the new identification status.
+  $user_account->hipay_identified = ($feedback['status'] == COMMERCE_HIPAY_WS_NOTIFICATION_STATUS_OK) ? COMMERCE_HIPAY_WS_ACCOUNT_IDENTIFIED : COMMERCE_HIPAY_WS_ACCOUNT_NOT_IDENTIFIED;
+  commerce_hipay_ws_user_account_save($user_account);
+
+  // Add watchdog entry.
+  watchdog('commerce_hipay_ws', 'Notification: identification: Updated Hipay user account %account_id identified status to %status.', array(
+    '%account_id' => $user_account->user_account_id,
+    '%status' => $user_account->hipay_identified,
+  ), WATCHDOG_NOTICE);
+
+  // Invoke the rules event to allow other modules to react to the notification.
+  return rules_invoke_all('commerce_hipay_ws_user_account_identification', $user_account, $feedback);
+}

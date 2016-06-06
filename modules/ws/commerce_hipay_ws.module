@@ -1094,6 +1094,16 @@ function commerce_hipay_ws_callback_notification_process_feedback_xml($xml_strin
     if (!empty($feedback_xml['operation'])) {
       switch ($feedback_xml['operation']) {
 
+        // Hipay user account has been identified.
+        case 'identification':
+          commerce_hipay_ws_api_user_account_validate_notification($feedback_xml);
+          break;
+
+        // Hipay bank account information has been validated.
+        case 'bank_info_validation':
+          commerce_hipay_ws_api_bank_account_validate_notification($feedback_xml);
+          break;
+
         case 'withdraw_validation':
           $withdrawal = commerce_hipay_ws_withdrawal_load_by_withdrawal_id($feedback_xml['transid']);
           $withdrawal['notification'] = $feedback_xml;

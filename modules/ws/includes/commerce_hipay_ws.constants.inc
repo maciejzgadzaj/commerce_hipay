@@ -78,6 +78,7 @@ define('COMMERCE_HIPAY_WS_STATUS_ERROR_WRONG_BANK_STATUS', 23);
 
 // Hipay Wallet bankInfosStatus response 'status' values.
 define('COMMERCE_HIPAY_WS_ACCOUNT_NO_BANK_INFO', 'No bank information');
+define('COMMERCE_HIPAY_WS_ACCOUNT_BANK_INFO_VALIDATION_IN_PROGRESS', 'Validation in progress');
 define('COMMERCE_HIPAY_WS_ACCOUNT_BANK_INFO_VALIDATED', 'Validated');
 
 // Hipay Wallet accountInfosIdentified response 'status' values.
@@ -97,3 +98,7 @@ define('COMMERCE_HIPAY_WS_LEGAL_STATUS_BUSINESS', 1);
 define('COMMERCE_HIPAY_WS_TITLE_MR', 1);
 define('COMMERCE_HIPAY_WS_TITLE_MRS', 2);
 define('COMMERCE_HIPAY_WS_TITLE_MISS', 3);
+
+// Hipay Wallet server-to-server notification statuses.
+define('COMMERCE_HIPAY_WS_NOTIFICATION_STATUS_OK', 'ok');
+define('COMMERCE_HIPAY_WS_NOTIFICATION_STATUS_NOK', 'nok');
