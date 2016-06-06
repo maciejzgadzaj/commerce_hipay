@@ -15,15 +15,8 @@
  *   A country code for provided country label.
  */
 function commerce_hipay_ws_get_code_from_country($country_label) {
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_COUNTRIES);
-
-  if (!empty($response['countries']['item']) && is_array($response['countries']['item'])) {
-    foreach ($response['countries']['item'] as $item) {
-      if ($item['label'] == $country_label) {
-        return $item['code'];
-      }
-    }
-  }
+  $countries = array_flip(commerce_hipay_ws_get_countries_options());
+  return (isset($countries[$country_label])) ? $countries[$country_label] : FALSE;
 }
 
 /**
