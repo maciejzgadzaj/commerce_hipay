@@ -280,6 +280,28 @@ function commerce_hipay_ws_bank_account_load_multiple($ids = FALSE, $conditions 
 }
 
 /**
+ * Loads Hipay bank account entity for provided Hipay user account ID.
+ *
+ * @param int $hipay_account_id
+ *   A Hipay user account ID to load the Hipay bank account entity for.
+ *
+ * @return array|false
+ *   A Hipay bank account entity, or FALSE if not found.
+ */
+function commerce_hipay_ws_bank_account_load_by_hipay_account_id($hipay_account_id) {
+  $query = new EntityFieldQuery();
+  $result = $query->entityCondition('entity_type', 'commerce_hipay_ws_bank_account')
+    ->propertyCondition('hipay_account_id', $hipay_account_id, '=')
+    ->execute();
+  if (!empty($result['commerce_hipay_ws_bank_account'])) {
+    $accounts = entity_load('commerce_hipay_ws_bank_account', array_keys($result['commerce_hipay_ws_bank_account']));
+    return reset($accounts);
+  }
+
+  return FALSE;
+}
+
+/**
  * Saves the bank account entity by calling its controller.
  */
 function commerce_hipay_ws_bank_account_save(&$bank_account) {
