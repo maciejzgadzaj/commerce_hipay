@@ -1778,7 +1778,7 @@ function commerce_hipay_ws_user_account_field_instances() {
 function commerce_hipay_ws_allowed_values_user_business_line_id() {
   $return = array();
 
-  $hipay_response = commerce_hipay_ws_get_website_business_lines();
+  $hipay_response = commerce_hipay_ws_api_get_website_business_lines();
   if (!empty($hipay_response['businessLines']['item'])) {
     foreach ($hipay_response['businessLines']['item'] as $item) {
       $return[$item['id']] = t($item['label']);

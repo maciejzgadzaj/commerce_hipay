@@ -191,7 +191,7 @@ function commerce_hipay_ws_check_account_identified($user_account_id) {
  *   Returns a cached value of Hipay Wallet API response, or false if cached
  *   value was not found and there was an error calling Hipay Wallet API.
  */
-function commerce_hipay_ws_get_cached($resource, $reset = FALSE) {
+function commerce_hipay_ws_api_get_cached_response($resource, $reset = FALSE) {
   $cached_response = &drupal_static(__FUNCTION__);
 
   // Build cache key from provided function arguments.
@@ -251,8 +251,8 @@ function commerce_hipay_ws_get_cached($resource, $reset = FALSE) {
  *   An array of Hipay Wallet API response parameters, where 'countries' key
  *   contains the list of countries supported by Hipay Wallet, or FALSE on error.
  */
-function commerce_hipay_ws_get_countries($reset = FALSE) {
-  return commerce_hipay_ws_get_cached(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_COUNTRIES, $reset);
+function commerce_hipay_ws_api_get_countries($reset = FALSE) {
+  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_COUNTRIES, $reset);
 }
 
 /**
@@ -265,8 +265,8 @@ function commerce_hipay_ws_get_countries($reset = FALSE) {
  *   An array of Hipay Wallet API response parameters, where 'locales' key
  *   contains the list of locales supported by Hipay Wallet, or FALSE on error.
  */
-function commerce_hipay_ws_get_locales($reset = FALSE) {
-  return commerce_hipay_ws_get_cached(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_CODES, $reset);
+function commerce_hipay_ws_api_get_locales($reset = FALSE) {
+  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_CODES, $reset);
 }
 
 /**
@@ -279,8 +279,8 @@ function commerce_hipay_ws_get_locales($reset = FALSE) {
  *   An array of Hipay Wallet API response parameters, where 'timezones' key
  *   contains the list of timezones supported by Hipay Wallet, or FALSE on error.
  */
-function commerce_hipay_ws_get_timezones($reset = FALSE) {
-  return commerce_hipay_ws_get_cached(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_TIMEZONES, $reset);
+function commerce_hipay_ws_api_get_timezones($reset = FALSE) {
+  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_TIMEZONES, $reset);
 }
 
 /**
@@ -293,8 +293,8 @@ function commerce_hipay_ws_get_timezones($reset = FALSE) {
  *   An array of Hipay Wallet API response parameters, where 'businessLines' key
  *   contains the list of available business lines, or FALSE on error.
  */
-function commerce_hipay_ws_get_website_business_lines($reset = FALSE) {
-  return commerce_hipay_ws_get_cached(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BUSINESS_LINES, $reset);
+function commerce_hipay_ws_api_get_website_business_lines($reset = FALSE) {
+  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BUSINESS_LINES, $reset);
 }
 
 /**
@@ -309,9 +309,9 @@ function commerce_hipay_ws_get_website_business_lines($reset = FALSE) {
  *   An array of Hipay Wallet API response parameters, where 'websiteTopics' key
  *   contains the list of available website topics, or FALSE on error.
  */
-function commerce_hipay_ws_get_website_topics($business_line_id, $reset = FALSE) {
+function commerce_hipay_ws_api_get_website_topics($business_line_id, $reset = FALSE) {
   $parameters = array('businessLineId' => $business_line_id);
-  return commerce_hipay_ws_get_cached(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_WEBSITE_TOPICS, $reset, $parameters);
+  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_WEBSITE_TOPICS, $reset, $parameters);
 }
 
 /**
@@ -323,7 +323,7 @@ function commerce_hipay_ws_get_website_topics($business_line_id, $reset = FALSE)
 function commerce_hipay_ws_get_countries_options() {
   $return = array();
 
-  $response = commerce_hipay_ws_get_countries();
+  $response = commerce_hipay_ws_api_get_countries();
   if (!empty($response['countries']['item'])) {
     foreach ($response['countries']['item'] as $item) {
       $return[$item['code']] = t($item['label']);
@@ -342,7 +342,7 @@ function commerce_hipay_ws_get_countries_options() {
 function commerce_hipay_ws_get_locales_options() {
   $return = array();
 
-  $response = commerce_hipay_ws_get_locales();
+  $response = commerce_hipay_ws_api_get_locales();
   if (!empty($response['locales']['item'])) {
     foreach ($response['locales']['item'] as $item) {
       $return[$item['code']] = t($item['label']);
@@ -361,7 +361,7 @@ function commerce_hipay_ws_get_locales_options() {
 function commerce_hipay_ws_get_timezones_options() {
   $return = array();
 
-  $response = commerce_hipay_ws_get_timezones();
+  $response = commerce_hipay_ws_api_get_timezones();
   if (!empty($response['timezones']['item'])) {
     foreach ($response['timezones']['item'] as $item) {
       $return[$item['code']] = t($item['label']);
@@ -380,7 +380,7 @@ function commerce_hipay_ws_get_timezones_options() {
 function commerce_hipay_ws_get_website_business_lines_options() {
   $return = array();
 
-  $response = commerce_hipay_ws_get_website_business_lines();
+  $response = commerce_hipay_ws_api_get_website_business_lines();
   if (!empty($response['businessLines']['item'])) {
     foreach ($response['businessLines']['item'] as $item) {
       $return[$item['id']] = t($item['label']);
@@ -401,7 +401,7 @@ function commerce_hipay_ws_get_website_business_lines_options() {
 function commerce_hipay_ws_get_website_topics_options($business_line_id) {
   $return = array();
 
-  $response = commerce_hipay_ws_get_website_topics($business_line_id);
+  $response = commerce_hipay_ws_api_get_website_topics($business_line_id);
   if (!empty($response['websiteTopics']['item'])) {
     foreach ($response['websiteTopics']['item'] as $item) {
       $return[$item['id']] = t($item['label']);
