@@ -124,21 +124,16 @@ function commerce_hipay_ws_get_bank_info($ws_login, $ws_password) {
  *
  * @param string $country
  *   Country code of the bank account.
+ * @param bool $reset
+ *   A boolean indicating whether a cached value should be reset or not.
  *
  * @return array
- *   Empty if no information, if not required bank fields information.
+ *   An array of Hipay Wallet API response parameters, where 'fields' key
+ *   contains the list of required bank fields, or FALSE on error.
  */
-function commerce_hipay_ws_get_bank_fields($country) {
-  // Bank account status.
-  $parameters = array(
-    'country' => $country,
-  );
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_FIELDS, $parameters);
-  if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-    return $response;
-  }
-
-  return array();
+function commerce_hipay_ws_api_get_bank_fields($country, $reset = FALSE) {
+  $parameters = array('country' => $country);
+  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_FIELDS, $reset, $parameters);
 }
 
 /**

@@ -296,7 +296,7 @@ function commerce_hipay_ws_bank_account_form_validate($form, &$form_state) {
 
   // Validate other required fields based on the country the bank account
   // is to be created in.
-  if (!$response = commerce_hipay_ws_get_bank_fields($form_state['values']['hipay_ws_bank_address'][LANGUAGE_NONE][0]['country'])) {
+  if (!$response = commerce_hipay_ws_api_get_bank_fields($form_state['values']['hipay_ws_bank_address'][LANGUAGE_NONE][0]['country'])) {
     form_set_error('hipay_ws_bank_address[country', t('Error fetching required bank fields for country !country from Hipay API.', array(
       '!country' => $form_state['values']['hipay_ws_bank_address'][LANGUAGE_NONE][0]['country'],
     )));

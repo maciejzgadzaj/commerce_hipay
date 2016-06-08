@@ -752,7 +752,7 @@ function commerce_hipay_ws_settings_form_validate_bank_account(&$form, &$form_st
   // Run the validation only if bank country was selected.
   if (!empty($bank_account['bankCountry'])) {
     // Get all required fields for selected country from Hipay API.
-    $response = commerce_hipay_ws_get_bank_fields($bank_account['bankCountry']);
+    $response = commerce_hipay_ws_api_get_bank_fields($bank_account['bankCountry']);
 
     // If any of the required fields is empty, set form error.
     if (!empty($response['fields']['item'])) {
