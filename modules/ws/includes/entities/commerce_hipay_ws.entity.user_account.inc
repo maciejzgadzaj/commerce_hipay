@@ -17,6 +17,12 @@ function commerce_hipay_ws_user_account_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
+      'revision_id' => array(
+        'description' => 'The current {commerce_hipay_ws_user_account_revision}.revision_id version identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+      ),
       'type' => array(
         'description' => 'The type of this user account entity.',
         'type' => 'varchar',
@@ -86,6 +92,116 @@ function commerce_hipay_ws_user_account_schema() {
       ),
     ),
     'primary key' => array('user_account_id'),
+    'unique keys' => array(
+      'revision_id' => array('revision_id'),
+    ),
+    'indexes' => array(
+      'uid' => array('uid'),
+      'hipay_account_id' => array('hipay_account_id'),
+    ),
+    'foreign keys' => array(
+      'current_revision' => array(
+        'table' => 'commerce_hipay_ws_user_account_revision',
+        'columns'=> array('revision_id' => 'revision_id'),
+      ),
+      'owner' => array(
+        'table' => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+    ),
+  );
+
+  $schema['commerce_hipay_ws_user_account_revision'] = array(
+    'description' => 'Saves information about each saved revision of a {commerce_hipay_ws_user_account}.',
+    'fields' => array(
+      'user_account_id' => array(
+        'description' => 'The {commerce_hipay_ws_user_account}.user_account_id of the Hipay user account this revision belongs to.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'revision_id' => array(
+        'description' => 'The primary identifier for this revision.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'revision_uid' => array(
+        'description' => 'The {users}.uid that owns the Hipay user account at this revision.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'hipay_account_id' => array(
+        'description' => 'ID of this Hipay account at this revision.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'hipay_space_id' => array(
+        'description' => 'ID of this Hipay userspace at this revision.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'hipay_identified' => array(
+        'description' => 'Status of this Hipay account at this revision.',
+        'type' => 'varchar',
+        'length' => 5,
+        'not null' => TRUE,
+        'default' => 'no',
+      ),
+      'hipay_ws_login' => array(
+        'description' => 'wsLogin of this Hipay account at this revision.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'hipay_ws_password' => array(
+        'description' => 'wsPassword of this Hipay account at this revision.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'log' => array(
+        'description' => 'The log entry explaining the changes in this version.',
+        'type' => 'text',
+        'not null' => TRUE,
+        'size' => 'big',
+      ),
+      'revision_timestamp' => array(
+        'description' => 'The Unix timestamp when this revision was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'data' => array(
+        'description' => 'A serialized array of additional data at this revision.',
+        'type' => 'blob',
+        'not null' => FALSE,
+        'size' => 'big',
+        'serialize' => TRUE,
+      ),
+    ),
+    'primary key' => array('revision_id'),
+    'indexes' => array(
+      'user_account_id' => array('user_account_id'),
+    ),
+    'foreign keys' => array(
+      'user_account' => array(
+        'table' => 'commerce_hipay_ws_user_account',
+        'columns'=> array('user_account_id' => 'user_account_id'),
+      ),
+      'owner' => array(
+        'table' => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+    ),
   );
 
   return $schema;
@@ -105,12 +221,15 @@ function commerce_hipay_ws_user_account_entity_info() {
       'views controller class' => 'EntityDefaultViewsController',
       'module' => 'commerce_hipay_ws',
       'base table' => 'commerce_hipay_ws_user_account',
+      'revision table' => 'commerce_hipay_ws_user_account_revision',
+      'load hook' => 'commerce_hipay_ws_user_account_load',
       'uri callback' => 'commerce_hipay_ws_user_account_uri',
       'access callback' => 'commerce_entity_access',
       'label callback' => 'commerce_hipay_ws_user_account_label',
       'fieldable' => TRUE,
       'entity keys' => array(
         'id' => 'user_account_id',
+        'revision' => 'revision_id',
         'label' => 'user_account_id',
         'bundle' => 'type',
         'language' => 'language',

@@ -281,7 +281,7 @@ function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'f
 }
 
 /**
- * Returns a form to create a Hipay User Account if it doesn't exist yet.
+ * Returns a form to create a user account in Hipay Wallet.
  *
  * @see commerce_hipay_ws_user_account_view_hipay_info()
  * @see commerce_hipay_ws_user_account_view_hipay_create_form_submit()
@@ -302,7 +302,7 @@ function commerce_hipay_ws_user_account_view_hipay_create_form($form, &$form_sta
 }
 
 /**
- * Form submit handler: created a Hipay User Account for an entity.
+ * Form submit handler: creates a user account in Hipay Wallet.
  *
  * @see commerce_hipay_ws_user_account_view_hipay_create_form()
  */
@@ -394,7 +394,9 @@ function commerce_hipay_ws_user_account_upload_kyc_documents($user_account) {
 }
 
 /**
- * Provides a wrapper on the edit form to add a new entity.
+ * Provides a wrapper on the edit form to add a new Hipay user account entity.
+ *
+ * @see commerce_hipay_ws_user_account_menu()
  */
 function commerce_hipay_ws_user_account_add($type) {
   // Create a basic entity structure to be used and passed to the validation
@@ -404,7 +406,10 @@ function commerce_hipay_ws_user_account_add($type) {
 }
 
 /**
- * Form function to create a bpost_accounting_reference entity.
+ * Form function to edit a Hipay user account entity.
+ *
+ * @see commerce_hipay_ws_user_account_form_validate()
+ * @see commerce_hipay_ws_user_account_form_submit()
  */
 function commerce_hipay_ws_user_account_form($form, &$form_state, $user_account) {
   global $user;
@@ -412,6 +417,10 @@ function commerce_hipay_ws_user_account_form($form, &$form_state, $user_account)
   // Ensure the owner name is accessible if the uid is set.
   if (isset($user_account->uid) && $owner = user_load($user_account->uid)) {
     $user_account->name = $owner->name;
+  }
+
+  if (empty($user_account->created)) {
+    $user_account->date = format_date(REQUEST_TIME, 'custom', 'Y-m-d H:i:s O');
   }
 
   $form['commerce_hipay_ws_user_account'] = array(
@@ -461,6 +470,42 @@ function commerce_hipay_ws_user_account_form($form, &$form_state, $user_account)
     '#weight' => -1,
   );
 
+  // Add a log checkbox and timestamp field to a Revision information tab.
+  $form['revision_information'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Revision information', array()),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#group' => 'additional_settings',
+    '#weight' => 40,
+    '#attached' => array(
+      'js' => array(drupal_get_path('module', 'commerce_hipay_ws') . '/includes/entities/commerce_hipay_ws.entity_ui.js'),
+    ),
+  );
+  $form['revision_information']['revision'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Create new revision'),
+    '#description' => t('If a revision log message is entered, a revision will be created even if this is unchecked.'),
+    '#default_value' => empty($user_account->is_new),
+    '#access' => user_access('administer commerce_hipay_ws_user_account entities'),
+  );
+  $form['revision_information']['date'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Created on'),
+    '#description' => t('Format: %time. The date format is YYYY-MM-DD and %timezone is the time zone offset from UTC. Leave blank to use the time of form submission.', array(
+      '%time' => !empty($user_account->date) ? date_format(date_create($user_account->date), 'Y-m-d H:i:s O') : format_date($user_account->created, 'custom', 'Y-m-d H:i:s O'),
+      '%timezone' => !empty($user_account->date) ? date_format(date_create($user_account->date), 'O') : format_date($user_account->created, 'custom', 'O'),
+    )),
+    '#maxlength' => 25,
+    '#default_value' => !empty($user_account->created) ? format_date($user_account->created, 'custom', 'Y-m-d H:i:s O') : '',
+  );
+  $form['revision_information']['log'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Revision log message'),
+    '#description' => t('Provide an explanation of the changes you are making. This will provide a meaningful audit trail for updates to this entity.'),
+    '#rows' => 4,
+  );
+
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
@@ -477,7 +522,10 @@ function commerce_hipay_ws_user_account_form($form, &$form_state, $user_account)
 }
 
 /**
- * Validation handler for bpost_accounting_reference_form form.
+ * Validation handler for Hipay user account edit form.
+ *
+ * @see commerce_hipay_ws_user_account_form()
+ * @see commerce_hipay_ws_user_account_form_submit()
  */
 function commerce_hipay_ws_user_account_form_validate($form, &$form_state) {
   $user_account = $form_state['values']['commerce_hipay_ws_user_account'];
@@ -487,6 +535,11 @@ function commerce_hipay_ws_user_account_form_validate($form, &$form_state) {
     // The use of empty() is mandatory in the context of usernames as the empty
     // string denotes an anonymous user.
     form_set_error('name', t('The username %name does not exist.', array('%name' => $form_state['values']['name'])));
+  }
+
+  // Validate the 'Created on' field.
+  if (!empty($form_state['values']['date']) && strtotime($form_state['values']['date']) === FALSE) {
+    form_set_error('date', t('You have to specify a valid date.'));
   }
 
   // Notify field widgets to validate their data.
@@ -523,10 +576,18 @@ function commerce_hipay_ws_user_account_form_validate($form, &$form_state) {
 }
 
 /**
- * Form submit handler: submits basic_add_form information
+ * Submission handler for Hipay user account edit form.
+ *
+ * @see commerce_hipay_ws_user_account_form()
+ * @see commerce_hipay_ws_user_account_form_validate()
  */
 function commerce_hipay_ws_user_account_form_submit($form, &$form_state) {
   $user_account = $form_state['values']['commerce_hipay_ws_user_account'];
+
+  if ($form_state['values']['revision'] || !empty($form_state['values']['log'])) {
+    $user_account->revision = TRUE;
+    $user_account->log = $form_state['values']['log'];
+  }
 
   // Set the profile's owner uid based on the supplied name.
   if (!empty($form_state['values']['name']) && $account = user_load_by_name($form_state['values']['name'])) {
@@ -535,6 +596,8 @@ function commerce_hipay_ws_user_account_form_submit($form, &$form_state) {
   else {
     $user_account->uid = 0;
   }
+
+  $user_account->created = !empty($form_state['values']['date']) ? strtotime($form_state['values']['date']) : REQUEST_TIME;
 
   // Notify field widgets.
   field_attach_submit('commerce_hipay_ws_user_account', $user_account, $form, $form_state);
@@ -547,7 +610,9 @@ function commerce_hipay_ws_user_account_form_submit($form, &$form_state) {
 }
 
 /**
- * Form deletion handler.
+ * Menu callback: returns Hipay user account deletion form.
+ *
+ * @see commerce_hipay_ws_user_account_menu()
  */
 function commerce_hipay_ws_user_account_delete($form, &$form_state) {
   return drupal_get_form('commerce_hipay_ws_user_account_delete_form', $form_state['values']['commerce_hipay_ws_user_account']);
@@ -555,6 +620,8 @@ function commerce_hipay_ws_user_account_delete($form, &$form_state) {
 
 /**
  * Form constructor for delete an accounting reference form.
+ *
+ * @see commerce_hipay_ws_user_account_delete_form_submit()
  */
 function commerce_hipay_ws_user_account_delete_form($form, &$form_state, $user_account, $type) {
   // Do not allow to delete a principal user account if it has a sub-account
@@ -596,7 +663,9 @@ function commerce_hipay_ws_user_account_delete_form($form, &$form_state, $user_a
 }
 
 /**
- * Form submission handler for bpost_accounting_reference_ui_delete_form().
+ * Submission handler for Hipay user account delete form.
+ *
+ * @see commerce_hipay_ws_user_account_delete_form()
  */
 function commerce_hipay_ws_user_account_delete_form_submit($form, &$form_state) {
   $form_state['commerce_hipay_ws_user_account']->delete();

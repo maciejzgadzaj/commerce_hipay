@@ -17,6 +17,12 @@ function commerce_hipay_ws_bank_account_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
+      'revision_id' => array(
+        'description' => 'The current {commerce_hipay_ws_user_account_revision}.revision_id version identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+      ),
       'type' => array(
         'description' => 'The type of this bank account entity.',
         'type' => 'varchar',
@@ -65,6 +71,95 @@ function commerce_hipay_ws_bank_account_schema() {
       ),
     ),
     'primary key' => array('bank_account_id'),
+    'unique keys' => array(
+      'revision_id' => array('revision_id'),
+    ),
+    'indexes' => array(
+      'uid' => array('uid'),
+      'hipay_account_id' => array('hipay_account_id'),
+    ),
+    'foreign keys' => array(
+      'current_revision' => array(
+        'table' => 'commerce_hipay_ws_bank_account_revision',
+        'columns'=> array('revision_id' => 'revision_id'),
+      ),
+      'owner' => array(
+        'table' => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+    ),
+  );
+
+  $schema['commerce_hipay_ws_bank_account_revision'] = array(
+    'description' => 'Saves information about each saved revision of a {commerce_hipay_ws_bank_account}.',
+    'fields' => array(
+      'bank_account_id' => array(
+        'description' => 'The {commerce_hipay_ws_bank_account}.bank_account_id of the Hipay bank account this revision belongs to.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'revision_id' => array(
+        'description' => 'The primary identifier for this revision.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'revision_uid' => array(
+        'description' => 'The {users}.uid that owns the Hipay bank account at this revision.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'hipay_account_id' => array(
+        'description' => 'ID of related Hipay user account at this revision.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'hipay_status' => array(
+        'description' => 'Status of this Hipay bank account at this revision.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => COMMERCE_HIPAY_WS_ACCOUNT_NO_BANK_INFO,
+      ),
+      'log' => array(
+        'description' => 'The log entry explaining the changes in this version.',
+        'type' => 'text',
+        'not null' => TRUE,
+        'size' => 'big',
+      ),
+      'revision_timestamp' => array(
+        'description' => 'The Unix timestamp when this revision was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'data' => array(
+        'description' => 'A serialized array of additional data at this revision.',
+        'type' => 'blob',
+        'not null' => FALSE,
+        'size' => 'big',
+        'serialize' => TRUE,
+      ),
+    ),
+    'primary key' => array('revision_id'),
+    'indexes' => array(
+      'bank_account_id' => array('bank_account_id'),
+    ),
+    'foreign keys' => array(
+      'bank_account' => array(
+        'table' => 'commerce_hipay_ws_bank_account',
+        'columns'=> array('bank_account_id' => 'bank_account_id'),
+      ),
+      'owner' => array(
+        'table' => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+    ),
   );
 
   return $schema;
@@ -84,12 +179,15 @@ function commerce_hipay_ws_bank_account_entity_info() {
       'views controller class' => 'EntityDefaultViewsController',
       'module' => 'commerce_hipay_ws',
       'base table' => 'commerce_hipay_ws_bank_account',
+      'revision table' => 'commerce_hipay_ws_bank_account_revision',
+      'load hook' => 'commerce_hipay_ws_user_account_load',
       'uri callback' => 'commerce_hipay_ws_bank_account_uri',
       'access callback' => 'commerce_entity_access',
       'label callback' => 'commerce_hipay_ws_bank_account_label',
       'fieldable' => TRUE,
       'entity keys' => array(
         'id' => 'bank_account_id',
+        'revision' => 'revision_id',
         'label' => 'bank_account_id',
         'bundle' => 'type',
         'language' => 'language',

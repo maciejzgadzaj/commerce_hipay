@@ -110,6 +110,8 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
     $account->hipay_space_id = $response['userSpaceId'];
     $account->hipay_ws_login = $response['wsLogin'];
     $account->hipay_ws_password = $response['wsPassword'];
+    $account->revision = TRUE;
+    $account->log = 'Created user account in Hipay Wallet.';
     commerce_hipay_ws_user_account_save($account);
   }
 
@@ -143,6 +145,8 @@ function commerce_hipay_ws_api_user_account_validate_notification($feedback) {
 
   // Update the Hipay user account entity with the new identification status.
   $user_account->hipay_identified = ($feedback['status'] == COMMERCE_HIPAY_WS_NOTIFICATION_STATUS_OK) ? COMMERCE_HIPAY_WS_ACCOUNT_IDENTIFIED : COMMERCE_HIPAY_WS_ACCOUNT_NOT_IDENTIFIED;
+  $user_account->revision = TRUE;
+  $user_account->log = 'Updated identified status from received Hipay Wallet notificaton.';
   commerce_hipay_ws_user_account_save($user_account);
 
   // Add watchdog entry.

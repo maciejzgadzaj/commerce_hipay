@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Main class for the Hipay Wallet User Account entity type.
+ * Main class for the Hipay bank account entity type.
  */
 class CommerceHipayWSBankAccountEntityController extends EntityAPIController {
   /**
@@ -10,6 +10,7 @@ class CommerceHipayWSBankAccountEntityController extends EntityAPIController {
   public function create(array $values = array()) {
     $values += array(
       'bank_account_id' => NULL,
+      'revision_id' => NULL,
       'is_new' => TRUE,
       'type' => 'hipay_bank_account',
       'created' => '',
@@ -23,7 +24,15 @@ class CommerceHipayWSBankAccountEntityController extends EntityAPIController {
    * Saves the custom fields using drupal_write_record()
    */
   public function save($entity) {
+    global $user;
+
+    // Determine if we will be inserting a new Hipay bank account.
+    $entity->is_new = empty($entity->bank_account_id);
+
     $entity->changed = REQUEST_TIME;
+
+    $entity->revision_timestamp = REQUEST_TIME;
+    $entity->revision_uid = $user->uid;
 
     // If our entity has no basic_id, then we need to give it a
     // time of creation.
@@ -41,6 +50,24 @@ class CommerceHipayWSBankAccountEntityController extends EntityAPIController {
       if ($entity->uid === '') {
         unset($entity->uid);
       }
+    }
+
+    if ($entity->is_new || !empty($entity->revision)) {
+      // When inserting either a new bank account or revision, $entity->log
+      // must be set because {commerce_hipay_ws_bank_account_revision}.log
+      // is a text column and therefore cannot have a default value.
+      // However, it might not be set at this point, so we ensure
+      // that it is at least an empty string in that case.
+      if (!isset($entity->log)) {
+        $entity->log = '';
+      }
+    }
+    elseif (empty($entity->log)) {
+      // If we are updating an existing account without adding a new revision,
+      // we need to make sure $entity->log is unset whenever it is empty. As
+      // long as $entity->log is unset, drupal_write_record() will not attempt
+      // to update the existing database column when re-saving the revision.
+      unset($entity->log);
     }
 
     return parent::save($entity);

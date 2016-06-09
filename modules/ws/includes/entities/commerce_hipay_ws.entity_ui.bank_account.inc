@@ -164,7 +164,7 @@ function commerce_hipay_ws_bank_account_view_hipay_info($entity, $view_mode = 'f
 }
 
 /**
- * Returns a form to create a Hipay Bank Account if it doesn't exist yet.
+ * Returns a form to create a bank account in Hipay Wallet.
  *
  * @see commerce_hipay_ws_bank_account_view_hipay_info()
  * @see commerce_hipay_ws_bank_account_view_hipay_create_form_submit()
@@ -185,14 +185,14 @@ function commerce_hipay_ws_bank_account_view_hipay_create_form($form, &$form_sta
 }
 
 /**
- * Form submit handler: created a Hipay User Account for an entity.
+ * Form submit handler: creates a bank account in Hipay Wallet.
  *
- * @see commerce_hipay_ws_user_account_view_hipay_create_form()
+ * @see commerce_hipay_ws_bank_account_view_hipay_create_form()
  */
 function commerce_hipay_ws_bank_account_view_hipay_create_form_submit($form, $form_state) {
-  $user_account = $form_state['commerce_hipay_ws_bank_account'];
+  $bank_account = $form_state['commerce_hipay_ws_bank_account'];
 
-  $response = commerce_hipay_ws_api_bank_account_create($user_account);
+  $response = commerce_hipay_ws_api_bank_account_create($bank_account);
 
   if ($response['code'] !== 0) {
     drupal_set_message(t('Error creating a new bank account in Hipay Wallet: @error.', array('@error' => $response['description'])), 'error');
@@ -200,7 +200,9 @@ function commerce_hipay_ws_bank_account_view_hipay_create_form_submit($form, $fo
 }
 
 /**
- * Provides a wrapper on the edit form to add a new entity.
+ * Provides a wrapper on the edit form to add a new Hipay bank account entity.
+ *
+ * @see commerce_hipay_ws_bank_account_menu()
  */
 function commerce_hipay_ws_bank_account_add() {
   // Create a basic entity structure to be used and passed to the validation
@@ -210,7 +212,10 @@ function commerce_hipay_ws_bank_account_add() {
 }
 
 /**
- * Form function to create a bpost_accounting_reference entity.
+ * Form function to edit a Hipay bank account entity.
+ *
+ * @see commerce_hipay_ws_bank_account_form_validate()
+ * @see commerce_hipay_ws_bank_account_form_submit()
  */
 function commerce_hipay_ws_bank_account_form($form, &$form_state, $bank_account) {
   global $user;
@@ -218,6 +223,10 @@ function commerce_hipay_ws_bank_account_form($form, &$form_state, $bank_account)
   // Ensure the owner name is accessible if the uid is set.
   if (isset($bank_account->uid) && $owner = user_load($bank_account->uid)) {
     $bank_account->name = $owner->name;
+  }
+
+  if (empty($bank_account->created)) {
+    $bank_account->date = format_date(REQUEST_TIME, 'custom', 'Y-m-d H:i:s O');
   }
 
   $form['commerce_hipay_ws_bank_account'] = array(
@@ -265,6 +274,42 @@ function commerce_hipay_ws_bank_account_form($form, &$form_state, $bank_account)
     '#weight' => -1,
   );
 
+  // Add a log checkbox and timestamp field to a Revision information tab.
+  $form['revision_information'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Revision information', array()),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#group' => 'additional_settings',
+    '#weight' => 40,
+    '#attached' => array(
+      'js' => array(drupal_get_path('module', 'commerce_hipay_ws') . '/includes/entities/commerce_hipay_ws.entity_ui.js'),
+    ),
+  );
+  $form['revision_information']['revision'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Create new revision'),
+    '#description' => t('If a revision log message is entered, a revision will be created even if this is unchecked.'),
+    '#default_value' => empty($bank_account->is_new),
+    '#access' => user_access('administer commerce_hipay_ws_bank_account entities'),
+  );
+  $form['revision_information']['date'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Created on'),
+    '#description' => t('Format: %time. The date format is YYYY-MM-DD and %timezone is the time zone offset from UTC. Leave blank to use the time of form submission.', array(
+      '%time' => !empty($bank_account->date) ? date_format(date_create($bank_account->date), 'Y-m-d H:i:s O') : format_date($bank_account->created, 'custom', 'Y-m-d H:i:s O'),
+      '%timezone' => !empty($bank_account->date) ? date_format(date_create($bank_account->date), 'O') : format_date($bank_account->created, 'custom', 'O'),
+    )),
+    '#maxlength' => 25,
+    '#default_value' => !empty($bank_account->created) ? format_date($bank_account->created, 'custom', 'Y-m-d H:i:s O') : '',
+  );
+  $form['revision_information']['log'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Revision log message'),
+    '#description' => t('Provide an explanation of the changes you are making. This will provide a meaningful audit trail for updates to this entity.'),
+    '#rows' => 4,
+  );
+
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
@@ -281,7 +326,10 @@ function commerce_hipay_ws_bank_account_form($form, &$form_state, $bank_account)
 }
 
 /**
- * Validation handler for bpost_accounting_reference_form form.
+ * Validation handler for Hipay bank account edit form.
+ *
+ * @see commerce_hipay_ws_bank_account_form()
+ * @see commerce_hipay_ws_bank_account_form_submit()
  */
 function commerce_hipay_ws_bank_account_form_validate($form, &$form_state) {
   $bank_account = $form_state['values']['commerce_hipay_ws_bank_account'];
@@ -339,15 +387,28 @@ function commerce_hipay_ws_bank_account_form_validate($form, &$form_state) {
     form_set_error('name', t('The username %name does not exist.', array('%name' => $form_state['values']['name'])));
   }
 
+  // Validate the 'Created on' field.
+  if (!empty($form_state['values']['date']) && strtotime($form_state['values']['date']) === FALSE) {
+    form_set_error('date', t('You have to specify a valid date.'));
+  }
+
   // Notify field widgets to validate their data.
   field_attach_form_validate('commerce_hipay_ws_bank_account', $form_state['values']['commerce_hipay_ws_bank_account'], $form, $form_state);
 }
 
 /**
- * Form submit handler: submits basic_add_form information
+ * Submission handler for Hipay bank account edit form.
+ *
+ * @see commerce_hipay_ws_bank_account_form()
+ * @see commerce_hipay_ws_bank_account_form_validate()
  */
 function commerce_hipay_ws_bank_account_form_submit($form, &$form_state) {
   $bank_account = $form_state['values']['commerce_hipay_ws_bank_account'];
+
+  if ($form_state['values']['revision'] || !empty($form_state['values']['log'])) {
+    $bank_account->revision = TRUE;
+    $bank_account->log = $form_state['values']['log'];
+  }
 
   // Set the profile's owner uid based on the supplied name.
   if (!empty($form_state['values']['name']) && $account = user_load_by_name($form_state['values']['name'])) {
@@ -356,6 +417,8 @@ function commerce_hipay_ws_bank_account_form_submit($form, &$form_state) {
   else {
     $bank_account->uid = 0;
   }
+
+  $bank_account->created = !empty($form_state['values']['date']) ? strtotime($form_state['values']['date']) : REQUEST_TIME;
 
   // Notify field widgets.
   field_attach_submit('commerce_hipay_ws_bank_account', $bank_account, $form, $form_state);
@@ -368,7 +431,9 @@ function commerce_hipay_ws_bank_account_form_submit($form, &$form_state) {
 }
 
 /**
- * Form deletion handler.
+ * Menu callback: returns Hipay bank account deletion form.
+ *
+ * @see commerce_hipay_ws_bank_account_menu()
  */
 function commerce_hipay_ws_bank_account_delete($form, &$form_state) {
   return drupal_get_form('commerce_hipay_ws_bank_account_delete_form', $form_state['values']['commerce_hipay_ws_bank_account']);
@@ -376,6 +441,8 @@ function commerce_hipay_ws_bank_account_delete($form, &$form_state) {
 
 /**
  * Form constructor for delete an accounting reference form.
+ *
+ * @see commerce_hipay_ws_bank_account_delete_form_submit()
  */
 function commerce_hipay_ws_bank_account_delete_form($form, &$form_state, $bank_account) {
   $form_state['commerce_hipay_ws_bank_account'] = $bank_account;
@@ -393,7 +460,9 @@ function commerce_hipay_ws_bank_account_delete_form($form, &$form_state, $bank_a
 }
 
 /**
- * Form submission handler for bpost_accounting_reference_ui_delete_form().
+ * Submission handler for Hipay bank account delete form.
+ *
+ * @see commerce_hipay_ws_bank_account_delete_form()
  */
 function commerce_hipay_ws_bank_account_delete_form_submit($form, &$form_state) {
   $form_state['commerce_hipay_ws_bank_account']->delete();

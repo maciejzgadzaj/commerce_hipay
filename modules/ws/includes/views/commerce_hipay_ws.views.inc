@@ -40,6 +40,64 @@ function commerce_hipay_ws_views_data_alter(&$data) {
     ),
   );
 
+  // User account revisions.
+  $data['commerce_hipay_ws_user_account_revision']['revision_id'] = array(
+    'title' => t('Revision ID'),
+    'help' => t('The revision ID of the Hipay user account revision.'),
+    'field' => array(
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'relationship' => array(
+      'handler' => 'views_handler_relationship',
+      'base' => 'commerce_hipay_ws_user_account',
+      'base field' => 'revision_id',
+      'title' => t('Hipay user account'),
+      'label' => t('Latest user account revision'),
+    ),
+  );
+  $data['commerce_hipay_ws_user_account_revision']['revision_uid'] = array(
+    'title' => t('User'),
+    'help' => t('Relate an user account revision to the user who created the revision.'),
+    'relationship' => array(
+      'handler' => 'views_handler_relationship',
+      'base' => 'users',
+      'base field' => 'uid',
+      'field' => 'revision_uid',
+      'field_name' => 'revision_uid',
+      'label' => t('Revision user'),
+    ),
+  );
+  $data['commerce_hipay_ws_user_account_revision']['log'] = array(
+    'title' => t('Log message'),
+    'help' => t('The log message entered when the revision was created.'),
+    'field' => array(
+      'handler' => 'views_handler_field_xss',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+  );
+  $data['commerce_hipay_ws_user_account_revision']['revision_timestamp'] = array(
+    'title' => t('Revision date'),
+    'help' => t('The date the Hipay user account revision was created.'),
+    'field' => array(
+      'handler' => 'views_handler_field_date',
+      'click sortable' => TRUE,
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort_date',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_date',
+    ),
+  );
+
   // Bank account.
   $data['commerce_hipay_ws_bank_account']['link'] = array(
     'field' => array(
@@ -67,6 +125,64 @@ function commerce_hipay_ws_views_data_alter(&$data) {
       'title' => t('Operations links'),
       'help' => t('Display all operations available for this bank account.'),
       'handler' => 'commerce_hipay_ws_bank_account_handler_operations_field',
+    ),
+  );
+
+  // Bank account revisions.
+  $data['commerce_hipay_ws_bank_account_revision']['revision_id'] = array(
+    'title' => t('Revision ID'),
+    'help' => t('The revision ID of the Hipay bank account revision.'),
+    'field' => array(
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'relationship' => array(
+      'handler' => 'views_handler_relationship',
+      'base' => 'commerce_hipay_ws_bank_account',
+      'base field' => 'revision_id',
+      'title' => t('Hipay bank account'),
+      'label' => t('Latest bank account revision'),
+    ),
+  );
+  $data['commerce_hipay_ws_bank_account_revision']['revision_uid'] = array(
+    'title' => t('User'),
+    'help' => t('Relate a bank account revision to the user who created the revision.'),
+    'relationship' => array(
+      'handler' => 'views_handler_relationship',
+      'base' => 'users',
+      'base field' => 'uid',
+      'field' => 'revision_uid',
+      'field_name' => 'revision_uid',
+      'label' => t('Revision user'),
+    ),
+  );
+  $data['commerce_hipay_ws_bank_account_revision']['log'] = array(
+    'title' => t('Log message'),
+    'help' => t('The log message entered when the revision was created.'),
+    'field' => array(
+      'handler' => 'views_handler_field_xss',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+  );
+  $data['commerce_hipay_ws_bank_account_revision']['revision_timestamp'] = array(
+    'title' => t('Revision date'),
+    'help' => t('The date the Hipay bank account revision was created.'),
+    'field' => array(
+      'handler' => 'views_handler_field_date',
+      'click sortable' => TRUE,
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort_date',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_date',
     ),
   );
 }

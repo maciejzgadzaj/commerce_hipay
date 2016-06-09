@@ -12,7 +12,6 @@
  *   An array of Hipay TPP API response parameters.
  */
 function commerce_hipay_ws_api_bank_account_create($account, $payment_method_instance = NULL) {
-//  dpm($account, 'create : $account');
   $wrapper = entity_metadata_wrapper('commerce_hipay_ws_bank_account', $account);
   $hipay_user_account = $wrapper->hipay_ws_bank_user_account->value();
 
@@ -68,6 +67,15 @@ function commerce_hipay_ws_api_bank_account_create($account, $payment_method_ins
   // Perform the call to Hipay Wallet API.
   $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_REGISTER, $parameters, $context);
 
+  // If everything went fine, create new revision of Hipay bank account entity
+  // to keep track of the account creation in Hipay Wallet.
+  if (isset($response['code']) && $response['code'] === 0) {
+    $account->hipay_account_id = $hipay_user_account->hipay_account_id;
+    $account->revision = TRUE;
+    $account->log = 'Created bank account in Hipay Wallet.';
+    commerce_hipay_ws_bank_account_save($account);
+  }
+
   return $response;
 }
 
@@ -98,6 +106,8 @@ function commerce_hipay_ws_api_bank_account_validate_notification($feedback) {
 
   // Update the Hipay user account entity with the new identification status.
   $bank_account->hipay_status = ($feedback['status'] == COMMERCE_HIPAY_WS_NOTIFICATION_STATUS_OK) ? COMMERCE_HIPAY_WS_ACCOUNT_BANK_INFO_VALIDATED : COMMERCE_HIPAY_WS_ACCOUNT_BANK_INFO_VALIDATION_IN_PROGRESS;
+  $bank_account->revision = TRUE;
+  $bank_account->log = 'Updated status from received Hipay Wallet notificaton.';
   commerce_hipay_ws_bank_account_save($bank_account);
 
   // Add watchdog entry.
