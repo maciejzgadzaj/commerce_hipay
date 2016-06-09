@@ -295,25 +295,27 @@ function commerce_hipay_ws_file_kyc_document_update($entity_type, $entity) {
 function commerce_hipay_ws_field_attach_load($entity_type, $entities, $age, $options) {
   if ($entity_type == 'commerce_hipay_ws_user_account') {
     foreach ($entities as $key => $entity) {
-      $wrapper = entity_metadata_wrapper($entity_type, $entity);
-      $kyc_documents = $wrapper->hipay_ws_user_kyc_documents->value();
+      if (isset($entity->hipay_ws_user_kyc_documents)) {
+        $wrapper = entity_metadata_wrapper($entity_type, $entity);
+        $kyc_documents = $wrapper->hipay_ws_user_kyc_documents->value();
 
-      if (!empty($kyc_documents)) {
-        $kyc_fields = commerce_hipay_ws_file_schema_kyc_fields();
+        if (!empty($kyc_documents)) {
+          $kyc_fields = commerce_hipay_ws_file_schema_kyc_fields();
 
-        foreach ($kyc_documents as $delta => $kyc_document) {
-          $result = db_select(COMMERCE_HIPAY_WS_KYC_DOCUMENTS_TABLE, 'kyc')
-            ->fields('kyc', $kyc_fields)
-            ->condition('entity_type', $entity_type)
-            ->condition('entity_id', $entity->user_account_id)
-            ->condition('deleted', 0)
-            ->condition('delta', $delta)
-            ->condition('language', LANGUAGE_NONE)
-            ->execute()
-            ->fetchAssoc();
-          // Add fetched data to the entity being loaded.
-          if (!empty($result) && is_array($result)) {
-            $entity->hipay_ws_user_kyc_documents[LANGUAGE_NONE][$delta] += $result;
+          foreach ($kyc_documents as $delta => $kyc_document) {
+            $result = db_select(COMMERCE_HIPAY_WS_KYC_DOCUMENTS_TABLE, 'kyc')
+              ->fields('kyc', $kyc_fields)
+              ->condition('entity_type', $entity_type)
+              ->condition('entity_id', $entity->user_account_id)
+              ->condition('deleted', 0)
+              ->condition('delta', $delta)
+              ->condition('language', LANGUAGE_NONE)
+              ->execute()
+              ->fetchAssoc();
+            // Add fetched data to the entity being loaded.
+            if (!empty($result) && is_array($result)) {
+              $entity->hipay_ws_user_kyc_documents[LANGUAGE_NONE][$delta] += $result;
+            }
           }
         }
       }
