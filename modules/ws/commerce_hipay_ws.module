@@ -558,7 +558,7 @@ function commerce_hipay_ws_settings_form($settings = array()) {
 
     // Check current bank information status only if API username and password
     // have already been provided - otherwise we won't be able to make API call.
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS);
+    $response = commerce_hipay_ws_api_get_bank_info_status();
     if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
       // Display current status of bank account information.
       $form['bank_account']['current_status'] = array(

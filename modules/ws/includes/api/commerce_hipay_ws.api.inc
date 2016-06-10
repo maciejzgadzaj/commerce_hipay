@@ -94,29 +94,35 @@ function commerce_hipay_ws_check_withdraw_balance($sender_account, $amount) {
 }
 
 /**
- * Get the bank information of an account
+ * Get the bank information for an account.
  *
- * @param string $ws_login
- *   Login for the account to get the information of.
+ * @param array $parameters
+ *   An array of parameters to pass to the API call.
  *
- * @param string $ws_password
- *   Login for the account to get the information of.
- *
- * @return array|object
- *   Empty if no information, if not bank information.
+ * @return array
+ *   An array of Hipay Wallet API response parameters.
  */
-function commerce_hipay_ws_get_bank_info($ws_login, $ws_password) {
-  // Bank account status.
-  $parameters = array(
-    'wsLogin' => $ws_login,
-    'wsPassword' => $ws_password,
-  );
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS, $parameters);
+function commerce_hipay_ws_api_get_bank_info_status($parameters = array(), $context = array()) {
+  // Fetch the bank account info status from Hipay Wallet API.
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS, $parameters, $context);
+
   if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-    return $response;
+    // If we are checking bank info status for a Hipay bank account entity,
+    // and received status differs from the status saved in the entity,
+    // let's update it, creating a new revision.
+    if (
+      !empty($context['commerce_hipay_ws_bank_account'])
+      && $context['commerce_hipay_ws_bank_account']->hipay_status != $response['status']
+    ) {
+      $hipay_bank_account = $context['commerce_hipay_ws_bank_account'];
+      $hipay_bank_account->hipay_status = $response['status'];
+      $hipay_bank_account->revision = TRUE;
+      $hipay_bank_account->log = t('Updated bank account status from %resource API call response.', array('%resource' => COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS));
+      commerce_hipay_ws_bank_account_save($hipay_bank_account);
+    }
   }
 
-  return array();
+  return $response;
 }
 
 /**

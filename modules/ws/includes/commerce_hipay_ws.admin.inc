@@ -47,7 +47,7 @@ function commerce_hipay_ws_store_overview($store) {
     $context = array(
       'commerce_store' => $store,
     );
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS, $parameters, $context);
+    $response = commerce_hipay_ws_api_get_bank_info_status($parameters, $context);
     if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
       $rows[] = array(
         t('Bank info status'),

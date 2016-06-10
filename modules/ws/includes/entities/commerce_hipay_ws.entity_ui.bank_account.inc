@@ -113,9 +113,9 @@ function commerce_hipay_ws_bank_account_view_hipay_info($entity, $view_mode = 'f
     // Fetch: bankInfosStatus.
     $parameters = array('wsSubAccountId' => $hipay_user_account->hipay_account_id);
     $context = array('commerce_hipay_ws_bank_account' => $entity);
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS, $parameters, NULL, $context);
+    $response = commerce_hipay_ws_api_get_bank_info_status($parameters, $context);
 
-    if ($response['status'] == 'No bank information') {
+    if ($response['status'] == COMMERCE_HIPAY_WS_ACCOUNT_NO_BANK_INFO) {
       $return = drupal_get_form('commerce_hipay_ws_bank_account_view_hipay_create_form', $entity);
     }
     else {
