@@ -57,7 +57,23 @@ function commerce_hipay_ws_api_upload($account, $kyc_document, $payment_method_i
     $delta = $kyc_document['delta'];
     $account->hipay_ws_user_kyc_documents[LANGUAGE_NONE][$delta]['kyc_uploaded'] = time();
     commerce_hipay_ws_file_kyc_document_update('commerce_hipay_ws_user_account', $account);
+
+    // Log message for a new revision.
+    $account->log = t('Uploaded %filename (@kyc_type) to Hipay Wallet.', array(
+      '%filename' => $kyc_document['filename'],
+      '@kyc_type' => $kyc_document['kyc_type'],
+    ));
   }
+  else {
+    $account->log = t('Failed uploading %filename (@kyc_type) to Hipay Wallet.', array(
+      '%filename' => $kyc_document['filename'],
+      '@kyc_type' => $kyc_document['kyc_type'],
+    ));
+  }
+
+  // Create a new revision to keep track of all uploads.
+  $account->revision = TRUE;
+  commerce_hipay_ws_user_account_save($account);
 
   return $response;
 }
