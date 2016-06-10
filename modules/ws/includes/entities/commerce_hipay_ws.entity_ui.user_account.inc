@@ -329,10 +329,20 @@ function commerce_hipay_ws_user_account_view_hipay_kyc_upload_form($form, &$form
     '#markup' => '<p>' . t('Not all KYC documents have been uploaded to Hipay Wallet yet.') . '</p>',
   );
 
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Upload remaining KYC documents to Hipay Wallet'),
-  );
+  // If user account has already been created in Hipay Wallet,
+  // allow to upload the KYC documents.
+  if (!empty($entity->hipay_account_id)) {
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Upload remaining KYC documents to Hipay Wallet'),
+    );
+  }
+  // Otherwise just display relevant info.
+  else {
+    $form['info_create'] = array(
+      '#markup' => '<p>' . t('You have to create the user account in Hipay Wallet first before being able to upload the KYC documents.') . '</p>',
+    );
+  }
 
   return $form;
 }
