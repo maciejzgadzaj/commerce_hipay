@@ -486,7 +486,7 @@ function commerce_hipay_ws_bank_account_get_field_mapping() {
     'bankCountry' => 'country',
     'iban' => 'hipay_ws_bank_iban',
     'swift' => 'hipay_ws_bank_swift',
-    'acct_num' => '	hipay_ws_bank_account_number',
+    'acct_num' => 'hipay_ws_bank_account_number',
     'aba_num' => 'hipay_ws_bank_aba_number',
     'transit_num' => 'hipay_ws_bank_transit_number',
   );
