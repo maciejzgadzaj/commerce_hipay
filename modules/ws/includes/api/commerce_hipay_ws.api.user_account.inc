@@ -105,7 +105,7 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
   $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_CREATE_FULL_USER_ACCOUNT, $parameters, $context);
 
   // If everything went fine, add new Hipay user account data to the entity.
-  if (isset($response['code']) && $response['code'] === 0) {
+  if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     $account->hipay_account_id = $response['userAccountId'];
     $account->hipay_space_id = $response['userSpaceId'];
     $account->hipay_ws_login = $response['wsLogin'];

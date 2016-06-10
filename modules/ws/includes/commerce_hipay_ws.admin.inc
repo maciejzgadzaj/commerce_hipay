@@ -48,7 +48,7 @@ function commerce_hipay_ws_store_overview($store) {
       'commerce_store' => $store,
     );
     $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS, $parameters, $context);
-    if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+    if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
       $rows[] = array(
         t('Bank info status'),
         t($response['status']),
@@ -64,7 +64,7 @@ function commerce_hipay_ws_store_overview($store) {
       'commerce_store' => $store,
     );
     $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_CHECK, $parameters, $context);
-    if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+    if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
       unset($response['code']);
       unset($response['description']);
       foreach ($response as $key => $value) {
@@ -86,7 +86,7 @@ function commerce_hipay_ws_store_overview($store) {
       'commerce_store' => $store,
     );
     $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BALANCE, $parameters, $context);
-    if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+    if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
       $rows[] = array(
         t('Balance'),
         commerce_currency_format(commerce_currency_decimal_to_amount($response['balances']['item']['balance'], $response['balances']['item']['currency']), $response['balances']['item']['currency']),

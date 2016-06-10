@@ -54,7 +54,7 @@ function commerce_hipay_ws_check_balance($sender_account, $amount, $item_name = 
   }
 
   $balance = 0;
-  if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+  if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     $balance = $response['balances']['item'][$item_name];
   }
 
@@ -112,7 +112,7 @@ function commerce_hipay_ws_get_bank_info($ws_login, $ws_password) {
     'wsPassword' => $ws_password,
   );
   $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS, $parameters);
-  if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+  if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     return $response;
   }
 
@@ -148,7 +148,7 @@ function commerce_hipay_ws_api_get_bank_fields($country, $reset = FALSE) {
 function commerce_hipay_ws_get_account_infos($user_account_id) {
   $parameters = array('accountId' => $user_account_id);
   $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_ACCOUNT_INFOS, $parameters);
-  if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+  if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     return $response;
   }
 

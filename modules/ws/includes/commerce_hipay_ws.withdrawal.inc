@@ -69,7 +69,7 @@ function commerce_hipay_ws_api_withdrawal($account_id, $amount, $currency_code, 
   commerce_hipay_ws_withdrawal_save($withdrawal);
 
   // Error code was returned in the response.
-  if (!isset($response['code']) || $response['code'] != 0) {
+  if (!isset($response['code']) || $response['code'] !== COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     watchdog('commerce_hipay_ws', 'Withdrawal: received error @error_code: @error_description', array(
       '@error_code' => $response['code'],
       '@error_description' => $response['description'],

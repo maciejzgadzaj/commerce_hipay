@@ -168,7 +168,7 @@ function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'f
     $parameters = array('accountId' => $entity->hipay_account_id);
     $context = array('commerce_hipay_ws_user_account' => $entity);
     $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_ACCOUNT_INFOS, $parameters, NULL, $context);
-    if (isset($response['code']) && $response['code'] === 0) {
+    if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
 
       // Display: getAccountInfos.
       $output .= '<h3>' . t('getAccountInfos') . '</h3>';
@@ -311,7 +311,7 @@ function commerce_hipay_ws_user_account_view_hipay_create_form_submit($form, $fo
 
   $response = commerce_hipay_ws_api_user_account_create($user_account);
 
-  if (!isset($response['code']) || $response['code'] !== 0) {
+  if (!isset($response['code']) || $response['code'] !== COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     drupal_set_message(t('Error creating a new user account in Hipay Wallet: @error.', array('@error' => $response['description'])), 'error');
   }
 }
@@ -374,7 +374,7 @@ function commerce_hipay_ws_user_account_upload_kyc_documents($user_account) {
       $response = commerce_hipay_ws_api_upload($user_account, $kyc_document);
 
       // If there was an error uploading the KYC document.
-      if (!isset($response['code']) || $response['code'] !== 0) {
+      if (!isset($response['code']) || $response['code'] !== COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
         // Combine all error messages into one string.
         $error_message = '';
         if (!empty($response['errors'])) {

@@ -86,7 +86,7 @@ function commerce_hipay_ws_api_transfer($sender_account_id, $recipient_account_i
   commerce_hipay_ws_transfer_save($transfer);
 
   // Error code was returned in the response.
-  if (!isset($response['code']) || $response['code'] != 0) {
+  if (!isset($response['code']) || $response['code'] !== COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     watchdog('commerce_hipay_ws', 'Transfer: received error @error_code: @error_description', array(
       '@error_code' => $response['code'],
       '@error_description' => $response['description'],

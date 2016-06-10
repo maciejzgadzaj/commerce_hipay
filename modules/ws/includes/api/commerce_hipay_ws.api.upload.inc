@@ -50,7 +50,7 @@ function commerce_hipay_ws_api_upload($account, $kyc_document, $payment_method_i
 
   // If everything went fine, add new uploaded date to the KYC document
   // file field.
-  if (isset($response['code']) && $response['code'] === 0) {
+  if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     // In commerce_hipay_ws_user_account_view_hipay_kyc_upload_form_submit()
     // we added the delta of the file currently being uploaded to $kyc_document
     // array.

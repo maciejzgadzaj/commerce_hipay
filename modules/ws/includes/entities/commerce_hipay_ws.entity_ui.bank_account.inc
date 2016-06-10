@@ -133,7 +133,7 @@ function commerce_hipay_ws_bank_account_view_hipay_info($entity, $view_mode = 'f
       // Display: bankInfosCheck.
       if (isset($response['code'])) {
         $return .= '<p><strong>bankInfosCheck</strong></p>';
-        if ($response['code'] === 0) {
+        if ($response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
           $exclude = array('code', 'description');
           $header = $row = array();
           foreach (array_diff_key($response, array_flip($exclude)) as $key => $value) {
@@ -194,7 +194,7 @@ function commerce_hipay_ws_bank_account_view_hipay_create_form_submit($form, $fo
 
   $response = commerce_hipay_ws_api_bank_account_create($bank_account);
 
-  if ($response['code'] !== 0) {
+  if ($response['code'] !== COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     drupal_set_message(t('Error creating a new bank account in Hipay Wallet: @error.', array('@error' => $response['description'])), 'error');
   }
 }

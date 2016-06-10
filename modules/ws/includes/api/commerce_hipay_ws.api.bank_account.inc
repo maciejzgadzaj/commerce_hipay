@@ -69,7 +69,7 @@ function commerce_hipay_ws_api_bank_account_create($account, $payment_method_ins
 
   // If everything went fine, create new revision of Hipay bank account entity
   // to keep track of the account creation in Hipay Wallet.
-  if (isset($response['code']) && $response['code'] === 0) {
+  if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     $account->hipay_account_id = $hipay_user_account->hipay_account_id;
     $account->revision = TRUE;
     $account->log = 'Created bank account in Hipay Wallet.';

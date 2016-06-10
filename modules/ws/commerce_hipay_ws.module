@@ -204,7 +204,7 @@ function commerce_hipay_ws_entity_insert($entity, $type) {
     if (!empty($payment_method_instance['settings']['api']['create_account_immediately'])) {
       $hipay_user_account = commerce_hipay_ws_user_account_load($entity->user_account_id);
       $response = commerce_hipay_ws_api_user_account_create($hipay_user_account);
-      if (!isset($response['code']) || $response['code'] !== 0) {
+      if (!isset($response['code']) || $response['code'] !== COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
         drupal_set_message(t('Error creating a new user account in Hipay Wallet: @error.', array('@error' => $response['description'])), 'error');
       }
       else {
@@ -221,7 +221,7 @@ function commerce_hipay_ws_entity_insert($entity, $type) {
     if (!empty($payment_method_instance['settings']['api']['create_account_immediately'])) {
       $hipay_bank_account = commerce_hipay_ws_bank_account_load($entity->bank_account_id);
       $response = commerce_hipay_ws_api_bank_account_create($hipay_bank_account);
-      if (!isset($response['code']) || $response['code'] !== 0) {
+      if (!isset($response['code']) || $response['code'] !== COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
         drupal_set_message(t('Error creating a new bank account in Hipay Wallet: @error.', array('@error' => $response['description'])), 'error');
       }
       else {
@@ -526,7 +526,7 @@ function commerce_hipay_ws_settings_form($settings = array()) {
 
     // Balance.
     $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BALANCE);
-    if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+    if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
       $rows[] = array(
         t('Account ID'),
         $response['balances']['item']['userAccountId'],
@@ -559,7 +559,7 @@ function commerce_hipay_ws_settings_form($settings = array()) {
     // Check current bank information status only if API username and password
     // have already been provided - otherwise we won't be able to make API call.
     $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS);
-    if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+    if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
       // Display current status of bank account information.
       $form['bank_account']['current_status'] = array(
         '#markup' => t('Current Hipay Wallet bank information status: <strong>@status</strong>', array(
@@ -585,7 +585,7 @@ function commerce_hipay_ws_settings_form($settings = array()) {
         // whatever settings has been saved locally before.
         if ($response['status'] != COMMERCE_HIPAY_WS_ACCOUNT_BANK_INFO_VALIDATED) {
           $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_CHECK);
-          if (isset($response['code']) && $response['code'] == COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+          if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
             // Alter existing payment method instance settings.
             $settings['bank_account'] = $response;
             // 'bankInfosCheck' API resource return 'bankCountry' as a label
@@ -790,7 +790,7 @@ function commerce_hipay_ws_settings_form_submit_create_bank_account(&$form, &$fo
   }
 
   // If an error code was returned in the response.
-  if (!isset($response['code']) || $response['code'] != 0) {
+  if (!isset($response['code']) || $response['code'] !== COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     drupal_set_message(t('There was an error creating bank account at Hipay Wallet (@error_code): @error_description', array(
       '@error_code' => $response['code'],
       '@error_description' => $response['description'],
