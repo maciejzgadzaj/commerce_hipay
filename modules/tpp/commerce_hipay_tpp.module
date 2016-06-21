@@ -4,6 +4,7 @@
  * Provides integration with Hipay TPP payment method (off-site).
  */
 
+require_once 'includes/commerce_hipay_tpp.inc';
 require_once 'includes/commerce_hipay_tpp.constants.inc';
 require_once 'includes/commerce_hipay_tpp.codes.inc';
 require_once 'includes/commerce_hipay_tpp.cardonfile.inc';
@@ -1003,10 +1004,7 @@ function commerce_hipay_tpp_redirect_process_feedback($feedback, $order, $paymen
   // Before we start with any validation, let's first try to load the payment
   // transaction and add received feedback to its payload, so it would be
   // possible later on to check what has gone wrong.
-  if (
-    empty($feedback['cdata2'])
-    || !($transaction = commerce_payment_transaction_load((int) $feedback['cdata2']))
-  ) {
+  if (!$transaction = commerce_hipay_tpp_feedback_get_payment_transaction($feedback)) {
     watchdog('commerce_hipay_tpp', 'Offsite redirect: Unable to load payment transaction from response cdata2 (@cdata2)', array(
       '@cdata2' => $feedback['cdata2'],
     ), WATCHDOG_ERROR);
@@ -1019,14 +1017,9 @@ function commerce_hipay_tpp_redirect_process_feedback($feedback, $order, $paymen
 
   // Validate the signature either if it was provided by the gateway
   // or when the secret passphrase is configured locally.
-  if (
-    !empty($payment_method['settings']['secret_passphrase'])
-    || !empty($feedback['hash'])
-  ) {
-    if (!commerce_hipay_tpp_validate_signature($feedback, $payment_method)) {
-      watchdog('commerce_hipay_tpp', 'Offsite redirect: signature hashes do not match.', array(), WATCHDOG_ERROR);
-      return FALSE;
-    }
+  if (!commerce_hipay_tpp_feedback_validate_signature($feedback, $payment_method)) {
+    watchdog('commerce_hipay_tpp', 'Offsite redirect: signature hashes do not match.', array(), WATCHDOG_ERROR);
+    return FALSE;
   }
 
   // Verify that the response orderid matches local order_id.
@@ -1039,10 +1032,7 @@ function commerce_hipay_tpp_redirect_process_feedback($feedback, $order, $paymen
   }
 
   // Verify that the response redirect key matches the one stored in the order.
-  if (
-    empty($feedback['cdata3'])
-    || $feedback['cdata3'] != $order->data['payment_redirect_key']
-  ) {
+  if (!commerce_hipay_tpp_feedback_validate_payment_redirect_key($feedback, $order)) {
     watchdog('commerce_hipay_tpp', 'Offsite redirect: Response redirect key in cdata3 (@cdata3) does not match order @order_id redirect key (@order_redirect_key).', array(
       '@cdata3' => $feedback['cdata3'],
       '@order_id' => $order->order_id,
@@ -1209,13 +1199,19 @@ function commerce_hipay_tpp_process_response($response, &$transaction, $transact
  * @see commerce_hipay_tpp_refresh()
  */
 function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
+  // Make sure that we have actually received the feedback from the gateway.
+  if (empty($feedback) || !is_array($feedback)) {
+    watchdog('commerce_hipay_tpp', '@callback_type: Missing or invalid feedback received in notification: !feedback', array(
+      '@callback_type' => ucfirst($callback_type),
+      '!feedback' => '<pre>' . var_export($feedback, TRUE) . '</pre>',
+    ), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
   // Before we start with any validation, let's first try to load the payment
   // transaction and add received feedback to its payload, so it would be
   // possible later on to check what has gone wrong.
-  if (
-    empty($feedback['cdata2'])
-    || !($transaction = commerce_payment_transaction_load((int) $feedback['cdata2']))
-  ) {
+  if (!$transaction = commerce_hipay_tpp_feedback_get_payment_transaction($feedback)) {
     watchdog('commerce_hipay_tpp', '@callback_type: Unable to load payment transaction from feedback cdata2 (@cdata2). Feedback received: !feedback', array(
       '@callback_type' => ucfirst($callback_type),
       '@cdata2' => $feedback['cdata2'],
@@ -1225,10 +1221,8 @@ function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
   }
 
   $operation_transaction = NULL;
-  if (isset($feedback['operation']) && isset($feedback['operation']['id'])) {
-    $operation_transaction = commerce_payment_transaction_load((int) $feedback['operation']['id']);
-
-    if (!$operation_transaction) {
+  if (!empty($feedback['operation']['id'])) {
+    if (!$operation_transaction = commerce_hipay_tpp_feedback_get_operation_payment_transaction($feedback)) {
       watchdog('commerce_hipay_tpp', '@callback_type: Unable to load payment transaction from Operation Reference (@last_operation_id). Feedback received: !feedback', array(
         '@callback_type' => ucfirst($callback_type),
         '@last_operation_id' => $feedback['operation']['id'],
@@ -1252,25 +1246,16 @@ function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
     ), WATCHDOG_DEBUG);
   }
 
-  // Validate the signature either if it was provided by the gateway
-  // or when the secret passphrase is configured locally.
-  if (
-    !empty($payment_method['settings']['secret_passphrase'])
-    && !empty($_SERVER['HTTP_X_ALLOPASS_SIGNATURE'])
-  ) {
-    if (!commerce_hipay_tpp_validate_signature($feedback, $payment_method)) {
-      watchdog('commerce_hipay_tpp', '@callback_type: signature hashes do not match.', array(
-        '@callback_type' => ucfirst($callback_type),
-      ), WATCHDOG_ERROR);
-      return FALSE;
-    }
+  // Validate the feedback signature.
+  if (!commerce_hipay_tpp_feedback_validate_signature($feedback, $payment_method)) {
+    watchdog('commerce_hipay_tpp', '@callback_type: signature hashes do not match.', array(
+      '@callback_type' => ucfirst($callback_type),
+    ), WATCHDOG_ERROR);
+    return FALSE;
   }
 
   // Try to load the order.
-  if (
-    empty($feedback['cdata1'])
-    || !($order = commerce_order_load((int) $feedback['cdata1']))
-  ) {
+  if (!$order = commerce_hipay_tpp_feedback_get_order($feedback)) {
     watchdog('commerce_hipay_tpp', '@callback_type: Unable to load order from response cdata1 (@cdata1).', array(
       '@callback_type' => ucfirst($callback_type),
       '@cdata1' => $feedback['cdata1'],
@@ -1279,10 +1264,7 @@ function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
   }
 
   // Make sure the response redirect key matches the one stored in the order.
-  if (
-    empty($feedback['cdata3'])
-    || $feedback['cdata3'] != $order->data['payment_redirect_key']
-  ) {
+  if (!commerce_hipay_tpp_feedback_validate_payment_redirect_key($feedback, $order)) {
     watchdog('commerce_hipay_tpp', '@callback_type: Response redirect key (@response_redirect_key) does not match order @order_id key (@order_redirect_key).', array(
       '@callback_type' => ucfirst($callback_type),
       '@response_redirect_key' => $feedback['cdata3'],
