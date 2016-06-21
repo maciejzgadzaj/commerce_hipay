@@ -953,10 +953,38 @@ function commerce_hipay_tpp_redirect_form($form, &$form_state, $order, $payment_
  * @see hook_commerce_payment_method_info()
  * @see commerce_hipay_tpp_redirect_form()
  * @see commerce_hipay_tpp_redirect_form_submit()
+ * @see commerce_payment_redirect_pane_checkout_form()
  */
 function commerce_hipay_tpp_redirect_form_validate($order, $payment_method) {
   $feedback = commerce_hipay_tpp_get_feedback();
 
+  $result = commerce_hipay_tpp_redirect_process_feedback($feedback, $order, $payment_method);
+
+  // Allow other modules to validate feedback and change the validation result.
+  foreach (module_implements('commerce_hipay_tpp_redirect_form_validate') as $module) {
+    $function = $module . '_commerce_hipay_tpp_redirect_form_validate';
+    $result = $result && $function($feedback, $order, $payment_method);
+  }
+
+  return $result;
+}
+
+/**
+ * Processes the offsite redirect return feedback.
+ *
+ * @param array $feedback
+ *   An associative array containing the Hipay API call feedback.
+ * @param object $order
+ *   An order the feedback relates to.
+ * @param array $payment_method
+ *   A payment method used to pay for the order.
+ *
+ * @return bool
+ *   A boolean indicating whether the processing was successful or not.
+ *
+ * @see commerce_hipay_tpp_redirect_form_validate()
+ */
+function commerce_hipay_tpp_redirect_process_feedback($feedback, $order, $payment_method) {
   // Log the Hipay return feedback if response logging is enabled.
   if (!empty($payment_method['settings']['api_logging']['response'])) {
     watchdog('commerce_hipay_tpp', 'Offsite redirect: received feedback: !feedback', array(
@@ -1056,14 +1084,7 @@ function commerce_hipay_tpp_redirect_form_validate($order, $payment_method) {
     return FALSE;
   }
 
-  // Allow other modules to validate feedback and change validation result.
-  $return = TRUE;
-  foreach (module_implements('commerce_hipay_tpp_redirect_form_validate') as $module) {
-    $function = $module . '_commerce_hipay_tpp_redirect_form_validate';
-    $return = $return && $function($feedback, $transaction, $order, $payment_method);
-  }
-
-  return $return;
+  return TRUE;
 }
 
 /**

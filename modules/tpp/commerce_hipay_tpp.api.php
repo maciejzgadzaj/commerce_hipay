@@ -53,6 +53,16 @@ function hook_commerce_hipay_tpp_api_order_request_alter(&$request_data, $order,
  *   An order object being paid for.
  * @param array $payment_method
  *   The payment method instance used for the payment transaction.
+ *
+ * @return bool
+ *   A boolean indicating whether the processing was successful or not.
+ *   Note that based on this value the order being processed will be moved
+ *   to either next (if TRUE) or previous (if FALSE) checkout step.
+ *   Also, if the validation callback returns FALSE, the redirect form
+ *   submission callback will not be called at all.
+ *
+ * @see commerce_hipay_tpp_redirect_form_validate()
+ * @see commerce_payment_redirect_pane_checkout_form()
  */
 function hook_commerce_hipay_tpp_redirect_form_validate($feedback, $transaction, $order, $payment_method) {
   // No example.
