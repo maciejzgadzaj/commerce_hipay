@@ -1283,9 +1283,9 @@ function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
   // example server-to-server notification returns 'transaction_reference',
   // while refresh call returns 'transactionReference'), which we must account
   // for here - hence the use of commerce_hipay_hpp_get_feedback_value().
-  $transaction->data['authorized_amount'] = commerce_currency_decimal_to_amount(commerce_hipay_hpp_get_feedback_value($feedback, 'authorizedAmount'), $feedback['currency']);
-  $transaction->data['captured_amount'] = commerce_currency_decimal_to_amount(commerce_hipay_hpp_get_feedback_value($feedback, 'capturedAmount'), $feedback['currency']);
-  $transaction->data['refunded_amount'] = commerce_currency_decimal_to_amount(commerce_hipay_hpp_get_feedback_value($feedback, 'refundedAmount'), $feedback['currency']);
+  $transaction->data['authorized_amount'] = commerce_currency_decimal_to_amount(commerce_hipay_tpp_get_feedback_value($feedback, 'authorizedAmount'), $feedback['currency']);
+  $transaction->data['captured_amount'] = commerce_currency_decimal_to_amount(commerce_hipay_tpp_get_feedback_value($feedback, 'capturedAmount'), $feedback['currency']);
+  $transaction->data['refunded_amount'] = commerce_currency_decimal_to_amount(commerce_hipay_tpp_get_feedback_value($feedback, 'refundedAmount'), $feedback['currency']);
 
   // If we have a notification for a certain transaction operation
   // let's update that first.
@@ -1314,7 +1314,7 @@ function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
   }
   // Otherwise we update the main transaction.
   else {
-    $transaction->remote_id = commerce_hipay_hpp_get_feedback_value($feedback, 'transactionReference');
+    $transaction->remote_id = commerce_hipay_tpp_get_feedback_value($feedback, 'transactionReference');
 
     // We do not want to change the main transaction status from one of 'captured'
     // statuses to one of 'authorized' statuses (which might happen when we start
@@ -1378,30 +1378,30 @@ function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
   }
 
   // CVC result.
-  if (($cvc_result = commerce_hipay_hpp_get_feedback_value($feedback, 'cvcResult')) !== NULL) {
+  if (($cvc_result = commerce_hipay_tpp_get_feedback_value($feedback, 'cvcResult')) !== NULL) {
     $transaction->message .= '<br />' . t('CVC: @cvc_message');
     $transaction->message_variables['@cvc_message'] = commerce_hipay_tpp_get_cvc_result_message($cvc_result);
   }
 
   // AVS result.
-  if (($avs_result = commerce_hipay_hpp_get_feedback_value($feedback, 'avsResult')) !== NULL) {
+  if (($avs_result = commerce_hipay_tpp_get_feedback_value($feedback, 'avsResult')) !== NULL) {
     $transaction->message .= '<br />' . t('AVS: @avs_message');
     $transaction->message_variables['@avs_message'] = commerce_hipay_tpp_get_avs_result_message($avs_result);
   }
 
   // 3-D Secure result.
-  if ($three_d_secure = commerce_hipay_hpp_get_feedback_value($feedback, 'threeDSecure')) {
+  if ($three_d_secure = commerce_hipay_tpp_get_feedback_value($feedback, 'threeDSecure')) {
     $transaction->message .= '<br />' . t('3DS: @3ds_message');
-    if ($authentication_message = commerce_hipay_hpp_get_feedback_value($three_d_secure, 'authenticationMessage')) {
+    if ($authentication_message = commerce_hipay_tpp_get_feedback_value($three_d_secure, 'authenticationMessage')) {
       $transaction->message_variables['@3ds_message'] = $authentication_message;
     }
     else {
-      $transaction->message_variables['@3ds_message'] = commerce_hipay_hpp_get_feedback_value($three_d_secure, 'enrollmentMessage');
+      $transaction->message_variables['@3ds_message'] = commerce_hipay_tpp_get_feedback_value($three_d_secure, 'enrollmentMessage');
     }
   }
 
   // Fraud screening result.
-  if ($fraud_screening = commerce_hipay_hpp_get_feedback_value($feedback, 'fraudScreening')) {
+  if ($fraud_screening = commerce_hipay_tpp_get_feedback_value($feedback, 'fraudScreening')) {
     $message = array(t('Fraud screening'));
     if (!empty($fraud_screening['scoring'])) {
       $message[] = t('score @fraud_score');
@@ -1419,19 +1419,19 @@ function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
   }
 
   // Authorized amount.
-  if (($authorized_amount = commerce_hipay_hpp_get_feedback_value($feedback, 'authorizedAmount')) != 0) {
+  if (($authorized_amount = commerce_hipay_tpp_get_feedback_value($feedback, 'authorizedAmount')) != 0) {
     $transaction->message .= '<br />' . t('Authorized amount: @authorized_amount');
     $transaction->message_variables['@authorized_amount'] = commerce_currency_format(commerce_currency_decimal_to_amount($authorized_amount, $transaction->currency_code), $transaction->currency_code);
   }
 
   // Captured amount.
-  if (($captured_amount = commerce_hipay_hpp_get_feedback_value($feedback, 'capturedAmount')) != 0) {
+  if (($captured_amount = commerce_hipay_tpp_get_feedback_value($feedback, 'capturedAmount')) != 0) {
     $transaction->message .= '<br />' . t('Total captured amount: @captured_amount');
     $transaction->message_variables['@captured_amount'] = commerce_currency_format(commerce_currency_decimal_to_amount($captured_amount, $transaction->currency_code), $transaction->currency_code);
   }
 
   // Refunded amount.
-  if (($refunded_amount = commerce_hipay_hpp_get_feedback_value($feedback, 'refundedAmount')) != 0) {
+  if (($refunded_amount = commerce_hipay_tpp_get_feedback_value($feedback, 'refundedAmount')) != 0) {
     $transaction->message .= '<br />' . t('Total refunded amount: @refunded_amount');
     $transaction->message_variables['@refunded_amount'] = commerce_currency_format(commerce_currency_decimal_to_amount($refunded_amount, $transaction->currency_code), $transaction->currency_code);
   }
@@ -1634,7 +1634,7 @@ function commerce_hipay_tpp_get_feedback() {
  *
  * @see commerce_hipay_tpp_process_notification
  */
-function commerce_hipay_hpp_get_feedback_value($feedback, $parameter_name, $default_value = NULL) {
+function commerce_hipay_tpp_get_feedback_value($feedback, $parameter_name, $default_value = NULL) {
   if (isset($feedback[$parameter_name])) {
     return $feedback[$parameter_name];
   }
