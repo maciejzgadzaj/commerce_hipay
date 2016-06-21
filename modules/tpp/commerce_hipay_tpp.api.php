@@ -69,8 +69,10 @@ function hook_commerce_hipay_tpp_redirect_form_validate($feedback, $transaction,
 }
 
 /**
- * Allow other modules to validate redirect feedback and change validation
- * result.
+ * Allow other modules to perform any additional submit functions if necessary.
+ *
+ * Note that this hook implementations will not be called if the validation
+ * result of commerce_hipay_tpp_redirect_form_validate() was FALSE.
  *
  * @param array $feedback
  *   An associative array containing the Hipay API call feedback.
@@ -78,6 +80,9 @@ function hook_commerce_hipay_tpp_redirect_form_validate($feedback, $transaction,
  *   An order object being paid for.
  * @param array $payment_method
  *   The payment method instance used for the payment transaction.
+ *
+ * @see commerce_hipay_tpp_redirect_form_submit()
+ * @see commerce_payment_redirect_pane_checkout_form()
  */
 function hook_commerce_hipay_tpp_redirect_form_submit($feedback, $order, $payment_method) {
   // No example.

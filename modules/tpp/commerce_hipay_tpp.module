@@ -1093,6 +1093,7 @@ function commerce_hipay_tpp_redirect_process_feedback($feedback, $order, $paymen
  * @see hook_commerce_payment_method_info()
  * @see commerce_hipay_tpp_redirect_form()
  * @see commerce_hipay_tpp_redirect_form_validate()
+ * @see commerce_payment_redirect_pane_checkout_form()
  */
 function commerce_hipay_tpp_redirect_form_submit($order, $payment_method) {
   $feedback = commerce_hipay_tpp_get_feedback();
