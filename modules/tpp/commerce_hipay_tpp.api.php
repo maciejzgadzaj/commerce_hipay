@@ -151,17 +151,27 @@ function hook_commerce_hipay_tpp_api_cancel_alter(&$request_data, $order, $payme
 }
 
 /**
- * Allow other modules to alter the payment transaction before it is saved.
+ * Allows other modules to process Hipay server-to-server notification.
  *
- * @param object $transaction
- *   Payment transaction updated from received feedback before it is saved.
  * @param array $feedback
- *   An associative array containing the Hipay API call feedback.
- * @param object $order
- *   An order object being paid for.
- * @param array $payment_method
- *   The payment method instance used for the payment transaction.
+ *   An associative array containing the Hipay server-to-server notification
+ *   feedback, or 'refresh' API call response feedback.
+ * @param string $callback_type
+ *   A callback type which the feedback is being processed for.
+ *   This could be either 'notification' (when processing asynchronous
+ *   server-to-server notification) or 'refresh' (when processing the response
+ *   of the 'refresh' API call).
+ * @param bool $processing_result
+ *   A boolean indicating whether the feedback was processed successfully by
+ *   commerce_hipay_tpp_process_notification() and other earlier implementations
+ *   of this hook.
+ *
+ * @return bool
+ *   A boolean indicating whether the processing was successful or not.
+ *
+ * @see commerce_hipay_tpp_callback_notification()
+ * @see commerce_hipay_tpp_refresh()
  */
-function hook_commerce_hipay_tpp_process_notification_alter(&$transaction, $feedback, $order, $payment_method) {
+function hook_commerce_hipay_tpp_process_notification($feedback, $callback_type, $processing_result) {
   // No example.
 }

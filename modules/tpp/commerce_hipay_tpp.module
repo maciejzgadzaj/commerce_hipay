@@ -1112,8 +1112,15 @@ function commerce_hipay_tpp_redirect_form_submit($order, $payment_method) {
  */
 function commerce_hipay_tpp_callback_notification() {
   // Get Hipay API notification feedback and process it.
+  $callback_type = 'notification';
   $feedback = commerce_hipay_tpp_get_feedback();
-  commerce_hipay_tpp_process_notification($feedback, 'notification');
+  $result = commerce_hipay_tpp_process_notification($feedback, $callback_type);
+
+  // Allow other modules to process the notification.
+  foreach (module_implements('commerce_hipay_tpp_process_notification') as $module) {
+    $function = $module . '_commerce_hipay_tpp_process_notification';
+    $result = $result && $function($feedback, $callback_type, $result);
+  }
 }
 
 /**
@@ -1446,8 +1453,6 @@ function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
     $transaction->message .= '<br />' . t('Total refunded amount: @refunded_amount');
     $transaction->message_variables['@refunded_amount'] = commerce_currency_format(commerce_currency_decimal_to_amount($refunded_amount, $transaction->currency_code), $transaction->currency_code);
   }
-
-  drupal_alter('commerce_hipay_tpp_process_notification', $transaction, $feedback, $order, $payment_method);
 
   commerce_payment_transaction_save($transaction);
 

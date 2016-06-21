@@ -27,7 +27,17 @@ function commerce_hipay_tpp_refresh($order, $transaction) {
   $url = commerce_hipay_tpp_get_server_url($payment_method) . COMMERCE_HIPAY_TPP_RESOURCE_TRANSACTION . $transaction->remote_id;
   $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, 'Refresh');
 
-  if (commerce_hipay_tpp_process_notification($response['transaction'], 'refresh')) {
+  $callback_type = 'refresh';
+  $feedback = $response['transaction'];
+  $result = commerce_hipay_tpp_process_notification($feedback, $callback_type);
+
+  // Allow other modules to process the response feedback.
+  foreach (module_implements('commerce_hipay_tpp_process_notification') as $module) {
+    $function = $module . '_commerce_hipay_tpp_process_notification';
+    $result = $result && $function($feedback, $callback_type, $result);
+  }
+
+  if ($result) {
     drupal_set_message(t('Transaction details has been successfully refreshed.'));
   }
 
