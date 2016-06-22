@@ -47,8 +47,6 @@ function hook_commerce_hipay_tpp_api_order_request_alter(&$request_data, $order,
  *
  * @param array $feedback
  *   An associative array containing the Hipay API call feedback.
- * @param object $transaction
- *   Payment transaction to refresh.
  * @param object $order
  *   An order object being paid for.
  * @param array $payment_method
@@ -64,7 +62,7 @@ function hook_commerce_hipay_tpp_api_order_request_alter(&$request_data, $order,
  * @see commerce_hipay_tpp_redirect_form_validate()
  * @see commerce_payment_redirect_pane_checkout_form()
  */
-function hook_commerce_hipay_tpp_redirect_form_validate($feedback, $transaction, $order, $payment_method) {
+function hook_commerce_hipay_tpp_redirect_form_validate($feedback, $order, $payment_method) {
   // No example.
 }
 
