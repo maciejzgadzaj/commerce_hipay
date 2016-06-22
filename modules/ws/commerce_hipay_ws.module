@@ -300,6 +300,12 @@ function commerce_hipay_ws_settings_default() {
  * @see hook_commerce_payment_method_info()
  */
 function commerce_hipay_ws_settings_form($settings = array()) {
+  // Make sure the PHP SOAP extension is installed.
+  if (!class_exists('SoapClient')) {
+    drupal_set_message(t('SoapClient class not found! The Hipay Wallet settings form will not be available until PHP <a href="!soap_url">SOAP extension</a> is installed.', array('!soap_url' => 'http://php.net/manual/en/book.soap.php')), 'error');
+    return array();
+  }
+
   // Merge default settings into the stored settings array.
   // Settings are stored in multi-level array, so we need recursive merge. And
   // actually replace instead of merge, to make sure the default settings are
