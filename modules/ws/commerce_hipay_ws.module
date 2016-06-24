@@ -254,6 +254,7 @@ function commerce_hipay_ws_entity_update($entity, $type) {
  */
 function commerce_hipay_ws_settings_default() {
   return array(
+    'hipay_user_account_id' => NULL,
     'endpoint' => COMMERCE_HIPAY_WS_TEST,
     'account_id' => '',
     'email' => '',
@@ -312,6 +313,7 @@ function commerce_hipay_ws_settings_form($settings = array()) {
   // correctly overriden by custom user settings (array_merge_recursive() would
   // just add new array elements instead of overriding existing ones).
   $settings = array_replace_recursive(commerce_hipay_ws_settings_default(), $settings);
+  dpm($settings, '$settings');
 
   // When the payment method is configured for the very first time, only part
   // of the settings form is displayed - as for the remaining part we need to
@@ -328,6 +330,11 @@ function commerce_hipay_ws_settings_form($settings = array()) {
   $form['settings'] = array(
     '#type' => 'value',
     '#value' => $settings,
+  );
+
+  $form['hipay_user_account_id'] = array(
+    '#type' => 'value',
+    '#value' => $settings['hipay_user_account_id'],
   );
 
   $form['endpoint'] = array(
@@ -738,11 +745,38 @@ function commerce_hipay_ws_settings_form_ajax_callback($form, $form_state) {
  * @see  commerce_hipay_ws_form_rules_ui_edit_element_alter().
  */
 function commerce_hipay_ws_settings_form_submit(&$form, &$form_state) {
+  global $user;
+
+  // If this is the first time that the payment method settings form was
+  // submitted, display the message telling the user that there are more
+  // settings to be provided.
   $original_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings']['settings'];
   if (empty($original_settings['api_password'])) {
     drupal_set_message(t("But wait! There's more!"), 'warning');
     $form_state['redirect'] = current_path();
   }
+
+  // If the main Hipay user account has not been created yet, do it now.
+  $settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
+//  dpm($settings, '$settings');
+
+  $hipay_user_account_values = array(
+    'uid' => $user->uid,
+    'hipay_account_id' => $settings['account_id'],
+    'title' => $settings['entity'],
+    'hipay_ws_login' => $settings['api_username'],
+    'hipay_ws_password' => $settings['api_password'],
+  );
+  $hipay_user_account = commerce_hipay_ws_user_account_new($hipay_user_account_values);
+
+  $wrapper = entity_metadata_wrapper('commerce_hipay_ws_user_account', $hipay_user_account);
+  $wrapper->hipay_ws_user_email = $settings['email'];
+  $wrapper->save();
+
+  $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings']['hipay_user_account_id'] = $hipay_user_account->user_account_id;
+  dpm($hipay_user_account, '$hipay_user_account');
+//  dpm($form, '$form');
+//  dpm($form_state, '$form_state');
 }
 
 /**

@@ -102,7 +102,9 @@ function commerce_hipay_ws_user_account_menu() {
     'title' => 'edit',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('commerce_hipay_ws_user_account_form', 4),
-    'access arguments' => array('edit any commerce_hipay_ws_user_account entity'),
+//    'access arguments' => array('edit any commerce_hipay_ws_user_account entity'),
+    'access callback' => 'commerce_hipay_ws_user_account_access',
+    'access arguments' => array('edit', 4),
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'file' => 'includes/entities/commerce_hipay_ws.entity_ui.user_account.inc',
@@ -112,7 +114,9 @@ function commerce_hipay_ws_user_account_menu() {
     'title' => 'delete',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('commerce_hipay_ws_user_account_delete_form', 4, 'sub-account'),
-    'access arguments' => array('delete any commerce_hipay_ws_user_account entity'),
+//    'access arguments' => array('delete any commerce_hipay_ws_user_account entity'),
+    'access callback' => 'commerce_hipay_ws_user_account_access',
+    'access arguments' => array('delete', 4),
     'type' => MENU_LOCAL_TASK,
     'weight' => 10,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
@@ -120,6 +124,15 @@ function commerce_hipay_ws_user_account_menu() {
   );
 
   return $items;
+}
+
+function commerce_hipay_ws_user_account_access($op, $entity = NULL, $account = NULL) {
+  switch ($op) {
+    case 'edit':
+      return user_access('edit any commerce_hipay_ws_user_account entity');
+    case 'delete':
+      return user_access('delete any commerce_hipay_ws_user_account entity');
+  }
 }
 
 /**
