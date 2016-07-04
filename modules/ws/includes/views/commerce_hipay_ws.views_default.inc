@@ -62,6 +62,11 @@ function commerce_hipay_ws_views_default_views() {
   $handler->display->display_options['fields']['hipay_ws_user_currency']['element_wrapper_type'] = '0';
   $handler->display->display_options['fields']['hipay_ws_user_currency']['element_default_classes'] = FALSE;
   $handler->display->display_options['fields']['hipay_ws_user_currency']['field_api_classes'] = TRUE;
+  /* Field: Hipay Wallet user account: Hipay account status */
+  $handler->display->display_options['fields']['hipay_identified']['id'] = 'hipay_identified';
+  $handler->display->display_options['fields']['hipay_identified']['table'] = 'commerce_hipay_ws_user_account';
+  $handler->display->display_options['fields']['hipay_identified']['field'] = 'hipay_identified';
+  $handler->display->display_options['fields']['hipay_identified']['label'] = 'Identified';
   /* Field: Hipay Wallet user account: Operations links */
   $handler->display->display_options['fields']['operations']['id'] = 'operations';
   $handler->display->display_options['fields']['operations']['table'] = 'commerce_hipay_ws_user_account';
@@ -204,6 +209,7 @@ function commerce_hipay_ws_views_default_views() {
     t('Hipay account ID'),
     t('Account'),
     t('Currency'),
+    t('Identified'),
     t('Page: Admin: Accounts'),
     t('Page: Admin: Sub-accounts'),
     t('Hipay Wallet user sub-accounts'),
