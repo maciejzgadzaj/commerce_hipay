@@ -442,6 +442,11 @@ function commerce_hipay_ws_views_default_views() {
   $handler->display->display_options['fields']['hipay_ws_user_currency']['element_wrapper_type'] = '0';
   $handler->display->display_options['fields']['hipay_ws_user_currency']['element_default_classes'] = FALSE;
   $handler->display->display_options['fields']['hipay_ws_user_currency']['field_api_classes'] = TRUE;
+  /* Field: Hipay Wallet bank account: Hipay account status */
+  $handler->display->display_options['fields']['hipay_status']['id'] = 'hipay_status';
+  $handler->display->display_options['fields']['hipay_status']['table'] = 'commerce_hipay_ws_bank_account';
+  $handler->display->display_options['fields']['hipay_status']['field'] = 'hipay_status';
+  $handler->display->display_options['fields']['hipay_status']['label'] = 'Status';
   /* Field: Hipay Wallet bank account: Operations links */
   $handler->display->display_options['fields']['operations']['id'] = 'operations';
   $handler->display->display_options['fields']['operations']['table'] = 'commerce_hipay_ws_bank_account';
@@ -516,6 +521,7 @@ function commerce_hipay_ws_views_default_views() {
     t('Hipay user account'),
     t('Bank'),
     t('Currency'),
+    t('Status'),
     t('Page: Admin'),
     t('Page: Store'),
     t('The Hipay Wallet bank account has not yet been created for this store.'),
