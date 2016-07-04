@@ -32,6 +32,55 @@ function commerce_hipay_ws_views_default_views() {
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = '50';
   $handler->display->display_options['style_plugin'] = 'table';
+  $handler->display->display_options['style_options']['columns'] = array(
+    'user_account_id' => 'user_account_id',
+    'hipay_account_id' => 'hipay_account_id',
+    'rendered_entity' => 'rendered_entity',
+    'hipay_ws_user_currency' => 'hipay_ws_user_currency',
+    'hipay_identified' => 'hipay_identified',
+    'operations' => 'operations',
+  );
+  $handler->display->display_options['style_options']['default'] = 'user_account_id';
+  $handler->display->display_options['style_options']['info'] = array(
+    'user_account_id' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'desc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'hipay_account_id' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'rendered_entity' => array(
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'hipay_ws_user_currency' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'hipay_identified' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'operations' => array(
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+  );
   /* Relationship: Entity Reference: Referenced Entity */
   $handler->display->display_options['relationships']['hipay_ws_user_user_account_target_id']['id'] = 'hipay_ws_user_user_account_target_id';
   $handler->display->display_options['relationships']['hipay_ws_user_user_account_target_id']['table'] = 'field_data_hipay_ws_user_user_account';
