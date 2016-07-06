@@ -185,4 +185,78 @@ function commerce_hipay_ws_views_data_alter(&$data) {
       'handler' => 'views_handler_filter_date',
     ),
   );
+
+  // Transfers.
+  $data['commerce_hipay_ws_transfer']['link'] = array(
+    'field' => array(
+      'title' => t('Link'),
+      'help' => t('Provide a link to the transfer.'),
+      'handler' => 'commerce_hipay_ws_transfer_handler_link_field',
+    ),
+  );
+  $data['commerce_hipay_ws_transfer']['operations'] = array(
+    'field' => array(
+      'title' => t('Operations links'),
+      'help' => t('Display all operations available for this transfer.'),
+      'handler' => 'commerce_hipay_ws_transfer_handler_operations_field',
+    ),
+  );
+
+  // Transfer revisions.
+  $data['commerce_hipay_ws_transfer_revision']['revision_id'] = array(
+    'title' => t('Revision ID'),
+    'help' => t('The revision ID of the Hipay transfer revision.'),
+    'field' => array(
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'relationship' => array(
+      'handler' => 'views_handler_relationship',
+      'base' => 'commerce_hipay_ws_transfer',
+      'base field' => 'revision_id',
+      'title' => t('Hipay transfer'),
+      'label' => t('Latest transfer revision'),
+    ),
+  );
+  $data['commerce_hipay_ws_transfer_revision']['revision_uid'] = array(
+    'title' => t('User'),
+    'help' => t('Relate a transfer revision to the user who created the revision.'),
+    'relationship' => array(
+      'handler' => 'views_handler_relationship',
+      'base' => 'users',
+      'base field' => 'uid',
+      'field' => 'revision_uid',
+      'field_name' => 'revision_uid',
+      'label' => t('Revision user'),
+    ),
+  );
+  $data['commerce_hipay_ws_transfer_revision']['log'] = array(
+    'title' => t('Log message'),
+    'help' => t('The log message entered when the revision was created.'),
+    'field' => array(
+      'handler' => 'views_handler_field_xss',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+  );
+  $data['commerce_hipay_ws_transfer_revision']['revision_timestamp'] = array(
+    'title' => t('Revision date'),
+    'help' => t('The date the Hipay transfer revision was created.'),
+    'field' => array(
+      'handler' => 'views_handler_field_date',
+      'click sortable' => TRUE,
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort_date',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_date',
+    ),
+  );
 }

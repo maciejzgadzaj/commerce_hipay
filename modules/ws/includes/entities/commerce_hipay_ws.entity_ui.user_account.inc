@@ -280,9 +280,25 @@ function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'f
     $context = array('commerce_hipay_ws_user_account' => $entity);
     $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_TRANSACTIONS, $parameters, NULL, $context);
 
-    // @TODO: Display: getTransactions.
-    if (!empty($response['transactions'])) {
+    // Display: getTransactions.
+    if (!empty($response['transactions']['item'])) {
+      // If there is only one transaction, 'item', we need to put it into
+      // a sub-array (as is the case with multiple transactions).
+      if (!isset($response['transactions']['item'][0])) {
+        $response['transactions']['item'] = array($response['transactions']['item']);
+      }
+
       $output .= '<h3>' . t('getTransactions') . '</h3>';
+      $header = $rows = array();
+      foreach ($response['transactions']['item'] as $item) {
+        $row = array();
+        foreach ($item as $key => $value) {
+          $header[$key] = check_plain($key);
+          $row[$key] = check_plain($value);
+        }
+        $rows[] = $row;
+      }
+      $output .= theme('table', array('header' => $header, 'rows' => $rows));
     }
 
     $return['hipay_user_account'] = array(

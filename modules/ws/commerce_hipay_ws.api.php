@@ -82,3 +82,13 @@ function hook_commerce_hipay_ws_user_account_identification($hipay_user_account,
 function hook_commerce_hipay_ws_bank_account_validation($hipay_bank_account, $feedback) {
   // No example.
 }
+
+/**
+ * Allows other modules to alter the list of available Hipay transfer statuses.
+ *
+ * @param array $statuses
+ *   An array of all defined Hipay transfer status values.
+ */
+function hook_commerce_hipay_ws_transfer_statuses_alter(&$statuses) {
+  $statuses['pending_execution'] = t('Pending execution');
+}

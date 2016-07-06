@@ -8,16 +8,18 @@
 require_once 'includes/commerce_hipay_ws.account.inc';
 require_once 'includes/commerce_hipay_ws.codes.inc';
 require_once 'includes/commerce_hipay_ws.constants.inc';
-require_once 'includes/commerce_hipay_ws.transfer.inc';
 require_once 'includes/commerce_hipay_ws.withdrawal.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity.user_account.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity.bank_account.inc';
+require_once 'includes/entities/commerce_hipay_ws.entity.transfer.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity.file.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity_ui.user_account.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity_ui.bank_account.inc';
+require_once 'includes/entities/commerce_hipay_ws.entity_ui.transfer.inc';
 require_once 'includes/api/commerce_hipay_ws.api.inc';
 require_once 'includes/api/commerce_hipay_ws.api.user_account.inc';
 require_once 'includes/api/commerce_hipay_ws.api.bank_account.inc';
+require_once 'includes/api/commerce_hipay_ws.api.transfer.inc';
 require_once 'includes/api/commerce_hipay_ws.api.upload.inc';
 
 /**
@@ -25,7 +27,8 @@ require_once 'includes/api/commerce_hipay_ws.api.upload.inc';
  */
 function commerce_hipay_ws_entity_info() {
   return commerce_hipay_ws_user_account_entity_info()
-    + commerce_hipay_ws_bank_account_entity_info();
+    + commerce_hipay_ws_bank_account_entity_info()
+    + commerce_hipay_ws_transfer_entity_info();
 }
 
 /**
@@ -60,6 +63,7 @@ function commerce_hipay_ws_permission() {
 
   $permissions += commerce_entity_access_permissions('commerce_hipay_ws_user_account');
   $permissions += commerce_entity_access_permissions('commerce_hipay_ws_bank_account');
+  $permissions += commerce_entity_access_permissions('commerce_hipay_ws_transfer');
 
   return $permissions;
 }
@@ -153,6 +157,9 @@ function commerce_hipay_ws_menu() {
 
   // Bank accounts.
   $items += commerce_hipay_ws_bank_account_menu();
+
+  // Transfers.
+  $items += commerce_hipay_ws_transfer_menu();
 
   return $items;
 }
