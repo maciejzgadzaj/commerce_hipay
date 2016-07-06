@@ -157,7 +157,7 @@ function commerce_hipay_ws_bank_account_schema() {
       ),
       'owner' => array(
         'table' => 'users',
-        'columns' => array('uid' => 'uid'),
+        'columns' => array('revision_uid' => 'uid'),
       ),
     ),
   );

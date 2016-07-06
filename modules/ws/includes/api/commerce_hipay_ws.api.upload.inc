@@ -29,7 +29,7 @@ function commerce_hipay_ws_api_upload($account, $kyc_document, $payment_method_i
   }
 
   // This requires PHP 5.5 or later.
-  $file = new CURLFile(drupal_realpath($kyc_document['uri']),'application/octet-stream', $kyc_document['filename']);
+  $file = new CURLFile(drupal_realpath($kyc_document['uri']), 'application/octet-stream', $kyc_document['filename']);
 
   $parameters = array(
     'user_space' => $account->hipay_space_id,

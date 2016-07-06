@@ -5,14 +5,17 @@
  */
 class CommerceHipayWSBankAccountEntityController extends EntityAPIController {
   /**
-   * Create and return a new entity_example_basic entity.
+   * Create and return a new commerce_hipay_ws_bank_account entity.
    */
   public function create(array $values = array()) {
+    global $user;
+
     $values += array(
       'bank_account_id' => NULL,
       'revision_id' => NULL,
       'is_new' => TRUE,
       'type' => 'hipay_bank_account',
+      'uid' => $user->uid,
       'created' => '',
       'changed' => '',
     );
@@ -34,7 +37,7 @@ class CommerceHipayWSBankAccountEntityController extends EntityAPIController {
     $entity->revision_timestamp = REQUEST_TIME;
     $entity->revision_uid = $user->uid;
 
-    // If our entity has no basic_id, then we need to give it a
+    // If our entity has no bank_account_id, then we need to give it a
     // time of creation.
     if (empty($entity->bank_account_id)) {
       $entity->created = REQUEST_TIME;

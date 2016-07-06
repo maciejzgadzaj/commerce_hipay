@@ -5,19 +5,22 @@
  */
 class CommerceHipayWSUserAccountEntityController extends EntityAPIController {
   /**
-   * Create and return a new entity_example_basic entity.
+   * Create and return a new commerce_hipay_ws_user_account entity.
    */
   public function create(array $values = array()) {
+    global $user;
+
     $values += array(
       'user_account_id' => NULL,
       'revision_id' => NULL,
       'is_new' => TRUE,
       'type' => 'hipay_user_account',
-      'uid' => '',
+      'uid' => $user->uid,
       'created' => '',
       'changed' => '',
       'hipay_account_id' => '',
       'hipay_space_id' => '',
+      'hipay_identified' => 'no',
       'hipay_ws_login' => '',
       'hipay_ws_password' => '',
     );
@@ -39,7 +42,7 @@ class CommerceHipayWSUserAccountEntityController extends EntityAPIController {
     $entity->revision_timestamp = REQUEST_TIME;
     $entity->revision_uid = $user->uid;
 
-    // If our entity has no basic_id, then we need to give it a
+    // If our entity has no user_account_id, then we need to give it a
     // time of creation.
     if (empty($entity->user_account_id)) {
       $entity->created = REQUEST_TIME;

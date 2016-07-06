@@ -1,8 +1,8 @@
 <?php
 
 /**
- * This field handler aggregates operations that can be done on a accounting
- * reference under a single field providing a more flexible way to present them
+ * This field handler aggregates operations that can be done on a bank
+ * account under a single field providing a more flexible way to present them
  * in a view.
  */
 class commerce_hipay_ws_bank_account_handler_operations_field extends views_handler_field {
