@@ -1,12 +1,18 @@
 <?php
 
+/**
+ * Returns Hipay bank account-related menu items.
+ *
+ * @see commerce_hipay_ws_menu()
+ */
 function commerce_hipay_ws_bank_account_menu() {
   $items = array();
 
   $items['admin/commerce/hipay-wallet/bank-accounts/add'] = array(
     'title' => 'Add a bank account',
     'page callback' => 'commerce_hipay_ws_bank_account_add',
-    'access arguments' => array('create commerce_hipay_ws_bank_account entities'),
+    'access callback' => 'commerce_hipay_ws_bank_account_access',
+    'access arguments' => array('create'),
     'type' => MENU_LOCAL_ACTION,
     'file' => 'includes/entities/commerce_hipay_ws.entity_ui.bank_account.inc',
   );
@@ -16,7 +22,8 @@ function commerce_hipay_ws_bank_account_menu() {
     'title arguments' => array(4),
     'page callback' => 'commerce_hipay_ws_bank_account_view',
     'page arguments' => array(4),
-    'access arguments' => array('view any commerce_hipay_ws_bank_account entity'),
+    'access callback' => 'commerce_hipay_ws_bank_account_access',
+    'access arguments' => array('view', 4),
     'file' => 'includes/entities/commerce_hipay_ws.entity_ui.bank_account.inc',
   );
 
@@ -40,7 +47,8 @@ function commerce_hipay_ws_bank_account_menu() {
     'title' => 'Hipay Wallet',
     'page callback' => 'commerce_hipay_ws_bank_account_view_hipay_info',
     'page arguments' => array(4),
-    'access arguments' => array('view any commerce_hipay_ws_bank_account entity'),
+    'access callback' => 'commerce_hipay_ws_bank_account_access',
+    'access arguments' => array('view', 4),
     'type' => MENU_LOCAL_TASK,
     'weight' => -5,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
@@ -51,7 +59,8 @@ function commerce_hipay_ws_bank_account_menu() {
     'title' => 'edit',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('commerce_hipay_ws_bank_account_form', 4),
-    'access arguments' => array('edit any commerce_hipay_ws_bank_account entity'),
+    'access callback' => 'commerce_hipay_ws_bank_account_access',
+    'access arguments' => array('edit', 4),
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'file' => 'includes/entities/commerce_hipay_ws.entity_ui.bank_account.inc',
@@ -61,7 +70,8 @@ function commerce_hipay_ws_bank_account_menu() {
     'title' => 'delete',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('commerce_hipay_ws_bank_account_delete_form', 4),
-    'access arguments' => array('delete any commerce_hipay_ws_bank_account entity'),
+    'access callback' => 'commerce_hipay_ws_bank_account_access',
+    'access arguments' => array('delete', 4),
     'type' => MENU_LOCAL_TASK,
     'weight' => 10,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
@@ -69,6 +79,35 @@ function commerce_hipay_ws_bank_account_menu() {
   );
 
   return $items;
+}
+
+/**
+ * Checks the current user's access to the specified bank account operation.
+ *
+ * @param string $op
+ *   The operation being performed. One of 'view', 'edit', 'create' or
+ *   'delete'.
+ * @param object $entity
+ *   Optionally an entity to check access for. If no entity is given, it will be
+ *   determined whether access is allowed for all entities of the given type.
+ * @param object $account
+ *   The user to check for. Leave it to NULL to check for the global user.
+ *
+ * @return boolean
+ *   Whether access is allowed or not. If the entity type does not specify any
+ *   access information, NULL is returned.
+ */
+function commerce_hipay_ws_bank_account_access($op, $entity = NULL, $account = NULL) {
+  switch ($op) {
+    case 'create':
+      return user_access('create commerce_hipay_ws_bank_account entities');
+    case 'view':
+      return user_access('view any commerce_hipay_ws_bank_account entity');
+    case 'edit':
+      return user_access('edit any commerce_hipay_ws_bank_account entity');
+    case 'delete':
+      return user_access('administer commerce_hipay_ws_bank_account entities');
+  }
 }
 
 /**
