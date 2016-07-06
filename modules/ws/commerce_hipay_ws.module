@@ -703,6 +703,9 @@ function commerce_hipay_ws_form_rules_ui_edit_element_alter(&$form, &$form_state
     }
 
     $form['#submit'][] = 'commerce_hipay_ws_settings_form_submit';
+
+    // Add submit callback to create a new Hipay user account entity
+    // for the provided vendor details.
     $form['#submit'][] = 'commerce_hipay_ws_settings_form_submit_save_vendor_account';
 
     // Submitted bank details.
@@ -738,6 +741,9 @@ function commerce_hipay_ws_settings_form_ajax_callback($form, $form_state) {
  * @see  commerce_hipay_ws_form_rules_ui_edit_element_alter().
  */
 function commerce_hipay_ws_settings_form_submit(&$form, &$form_state) {
+  // If this is the first time that the payment method settings form was
+  // submitted, display the message telling the user that there are more
+  // settings to be provided.
   $original_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings']['settings'];
   if (empty($original_settings['api_password'])) {
     drupal_set_message(t("But wait! There's more!"), 'warning');
@@ -809,28 +815,47 @@ function commerce_hipay_ws_settings_form_submit_create_bank_account(&$form, &$fo
 }
 
 /**
- * @TODO: Get rid of this.
+ * Creates a new Hipay user account entity for the provided vendor details.
+ *
+ * @see commerce_hipay_ws_form_rules_ui_edit_element_alter()
+ * @see commerce_hipay_ws_settings_form()
  */
 function commerce_hipay_ws_settings_form_submit_save_vendor_account(&$form, &$form_state) {
+  global $user;
+
   // Submitted payment method settings.
   $settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
 
-  $record = array(
-    'account_id' => $settings['account_id'],
-    'store_id' => 0,
-    'email' => $settings['email'],
-    'hipay_vendor_account' => array(
-      'userAccountId' => $settings['account_id'],
-      'wsLogin' => $settings['api_username'],
-      'wsPassword' => $settings['api_password'],
-    ),
-  );
-
-  if ($account = commerce_hipay_ws_account_load_by_account_id($settings['account_id'])) {
-    $record = array_replace_recursive($account, $record);
+  // Try to load the existing Hipay user account entity from provided account_id
+  // value, and if it doesn't exist yet, create a new one.
+  if (!$user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($settings['account_id'])) {
+    $user_account = commerce_hipay_ws_user_account_new();
+    $user_account->uid = $user->uid;
   }
 
-  commerce_hipay_ws_account_save($record);
+  // Replace existing values with form submitted values.
+  // Replace property values.
+  $user_account->hipay_account_id = $settings['account_id'];
+  $user_account->hipay_space_id = '';
+  $user_account->hipay_identified = COMMERCE_HIPAY_WS_ACCOUNT_IDENTIFIED;
+  $user_account->hipay_ws_login = $settings['api_username'];
+  $user_account->hipay_ws_password = $settings['api_password'];
+
+  // Replace field values.
+  $user_account_wrapper = entity_metadata_wrapper('commerce_hipay_ws_user_account', $user_account);
+  $user_account_wrapper->hipay_ws_user_address = array(LANGUAGE_NONE => array());
+  $user_account_wrapper->hipay_ws_user_company_name = $settings['entity'];
+  $user_account_wrapper->hipay_ws_user_currency = commerce_default_currency();
+  $user_account_wrapper->hipay_ws_user_email = $settings['email'];
+  $user_account_wrapper->hipay_ws_user_locale = $settings['locale'];
+  $user_account_wrapper->hipay_ws_user_shop = 0;
+
+  // Create new revision.
+  $user_account->revision = TRUE;
+  $user_account->log = t('Submitted Hipay Wallet configuration form.');
+
+  // Save updated Hipay user account entity.
+  commerce_hipay_ws_user_account_save($user_account);
 }
 
 /**
