@@ -260,7 +260,7 @@ function commerce_hipay_ws_entity_update($entity, $type) {
  * @see commerce_hipay_ws_settings_form()
  */
 function commerce_hipay_ws_settings_default() {
-  return array(
+  $defaults = array(
     'endpoint' => COMMERCE_HIPAY_WS_TEST,
     'account_id' => '',
     'email' => '',
@@ -268,6 +268,7 @@ function commerce_hipay_ws_settings_default() {
     'api_username' => '',
     'api_password' => '',
     'locale' => 'en_GB',
+    'fees' => array(),
     'api' => array(
       'create_account_immediately' => TRUE,
       'test_mode' => FALSE,
@@ -299,6 +300,12 @@ function commerce_hipay_ws_settings_default() {
       'transit_num' => '',
     ),
   );
+
+  foreach (array_keys(commerce_currencies(TRUE)) as $currency_code) {
+    $defaults['fees'][$currency_code] = '';
+  }
+
+  return $defaults;
 }
 
 /**
@@ -396,6 +403,21 @@ function commerce_hipay_ws_settings_form($settings = array()) {
     '#default_value' => $settings['locale'],
     '#required' => TRUE,
   );
+
+  // Fee accounts.
+  $form['fees'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Fee accounts'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  foreach (commerce_currencies(TRUE) as $currency_code => $currency) {
+    $form['fees'][$currency_code] = array(
+      '#type' => 'textfield',
+      '#title' => t('@currency_code fee account ID', array('@currency_code' => $currency_code)),
+      '#default_value' => $settings['fees'][$currency_code],
+    );
+  }
 
   // API settings.
   $form['api'] = array(
