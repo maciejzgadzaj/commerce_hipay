@@ -7,18 +7,20 @@
 
 require_once 'includes/commerce_hipay_ws.codes.inc';
 require_once 'includes/commerce_hipay_ws.constants.inc';
-require_once 'includes/commerce_hipay_ws.withdrawal.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity.user_account.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity.bank_account.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity.transfer.inc';
+require_once 'includes/entities/commerce_hipay_ws.entity.withdrawal.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity.file.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity_ui.user_account.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity_ui.bank_account.inc';
 require_once 'includes/entities/commerce_hipay_ws.entity_ui.transfer.inc';
+require_once 'includes/entities/commerce_hipay_ws.entity_ui.withdrawal.inc';
 require_once 'includes/api/commerce_hipay_ws.api.inc';
 require_once 'includes/api/commerce_hipay_ws.api.user_account.inc';
 require_once 'includes/api/commerce_hipay_ws.api.bank_account.inc';
 require_once 'includes/api/commerce_hipay_ws.api.transfer.inc';
+require_once 'includes/api/commerce_hipay_ws.api.withdrawal.inc';
 require_once 'includes/api/commerce_hipay_ws.api.upload.inc';
 
 /**
@@ -27,7 +29,8 @@ require_once 'includes/api/commerce_hipay_ws.api.upload.inc';
 function commerce_hipay_ws_entity_info() {
   return commerce_hipay_ws_user_account_entity_info()
     + commerce_hipay_ws_bank_account_entity_info()
-    + commerce_hipay_ws_transfer_entity_info();
+    + commerce_hipay_ws_transfer_entity_info()
+    + commerce_hipay_ws_withdrawal_entity_info();
 }
 
 /**
@@ -63,6 +66,7 @@ function commerce_hipay_ws_permission() {
   $permissions += commerce_entity_access_permissions('commerce_hipay_ws_user_account');
   $permissions += commerce_entity_access_permissions('commerce_hipay_ws_bank_account');
   $permissions += commerce_entity_access_permissions('commerce_hipay_ws_transfer');
+  $permissions += commerce_entity_access_permissions('commerce_hipay_ws_withdrawal');
 
   return $permissions;
 }
@@ -105,6 +109,9 @@ function commerce_hipay_ws_menu() {
 
   // Transfers.
   $items += commerce_hipay_ws_transfer_menu();
+
+  // Withdrawals.
+  $items += commerce_hipay_ws_withdrawal_menu();
 
   return $items;
 }
@@ -1134,10 +1141,11 @@ function commerce_hipay_ws_callback_notification_process_feedback_xml($xml_strin
           break;
 
         case 'withdraw_validation':
-          $withdrawal = commerce_hipay_ws_withdrawal_load_by_withdrawal_id($feedback_xml['transid']);
-          $withdrawal['notification'] = $feedback_xml;
-          $transfer['status'] = $feedback_xml['status'];
-          commerce_hipay_ws_withdrawal_save($withdrawal);
+          // @TODO.
+//          $withdrawal = commerce_hipay_ws_withdrawal_load_by_withdrawal_id($feedback_xml['transid']);
+//          $withdrawal['notification'] = $feedback_xml;
+//          $transfer['status'] = $feedback_xml['status'];
+//          commerce_hipay_ws_withdrawal_save($withdrawal);
           break;
 
       }

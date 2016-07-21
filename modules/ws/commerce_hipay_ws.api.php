@@ -92,3 +92,13 @@ function hook_commerce_hipay_ws_bank_account_validation($hipay_bank_account, $fe
 function hook_commerce_hipay_ws_transfer_statuses_alter(&$statuses) {
   $statuses['pending_execution'] = t('Pending execution');
 }
+
+/**
+ * Allows other modules to alter the list of available Hipay withdrawal statuses.
+ *
+ * @param array $statuses
+ *   An array of all defined Hipay withdrawal status values.
+ */
+function hook_commerce_hipay_ws_withdrawal_statuses_alter(&$statuses) {
+  $statuses['pending_execution'] = t('Pending execution');
+}
