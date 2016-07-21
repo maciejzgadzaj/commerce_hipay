@@ -5,7 +5,6 @@
  * Provides integration with Hipay Wallet.
  */
 
-require_once 'includes/commerce_hipay_ws.account.inc';
 require_once 'includes/commerce_hipay_ws.codes.inc';
 require_once 'includes/commerce_hipay_ws.constants.inc';
 require_once 'includes/commerce_hipay_ws.withdrawal.inc';
@@ -96,60 +95,6 @@ function commerce_hipay_ws_menu() {
     'page arguments' => array(2),
     'access arguments' => array('access devel information'),
     'type' => MENU_CALLBACK,
-  );
-
-  $items['store/%commerce_store/hipay-wallet'] = array(
-    'title' => 'Hipay Wallet',
-    'type' => MENU_LOCAL_TASK,
-    'page callback' => 'commerce_hipay_ws_store_overview',
-    'page arguments' => array(1),
-    'access callback' => 'commerce_store_access',
-    'access arguments' => array('update', 1),
-    'weight' => 0,
-    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
-    'file' => 'includes/commerce_hipay_ws.admin.inc',
-  );
-
-  $items['store/%commerce_store/hipay-wallet/view'] = array(
-    'title' => 'Account details',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => -5,
-  );
-
-  $items['store/%commerce_store/hipay-wallet/received-transfers'] = array(
-    'title' => 'Received transfers',
-    'page callback' => 'commerce_hipay_ws_store_transfers_received',
-    'page arguments' => array(1),
-    'access callback' => 'commerce_store_access',
-    'access arguments' => array('update', 1),
-    'weight' => 0,
-    'type' => MENU_LOCAL_TASK,
-    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
-    'file' => 'includes/commerce_hipay_ws.admin.inc',
-  );
-
-  $items['store/%commerce_store/hipay-wallet/sent-transfers'] = array(
-    'title' => 'Sent transfers',
-    'page callback' => 'commerce_hipay_ws_store_transfers_sent',
-    'page arguments' => array(1),
-    'access callback' => 'commerce_store_access',
-    'access arguments' => array('update', 1),
-    'weight' => 0,
-    'type' => MENU_LOCAL_TASK,
-    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
-    'file' => 'includes/commerce_hipay_ws.admin.inc',
-  );
-
-  $items['store/%commerce_store/hipay-wallet/withdrawals'] = array(
-    'title' => 'Withdrawals',
-    'page callback' => 'commerce_hipay_ws_store_withdrawals',
-    'page arguments' => array(1),
-    'access callback' => 'commerce_store_access',
-    'access arguments' => array('update', 1),
-    'weight' => 0,
-    'type' => MENU_LOCAL_TASK,
-    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
-    'file' => 'includes/commerce_hipay_ws.admin.inc',
   );
 
   // User accounts.
