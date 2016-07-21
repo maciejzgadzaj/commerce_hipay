@@ -41,20 +41,6 @@ function commerce_hipay_ws_transfer_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
-      'order_id' => array(
-        'description' => 'The {commerce_order}.order_id of the order this transfer is for.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => FALSE,
-        'default' => 0,
-      ),
-      'line_item_id' => array(
-        'description' => 'The {commerce_line_item}.line_item_id of the line item this transfer is for.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => FALSE,
-        'default' => 0,
-      ),
       'sender_account_id' => array(
         'description' => 'The Hipay sender account ID.',
         'type' => 'int',
@@ -144,8 +130,6 @@ function commerce_hipay_ws_transfer_schema() {
       'revision_id' => array('revision_id'),
     ),
     'indexes' => array(
-      'order_id' => array('order_id'),
-      'line_item_id' => array('line_item_id'),
       'sender_account_id' => array('sender_account_id'),
       'recipient_account_id' => array('recipient_account_id'),
       'status' => array('status'),
@@ -159,14 +143,6 @@ function commerce_hipay_ws_transfer_schema() {
       'owner' => array(
         'table' => 'users',
         'columns' => array('uid' => 'uid'),
-      ),
-      'order' => array(
-        'table' => 'commerce_order',
-        'columns' => array('order_id' => 'order_id'),
-      ),
-      'line_item' => array(
-        'table' => 'commerce_line_item',
-        'columns' => array('line_item_id' => 'line_item_id'),
       ),
       'sender' => array(
         'table' => 'commerce_hipay_ws_user_account',
@@ -387,22 +363,6 @@ function commerce_hipay_ws_transfer_entity_property_info() {
     'setter permission' => 'administer commerce_hipay_ws_transfer entities',
     'schema field' => 'uid',
   );
-  $properties['order_id'] = array(
-    'label' => t('Order ID'),
-    'description' => t('The ID of the order the Hipay transfer belongs to.'),
-    'type' => 'integer',
-    'setter callback' => 'entity_property_verbatim_set',
-    'setter permission' => 'administer commerce_hipay_ws_transfer entities',
-    'schema field' => 'order_id',
-  );
-  $properties['line_item_id'] = array(
-    'label' => t('Line item ID'),
-    'description' => t('The ID of the line item the Hipay transfer belongs to.'),
-    'type' => 'integer',
-    'setter callback' => 'entity_property_verbatim_set',
-    'setter permission' => 'administer commerce_hipay_ws_transfer entities',
-    'schema field' => 'line_item_id',
-  );
   $properties['sender_account_id'] = array(
     'label' => t('Sender Hipay user account ID'),
     'description' => t('The ID of the sender Hipay user account.'),
@@ -579,7 +539,7 @@ function commerce_hipay_ws_transfer_load_multiple($ids = FALSE, $conditions = ar
 function commerce_hipay_ws_transfer_load_by_order_id($order_id) {
   $query = new EntityFieldQuery();
   $result = $query->entityCondition('entity_type', 'commerce_hipay_ws_transfer')
-    ->propertyCondition('order_id', $order_id, '=')
+    ->fieldCondition('hipay_ws_transfer_order', 'target_id', $order_id, '=')
     ->execute();
   if (!empty($result['commerce_hipay_ws_transfer'])) {
     return entity_load('commerce_hipay_ws_transfer', array_keys($result['commerce_hipay_ws_transfer']));
@@ -644,4 +604,180 @@ function commerce_hipay_ws_transfer_statuses() {
   drupal_alter('commerce_hipay_ws_transfer_statuses', $statuses);
 
   return $statuses;
+}
+
+/**
+ * Provides definitions of all field bases for transfer entity type.
+ *
+ * @return array
+ *   An array of definitions of all field bases for transfer entity type.
+ */
+function commerce_hipay_ws_transfer_field_bases() {
+  $field_bases = array();
+
+  $field_bases['hipay_ws_transfer_line_item'] = array(
+    'active' => 1,
+    'cardinality' => -1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'hipay_ws_transfer_line_item',
+    'indexes' => array(
+      'target_id' => array(
+        0 => 'target_id',
+      ),
+    ),
+    'locked' => 1,
+    'module' => 'entityreference',
+    'settings' => array(
+      'handler' => 'base',
+      'handler_settings' => array(
+        'behaviors' => array(
+          'views-select-list' => array(
+            'status' => 0,
+          ),
+        ),
+        'sort' => array(
+          'type' => 'none',
+        ),
+        'target_bundles' => array(),
+      ),
+      'target_type' => 'commerce_line_item',
+    ),
+    'translatable' => 0,
+    'type' => 'entityreference',
+  );
+
+  $field_bases['hipay_ws_transfer_order'] = array(
+    'active' => 1,
+    'cardinality' => -1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'hipay_ws_transfer_order',
+    'indexes' => array(
+      'target_id' => array(
+        0 => 'target_id',
+      ),
+    ),
+    'locked' => 1,
+    'module' => 'entityreference',
+    'settings' => array(
+      'handler' => 'base',
+      'handler_settings' => array(
+        'behaviors' => array(
+          'views-select-list' => array(
+            'status' => 0,
+          ),
+        ),
+        'sort' => array(
+          'type' => 'none',
+        ),
+        'target_bundles' => array(),
+      ),
+      'target_type' => 'commerce_order',
+    ),
+    'translatable' => 0,
+    'type' => 'entityreference',
+  );
+
+  return $field_bases;
+}
+
+/**
+ * Provides definitions of all field instances for transfer entity type.
+ *
+ * @return array
+ *   An array of definitions of all field instances for transfer entity type.
+ */
+function commerce_hipay_ws_transfer_field_instances() {
+  $field_instances = array();
+
+  $field_instances['commerce_hipay_ws_transfer-hipay_transfer-hipay_ws_transfer_line_item'] = array(
+    'bundle' => 'hipay_transfer',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => '',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'entityreference',
+        'settings' => array(
+          'link' => FALSE,
+        ),
+        'type' => 'entityreference_label',
+        'weight' => 0,
+      ),
+    ),
+    'entity_type' => 'commerce_hipay_ws_transfer',
+    'field_name' => 'hipay_ws_transfer_line_item',
+    'label' => 'Line item',
+    'required' => 1,
+    'settings' => array(),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'options',
+      'settings' => array(),
+      'type' => 'options_select',
+      'weight' => 1,
+    ),
+  );
+
+  $field_instances['commerce_hipay_ws_transfer-hipay_transfer-hipay_ws_transfer_order'] = array(
+    'bundle' => 'hipay_transfer',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => '',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'entityreference',
+        'settings' => array(
+          'link' => FALSE,
+        ),
+        'type' => 'entityreference_label',
+        'weight' => 0,
+      ),
+    ),
+    'entity_type' => 'commerce_hipay_ws_transfer',
+    'field_name' => 'hipay_ws_transfer_order',
+    'label' => 'Order',
+    'required' => 1,
+    'settings' => array(),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'options',
+      'settings' => array(),
+      'type' => 'options_select',
+      'weight' => 1,
+    ),
+  );
+
+  return $field_instances;
+}
+
+/**
+ * Creates fields and field instances for the Hipay transfer entity type.
+ */
+function commerce_hipay_ws_transfer_create_fields() {
+  // Create field bases.
+  foreach (commerce_hipay_ws_transfer_field_bases() as $field_base) {
+    field_create_field($field_base);
+  }
+  // Create field instances.
+  foreach (commerce_hipay_ws_transfer_field_instances() as $field_instance) {
+    field_create_instance($field_instance);
+  }
+}
+
+/**
+ * Deletes fields and field instances for the Hipay transfer entity type.
+ */
+function commerce_hipay_ws_transfer_delete_fields() {
+  // Delete field instances.
+  foreach (commerce_hipay_ws_transfer_field_instances() as $field_instance) {
+    field_delete_instance($field_instance);
+  }
+  // Delete field bases.
+  foreach (commerce_hipay_ws_transfer_field_bases() as $field_base) {
+    field_delete_field($field_base['field_name']);
+  }
 }

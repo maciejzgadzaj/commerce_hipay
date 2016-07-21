@@ -192,13 +192,14 @@ function commerce_hipay_ws_transfer_views_default_views() {
     'transfer_id' => 'transfer_id',
     'sender_account_id' => 'sender_account_id',
     'recipient_account_id' => 'recipient_account_id',
-    'order_id' => 'order_id',
-    'line_item_id' => 'line_item_id',
+    'hipay_ws_transfer_order' => 'hipay_ws_transfer_order',
+    'hipay_ws_transfer_line_item' => 'hipay_ws_transfer_line_item',
     'amount' => 'amount',
     'currency_code' => 'currency_code',
     'status' => 'status',
     'remote_status' => 'remote_status',
     'transaction_id' => 'transaction_id',
+    'operations' => 'operations',
   );
   $handler->display->display_options['style_options']['default'] = 'transfer_id';
   $handler->display->display_options['style_options']['info'] = array(
@@ -223,16 +224,12 @@ function commerce_hipay_ws_transfer_views_default_views() {
       'separator' => '',
       'empty_column' => 0,
     ),
-    'order_id' => array(
-      'sortable' => 1,
-      'default_sort_order' => 'asc',
+    'hipay_ws_transfer_order' => array(
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
     ),
-    'line_item_id' => array(
-      'sortable' => 1,
-      'default_sort_order' => 'asc',
+    'hipay_ws_transfer_line_item' => array(
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -272,6 +269,11 @@ function commerce_hipay_ws_transfer_views_default_views() {
       'separator' => '',
       'empty_column' => 0,
     ),
+    'operations' => array(
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
   );
   /* Field: Hipay Wallet transfer: Transfer ID */
   $handler->display->display_options['fields']['transfer_id']['id'] = 'transfer_id';
@@ -289,16 +291,26 @@ function commerce_hipay_ws_transfer_views_default_views() {
   $handler->display->display_options['fields']['recipient_account_id']['field'] = 'recipient_account_id';
   $handler->display->display_options['fields']['recipient_account_id']['label'] = 'Recipient account ID';
   $handler->display->display_options['fields']['recipient_account_id']['separator'] = '';
-  /* Field: Hipay Wallet transfer: Order ID */
-  $handler->display->display_options['fields']['order_id']['id'] = 'order_id';
-  $handler->display->display_options['fields']['order_id']['table'] = 'commerce_hipay_ws_transfer';
-  $handler->display->display_options['fields']['order_id']['field'] = 'order_id';
-  $handler->display->display_options['fields']['order_id']['separator'] = '';
-  /* Field: Hipay Wallet transfer: Line item ID */
-  $handler->display->display_options['fields']['line_item_id']['id'] = 'line_item_id';
-  $handler->display->display_options['fields']['line_item_id']['table'] = 'commerce_hipay_ws_transfer';
-  $handler->display->display_options['fields']['line_item_id']['field'] = 'line_item_id';
-  $handler->display->display_options['fields']['line_item_id']['separator'] = '';
+  /* Field: Hipay Wallet transfer: Order */
+  $handler->display->display_options['fields']['hipay_ws_transfer_order']['id'] = 'hipay_ws_transfer_order';
+  $handler->display->display_options['fields']['hipay_ws_transfer_order']['table'] = 'field_data_hipay_ws_transfer_order';
+  $handler->display->display_options['fields']['hipay_ws_transfer_order']['field'] = 'hipay_ws_transfer_order';
+  $handler->display->display_options['fields']['hipay_ws_transfer_order']['label'] = 'Order ID';
+  $handler->display->display_options['fields']['hipay_ws_transfer_order']['type'] = 'entityreference_entity_id';
+  $handler->display->display_options['fields']['hipay_ws_transfer_order']['settings'] = array(
+    'link' => 0,
+  );
+  $handler->display->display_options['fields']['hipay_ws_transfer_order']['delta_offset'] = '0';
+  /* Field: Hipay Wallet transfer: Line item */
+  $handler->display->display_options['fields']['hipay_ws_transfer_line_item']['id'] = 'hipay_ws_transfer_line_item';
+  $handler->display->display_options['fields']['hipay_ws_transfer_line_item']['table'] = 'field_data_hipay_ws_transfer_line_item';
+  $handler->display->display_options['fields']['hipay_ws_transfer_line_item']['field'] = 'hipay_ws_transfer_line_item';
+  $handler->display->display_options['fields']['hipay_ws_transfer_line_item']['label'] = 'Line item ID';
+  $handler->display->display_options['fields']['hipay_ws_transfer_line_item']['type'] = 'entityreference_entity_id';
+  $handler->display->display_options['fields']['hipay_ws_transfer_line_item']['settings'] = array(
+    'link' => 1,
+  );
+  $handler->display->display_options['fields']['hipay_ws_transfer_line_item']['delta_offset'] = '0';
   /* Field: Hipay Wallet transfer: Amount */
   $handler->display->display_options['fields']['amount']['id'] = 'amount';
   $handler->display->display_options['fields']['amount']['table'] = 'commerce_hipay_ws_transfer';
@@ -312,11 +324,11 @@ function commerce_hipay_ws_transfer_views_default_views() {
   $handler->display->display_options['fields']['status']['id'] = 'status';
   $handler->display->display_options['fields']['status']['table'] = 'commerce_hipay_ws_transfer';
   $handler->display->display_options['fields']['status']['field'] = 'status';
-  /* Field: Hipay Wallet transfer: Remote status */
+  /* Field: Hipay Wallet transfer: Hipay status */
   $handler->display->display_options['fields']['remote_status']['id'] = 'remote_status';
   $handler->display->display_options['fields']['remote_status']['table'] = 'commerce_hipay_ws_transfer';
   $handler->display->display_options['fields']['remote_status']['field'] = 'remote_status';
-  /* Field: Hipay Wallet transfer: Transaction ID */
+  /* Field: Hipay Wallet transfer: Hipay transaction ID */
   $handler->display->display_options['fields']['transaction_id']['id'] = 'transaction_id';
   $handler->display->display_options['fields']['transaction_id']['table'] = 'commerce_hipay_ws_transfer';
   $handler->display->display_options['fields']['transaction_id']['field'] = 'transaction_id';
@@ -367,8 +379,8 @@ function commerce_hipay_ws_transfer_views_default_views() {
     t('Amount'),
     t('Currency Code'),
     t('Status'),
-    t('Remote status'),
-    t('Transaction ID'),
+    t('Hipay status'),
+    t('Hipay transaction ID'),
     t('Page'),
   );
   $export[$view->name] = $view;

@@ -16,8 +16,6 @@ class CommerceHipayWSTransferEntityController extends EntityAPIController {
       'is_new' => TRUE,
       'type' => 'hipay_transfer',
       'uid' => $user->uid,
-      'order_id' => 0,
-      'line_item_id' => 0,
       'sender_account_id' => 0,
       'recipient_account_id' => 0,
       'amount' => 0,

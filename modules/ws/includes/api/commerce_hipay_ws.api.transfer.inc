@@ -66,10 +66,21 @@ function commerce_hipay_ws_api_transfer_execute($transfer) {
 
   // Create new order revision if required.
   if (variable_get('commerce_order_auto_revision', TRUE)) {
-    $order = commerce_order_load($transfer->order_id);
-    $order->revision = TRUE;
-    $order->log = (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) ? t('Transfer @transfer_id for line item @line_item_id executed successfully.', array('@transfer_id' => $transfer->transfer_id, '@line_item_id' => $transfer->line_item_id)) : t('Transfer @transfer_id execution for line item @line_item_id failed.', array('@transfer_id' => $transfer->transfer_id, '@line_item_id' => $transfer->line_item_id));
-    commerce_order_save($order);
+    if (!empty($transfer->hipay_ws_transfer_order)) {
+      $transfer_wrapper = entity_metadata_wrapper('commerce_hipay_ws_transfer', $transfer);
+      foreach ($transfer_wrapper->hipay_ws_transfer_order as $order_wrapper) {
+        $order = $order_wrapper->value();
+        $order->revision = TRUE;
+        $order->log = (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) ? t('Transfer @transfer_id for line item @line_item_id executed successfully.', array(
+          '@transfer_id' => $transfer->transfer_id,
+          '@line_item_id' => $transfer->line_item_id,
+        )) : t('Transfer @transfer_id execution for line item @line_item_id failed.', array(
+          '@transfer_id' => $transfer->transfer_id,
+          '@line_item_id' => $transfer->line_item_id,
+        ));
+        commerce_order_save($order);
+      }
+    }
   }
 
   // Error code was returned in the response.
