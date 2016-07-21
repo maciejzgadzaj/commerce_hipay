@@ -152,7 +152,7 @@ function commerce_hipay_ws_bank_account_view_hipay_info($entity, $view_mode = 'f
     // Fetch: bankInfosStatus.
     $parameters = array('wsSubAccountId' => $hipay_user_account->hipay_account_id);
     $context = array('commerce_hipay_ws_bank_account' => $entity);
-    $response = commerce_hipay_ws_api_get_bank_info_status($parameters, $context);
+    $response = commerce_hipay_ws_api_bank_account_get_info_status($parameters, $context);
 
     if ($response['status'] == COMMERCE_HIPAY_WS_ACCOUNT_NO_BANK_INFO) {
       $return = drupal_get_form('commerce_hipay_ws_bank_account_view_hipay_create_form', $entity);
@@ -383,7 +383,7 @@ function commerce_hipay_ws_bank_account_form_validate($form, &$form_state) {
 
   // Validate other required fields based on the country the bank account
   // is to be created in.
-  if (!$response = commerce_hipay_ws_api_get_bank_fields($form_state['values']['hipay_ws_bank_address'][LANGUAGE_NONE][0]['country'])) {
+  if (!$response = commerce_hipay_ws_api_bank_account_get_info_fields($form_state['values']['hipay_ws_bank_address'][LANGUAGE_NONE][0]['country'])) {
     form_set_error('hipay_ws_bank_address[country', t('Error fetching required bank fields for country !country from Hipay API.', array(
       '!country' => $form_state['values']['hipay_ws_bank_address'][LANGUAGE_NONE][0]['country'],
     )));

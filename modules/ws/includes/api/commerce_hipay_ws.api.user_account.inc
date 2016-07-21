@@ -158,3 +158,54 @@ function commerce_hipay_ws_api_user_account_validate_notification($feedback) {
   // Invoke the rules event to allow other modules to react to the notification.
   return rules_invoke_all('commerce_hipay_ws_user_account_identification', $user_account, $feedback);
 }
+
+/**
+ * Get information on an account.
+ *
+ * @param string $user_account_id
+ *   The hipay id of the account we wish to get the information of.
+ *
+ * @return array
+ *   The information or empty array.
+ */
+function commerce_hipay_ws_api_user_account_get_infos($user_account_id, $context = array()) {
+  $parameters = array('accountId' => $user_account_id);
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_ACCOUNT_INFOS, $parameters);
+
+  if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+    // If we are checking account info status for a Hipay user account entity,
+    // and received status differs from the status saved in the entity,
+    // let's update it, creating a new revision.
+    if (
+      !empty($context['commerce_hipay_ws_user_account'])
+      && $context['commerce_hipay_ws_user_account']->hipay_identified != $response['identified']
+    ) {
+      $hipay_user_account = $context['commerce_hipay_ws_user_account'];
+      $hipay_user_account->hipay_identified = $response['identified'];
+      $hipay_user_account->revision = TRUE;
+      $hipay_user_account->log = t('Updated identified value from %resource API call response.', array('%resource' => COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_ACCOUNT_INFOS));
+      commerce_hipay_ws_user_account_save($hipay_user_account);
+    }
+  }
+
+  return $response;
+}
+
+/**
+ * Check if an account is identified.
+ *
+ * @param string $user_account_id
+ *   The hipay id of the account we wish to check.
+ *
+ * @return bool
+ *   True if the account is identified, false if not.
+ */
+function commerce_hipay_ws_api_user_account_check_identified($user_account_id) {
+  $account_info = commerce_hipay_ws_api_user_account_get_infos($user_account_id);
+
+  if (empty($account_info) || empty($account_info['identified']) || $account_info['identified'] == 'no') {
+    return FALSE;
+  }
+
+  return TRUE;
+}

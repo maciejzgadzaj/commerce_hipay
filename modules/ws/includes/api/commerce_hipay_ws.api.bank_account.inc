@@ -119,3 +119,52 @@ function commerce_hipay_ws_api_bank_account_validate_notification($feedback) {
   // Invoke the rules event to allow other modules to react to the notification.
   return rules_invoke_all('commerce_hipay_ws_bank_account_validation', $bank_account, $feedback);
 }
+
+/**
+ * Get the required bank field needed for an Hipay account.
+ *
+ * @param string $country
+ *   Country code of the bank account.
+ * @param bool $reset
+ *   A boolean indicating whether a cached value should be reset or not.
+ *
+ * @return array
+ *   An array of Hipay Wallet API response parameters, where 'fields' key
+ *   contains the list of required bank fields, or FALSE on error.
+ */
+function commerce_hipay_ws_api_bank_account_get_info_fields($country, $reset = FALSE) {
+  $parameters = array('country' => $country);
+  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_FIELDS, $reset, $parameters);
+}
+
+/**
+ * Get the bank information for an account.
+ *
+ * @param array $parameters
+ *   An array of parameters to pass to the API call.
+ *
+ * @return array
+ *   An array of Hipay Wallet API response parameters.
+ */
+function commerce_hipay_ws_api_bank_account_get_info_status($parameters = array(), $context = array()) {
+  // Fetch the bank account info status from Hipay Wallet API.
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS, $parameters, $context);
+
+  if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+    // If we are checking bank info status for a Hipay bank account entity,
+    // and received status differs from the status saved in the entity,
+    // let's update it, creating a new revision.
+    if (
+      !empty($context['commerce_hipay_ws_bank_account'])
+      && $context['commerce_hipay_ws_bank_account']->hipay_status != $response['status']
+    ) {
+      $hipay_bank_account = $context['commerce_hipay_ws_bank_account'];
+      $hipay_bank_account->hipay_status = $response['status'];
+      $hipay_bank_account->revision = TRUE;
+      $hipay_bank_account->log = t('Updated bank account status from %resource API call response.', array('%resource' => COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS));
+      commerce_hipay_ws_bank_account_save($hipay_bank_account);
+    }
+  }
+
+  return $response;
+}

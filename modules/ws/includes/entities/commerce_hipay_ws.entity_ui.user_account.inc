@@ -208,9 +208,8 @@ function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'f
     $output = '';
 
     // Fetch: getAccountInfos.
-    $parameters = array('accountId' => $entity->hipay_account_id);
     $context = array('commerce_hipay_ws_user_account' => $entity);
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_ACCOUNT_INFOS, $parameters, NULL, $context);
+    $response = commerce_hipay_ws_api_user_account_get_infos($entity->hipay_account_id, $context);
     if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
 
       // Display: getAccountInfos.
