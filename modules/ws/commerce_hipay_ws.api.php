@@ -56,7 +56,7 @@ function hook_commerce_hipay_ws_api_notification($feedback) {
 }
 
 /**
- * Allows other modules to respond to the Hipay user account identification.
+ * Allows other modules to respond to Hipay user account identification notification.
  *
  * @param object $hipay_user_account
  *   A Hipay user account entity that has just been validated.
@@ -70,7 +70,7 @@ function hook_commerce_hipay_ws_user_account_identification($hipay_user_account,
 }
 
 /**
- * Allows other modules to respond to the Hipay bank account validation.
+ * Allows other modules to respond to Hipay bank account validation notification.
  *
  * @param object $hipay_bank_account
  *   A Hipay bank account entity that has just been validated.
@@ -80,6 +80,20 @@ function hook_commerce_hipay_ws_user_account_identification($hipay_user_account,
  * @see commerce_hipay_ws_api_bank_account_validate_notification()
  */
 function hook_commerce_hipay_ws_bank_account_validation($hipay_bank_account, $feedback) {
+  // No example.
+}
+
+/**
+ * Allows other modules to respond to Hipay withdrawal validation notification.
+ *
+ * @param object $withdrawal
+ *   A Hipay withdrawal entity that has just been validated.
+ * @param array $feedback
+ *   An array of XML feedback values received in Hipay Wallet notification.
+ *
+ * @see commerce_hipay_ws_api_withdrawal_validate_notification()
+ */
+function hook_commerce_hipay_ws_withdrawal_validation($withdrawal, $feedback) {
   // No example.
 }
 

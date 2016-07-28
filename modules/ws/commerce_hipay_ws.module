@@ -1216,11 +1216,7 @@ function commerce_hipay_ws_callback_notification_process_feedback_xml($xml_strin
           break;
 
         case 'withdraw_validation':
-          // @TODO.
-//          $withdrawal = commerce_hipay_ws_withdrawal_load_by_withdrawal_id($feedback_xml['transid']);
-//          $withdrawal['notification'] = $feedback_xml;
-//          $transfer['status'] = $feedback_xml['status'];
-//          commerce_hipay_ws_withdrawal_save($withdrawal);
+          commerce_hipay_ws_api_withdrawal_validate_notification($feedback_xml);
           break;
 
       }

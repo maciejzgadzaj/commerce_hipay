@@ -311,10 +311,10 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
   /* Display: Page */
   $handler = $view->new_display('page', 'Page', 'page');
   $handler->display->display_options['path'] = 'admin/commerce/hipay-wallet/withdrawals/list';
-  $handler->display->display_options['menu']['type'] = 'tab';
+  $handler->display->display_options['menu']['type'] = 'default tab';
   $handler->display->display_options['menu']['title'] = 'List';
   $handler->display->display_options['menu']['description'] = 'Find and manage Hipay Wallet withdrawals.';
-  $handler->display->display_options['menu']['weight'] = '10';
+  $handler->display->display_options['menu']['weight'] = '-10';
   $handler->display->display_options['menu']['context'] = 0;
   $handler->display->display_options['menu']['context_only_inline'] = 0;
   $handler->display->display_options['tab_options']['type'] = 'normal';
@@ -487,7 +487,7 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
   $handler->display->display_options['menu']['type'] = 'tab';
   $handler->display->display_options['menu']['title'] = 'revisions';
   $handler->display->display_options['menu']['description'] = 'View revisions of this Hipay withdrawal.';
-  $handler->display->display_options['menu']['weight'] = '-10';
+  $handler->display->display_options['menu']['weight'] = 20;
   $handler->display->display_options['menu']['context'] = 0;
   $handler->display->display_options['menu']['context_only_inline'] = 0;
   $translatables['hipay_ws_withdrawal_revisions'] = array(

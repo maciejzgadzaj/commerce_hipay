@@ -503,6 +503,28 @@ function commerce_hipay_ws_withdrawal_load_multiple($ids = FALSE, $conditions = 
 }
 
 /**
+ * Loads Hipay withdrawal entity for provided Hipay transaction ID.
+ *
+ * @param int $transaction_id
+ *   A Hipay transaction ID to load the Hipay withdrawal entity for.
+ *
+ * @return array|false
+ *   A Hipay withdrawal entity, or FALSE if not found.
+ */
+function commerce_hipay_ws_withdrawal_load_by_transaction_id($transaction_id) {
+  $query = new EntityFieldQuery();
+  $result = $query->entityCondition('entity_type', 'commerce_hipay_ws_withdrawal')
+    ->propertyCondition('transaction_id', $transaction_id, '=')
+    ->execute();
+  if (!empty($result['commerce_hipay_ws_withdrawal'])) {
+    $withdrawals = entity_load('commerce_hipay_ws_withdrawal', array_keys($result['commerce_hipay_ws_withdrawal']));
+    return reset($withdrawals);
+  }
+
+  return FALSE;
+}
+
+/**
  * Saves the withdrawal entity by calling its controller.
  */
 function commerce_hipay_ws_withdrawal_save(&$withdrawal) {

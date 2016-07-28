@@ -1,86 +1,6 @@
 <?php
 
 /**
- * Executes a withdraw from the wallet account to the registered bank account.
- *
- * @param int $account_id
- *   The account from which we wil withdraw to fill the bank account.
- *
- * @param float $amount
- *   The amount to withdraw.
- *
- * @param string $currency_code
- *   The currency (EUR).
- *
- * @param string $label
- *   A label to distinguish the withdraw.
- *
- * @return int|bool
- *   The transfer id if successful, and false if it failed.
- */
-//function commerce_hipay_ws_api_withdrawal($account_id, $amount, $currency_code, $label) {
-//  // Make sure the vendor account exists.
-//  if (!$account = commerce_hipay_ws_account_load_by_account_id($account_id)) {
-//    watchdog('commerce_hipay_ws', 'Withdrawal: unable to load vendor account from ID @account_id', array(
-//      '@account_id' => $account_id,
-//    ), WATCHDOG_ERROR);
-//    return FALSE;
-//  }
-//
-//  // Make sure we have vendor API access credentials.
-//  if (
-//    empty($account['hipay_vendor_account']['wsLogin'])
-//    || empty($account['hipay_vendor_account']['wsPassword'])
-//  ) {
-//    watchdog('commerce_hipay_ws', 'Withdrawal: missing Hipay API credentials for vendor account ID @account_id', array(
-//      '@account_id' => $account_id,
-//    ), WATCHDOG_ERROR);
-//    return FALSE;
-//  }
-//
-//  // Prepare Hipay API request.
-//  $parameters = array(
-//    'wsLogin' => $account['hipay_vendor_account']['wsLogin'],
-//    'wsPassword' => $account['hipay_vendor_account']['wsPassword'],
-//    'amount' => commerce_currency_amount_to_decimal($amount, $currency_code),
-//    'label' => substr($label, 0, 32),
-//  );
-//
-//  // Call Hipay API.
-//  if (!$response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_WITHDRAWAL, $parameters)) {
-//    watchdog('commerce_hipay_ws', 'Withdrawal: error when calling Hipay API', array(), WATCHDOG_ERROR);
-//    return FALSE;
-//  }
-//
-//  // Save the withdrawal transaction in the database.
-//  // @TODO: Don't we actually want to save the withdrawal request
-//  // before calling the API, so it is saved even if API returns an error?
-//  // Request details.
-//  $withdrawal = commerce_hipay_ws_withdrawal_new();
-//  $withdrawal['account_id'] = $account_id;
-//  $withdrawal['amount'] = $amount;
-//  $withdrawal['currency_code'] = $currency_code;
-//  $withdrawal['label'] = $label;
-//  $withdrawal['created'] = $withdrawal['changed'] = time();
-//  // Response details.
-//  $withdrawal['status'] = $response['code'];
-//  $withdrawal['status_message'] = $response['description'];
-//  $withdrawal['transaction_id'] = $response['transactionPublicId'];
-//  commerce_hipay_ws_withdrawal_save($withdrawal);
-//
-//  // Error code was returned in the response.
-//  if (!isset($response['code']) || $response['code'] !== COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-//    watchdog('commerce_hipay_ws', 'Withdrawal: received error @error_code: @error_description', array(
-//      '@error_code' => $response['code'],
-//      '@error_description' => $response['description'],
-//    ), WATCHDOG_ERROR);
-//    return FALSE;
-//  }
-//
-//  return $response['transactionPublicId'];
-//}
-
-/**
  * Executes a withdrawal of wallet money from Hipay user account to bank account.
  *
  * @param object $withdrawal
@@ -90,8 +10,6 @@
  *   An array of Hipay Wallet API response values, or FALSE in case of failure.
  */
 function commerce_hipay_ws_api_withdrawal_execute($withdrawal) {
-  dpm($withdrawal, '$withdrawal');
-
   // Validate all withdrawal details.
   if (!commerce_hipay_ws_api_withdrawal_validate($withdrawal)) {
     $withdrawal->revision = TRUE;
@@ -108,7 +26,7 @@ function commerce_hipay_ws_api_withdrawal_execute($withdrawal) {
   $parameters = array(
     'wsLogin' => $hipay_user_account->hipay_ws_login,
     'wsPassword' => $hipay_user_account->hipay_ws_password,
-    'amount' => commerce_currency_amount_to_decimal($withdrawal->amount, $withdrawal->currency_code),
+    'amount' => number_format(commerce_currency_amount_to_decimal($withdrawal->amount, $withdrawal->currency_code), 2),
     'label' => substr($withdrawal->label, 0, 255),
   );
 
@@ -117,16 +35,15 @@ function commerce_hipay_ws_api_withdrawal_execute($withdrawal) {
     watchdog('commerce_hipay_ws', 'Withdrawal: error when calling Hipay API', array(), WATCHDOG_ERROR);
     return FALSE;
   }
-  dpm($response, '$response');
 
-  // Update the transfer entity with values received in Hipay response,
+  // Update the withdrawal entity with values received in Hipay response,
   // creating new revision.
   $withdrawal->remote_status = $response['code'];
   $withdrawal->description = $response['description'];
   $withdrawal->transaction_id = $response['transactionPublicId'];
   $withdrawal->revision = TRUE;
 
-  // If transfer was executed successfully, update its status to 'executed'.
+  // If withdrawal was executed successfully, update its status to 'executed'.
   if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     $withdrawal->status = COMMERCE_HIPAY_WS_WITHDRAWAL_STATUS_EXECUTED;
     $withdrawal->log = 'Withdrawal executed successfully.';
@@ -135,26 +52,52 @@ function commerce_hipay_ws_api_withdrawal_execute($withdrawal) {
     $withdrawal->log = 'Withdrawal execution failed.';
   }
 
-  // Save new transfer revision.
+  // Save new withdrawal revision.
   commerce_hipay_ws_withdrawal_save($withdrawal);
-
-  return;
-
-  // Create new order revision if required.
-  if (variable_get('commerce_order_auto_revision', TRUE)) {
-    $order = commerce_order_load($transfer->order_id);
-    $order->revision = TRUE;
-    $order->log = (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) ? t('Transfer @transfer_id for line item @line_item_id executed successfully.', array('@transfer_id' => $transfer->transfer_id, '@line_item_id' => $transfer->line_item_id)) : t('Transfer @transfer_id execution for line item @line_item_id failed.', array('@transfer_id' => $transfer->transfer_id, '@line_item_id' => $transfer->line_item_id));
-    commerce_order_save($order);
-  }
 
   // Error code was returned in the response.
   if (!isset($response['code']) || $response['code'] !== COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-    watchdog('commerce_hipay_ws', 'Transfer: received error @error_code: @error_description', array(
+    watchdog('commerce_hipay_ws', 'Withdrawal @withdrawal_id: received error @error_code: @error_description', array(
+      '@withdrawal_id' => $withdrawal->withdrawal_id,
       '@error_code' => $response['code'],
       '@error_description' => $response['description'],
     ), WATCHDOG_ERROR);
-    return FALSE;
+  }
+
+  // Create new revisions of all related transfers and orders if required.
+  if (!empty($withdrawal->hipay_ws_withdrawal_transfer)) {
+    $withdrawal_wrapper = entity_metadata_wrapper('commerce_hipay_ws_withdrawal', $withdrawal);
+    foreach ($withdrawal_wrapper->hipay_ws_withdrawal_transfer as $transfer_wrapper) {
+      // Create new transfer revision.
+      $transfer = $transfer_wrapper->value();
+      $transfer->revision = TRUE;
+      if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+        // Update transfer status to 'withdrawal_executed'.
+        $transfer->status = COMMERCE_HIPAY_WS_TRANSFER_STATUS_WITHDRAWAL_EXECUTED;
+        $transfer->log = t('Executed withdrawal @withdrawal_id.', array('@withdrawal_id' => $withdrawal->withdrawal_id));
+      }
+      else {
+        $transfer->log = t('Withdrawal @withdrawal_id execution failed.', array('@withdrawal_id' => $withdrawal->withdrawal_id));
+      }
+      commerce_hipay_ws_transfer_save($transfer);
+
+      // Create new revisions of all related orders, if order auto-revisioning
+      // is enabled.
+      if (variable_get('commerce_order_auto_revision', TRUE) && !empty($transfer->hipay_ws_transfer_order)) {
+        foreach ($transfer_wrapper->hipay_ws_transfer_order as $order_wrapper) {
+          $order = $order_wrapper->value();
+          $order->revision = TRUE;
+          $order->log = (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) ? t('Withdrawal @withdrawal_id for transfer @transfer_id executed successfully.', array(
+            '@withdrawal_id' => $withdrawal->withdrawal_id,
+            '@transfer_id' => $transfer->transfer_id,
+          )) : t('Withdrawal @withdrawal_id execution for transfer @transfer_id failed.', array(
+            '@withdrawal_id' => $withdrawal->withdrawal_id,
+            '@transfer_id' => $transfer->transfer_id,
+          ));
+          commerce_order_save($order);
+        }
+      }
+    }
   }
 
   return $response;
@@ -200,4 +143,90 @@ function commerce_hipay_ws_api_withdrawal_validate($withdrawal) {
   }
 
   return TRUE;
+}
+
+/**
+ * Processes Hipay Wallet withdrawal validation notification.
+ *
+ * @param array $feedback
+ *   An array of XML parameters received in the notification.
+ *
+ * @return bool
+ *   An boolean indicating whether the notification was processed successfully.
+ */
+function commerce_hipay_ws_api_withdrawal_validate_notification($feedback) {
+  // Make sure we have received all required parameters.
+  $required_parameters = array('account_id', 'transid', 'status');
+  foreach ($required_parameters as $required_parameter) {
+    if (empty($feedback[$required_parameter])) {
+      watchdog('commerce_hipay_ws', 'Notification: withdraw_validation: !param_name parameter missing or empty.', array('!param_name' => $required_parameter), WATCHDOG_ERROR);
+      return FALSE;
+    }
+  }
+
+  // Try to load the Hipay withdrawal entity from the received parameter.
+  if (!$withdrawal = commerce_hipay_ws_withdrawal_load_by_transaction_id($feedback['transid'])) {
+    watchdog('commerce_hipay_ws', 'Notification: withdraw_validation: unable to load a Hipay withdrawal entity from transid parameter: @transid.', array('@transid' => $feedback['transid']), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  // Make sure the notification account_id matches the withdrawal account_id.
+  if ($feedback['account_id'] != $withdrawal->user_account_id) {
+    watchdog('commerce_hipay_ws', 'Notification: withdraw_validation: notification account_id @account_id does not match withdrawal user_account_id @user_account_id for transaction @transid.', array(
+      '@account_id' => $feedback['account_id'],
+      '@user_account_id' => $withdrawal->user_account_id,
+      '@transid' => $feedback['transid'],
+    ), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  // Update the Hipay withdrawal entity with the new status.
+  $withdrawal->status = ($feedback['status'] == COMMERCE_HIPAY_WS_NOTIFICATION_STATUS_OK) ? COMMERCE_HIPAY_WS_WITHDRAWAL_STATUS_VALIDATED : COMMERCE_HIPAY_WS_WITHDRAWAL_STATUS_FAILED;
+  $withdrawal->revision = TRUE;
+  $withdrawal->log = 'Updated status from Hipay Wallet notificaton.';
+  commerce_hipay_ws_withdrawal_save($withdrawal);
+
+  // Add watchdog entry.
+  watchdog('commerce_hipay_ws', 'Notification: withdraw_validation: Updated Hipay withdrawal @withdrawal_id status to @status.', array(
+    '@withdrawal_id' => $withdrawal->withdrawal_id,
+    '@status' => $withdrawal->status,
+  ), WATCHDOG_NOTICE);
+
+  // Create new revisions of all related transfers and orders if required.
+  $withdrawal_wrapper = entity_metadata_wrapper('commerce_hipay_ws_withdrawal', $withdrawal);
+  foreach ($withdrawal_wrapper->hipay_ws_withdrawal_transfer as $transfer_wrapper) {
+    // Create new transfer revision.
+    $transfer = $transfer_wrapper->value();
+    $transfer->revision = TRUE;
+    if ($feedback['status'] == COMMERCE_HIPAY_WS_NOTIFICATION_STATUS_OK) {
+      // Update transfer status to 'withdrawal_validated'.
+      $transfer->status = COMMERCE_HIPAY_WS_TRANSFER_STATUS_WITHDRAWAL_VALIDATED;
+      $transfer->log = t('Withdrawal @withdrawal_id has been validated.', array('@withdrawal_id' => $withdrawal->withdrawal_id));
+    }
+    else {
+      $transfer->status = COMMERCE_HIPAY_WS_TRANSFER_STATUS_WITHDRAWAL_FAILED;
+      $transfer->log = t('Withdrawal @withdrawal_id validation failed.', array('@withdrawal_id' => $withdrawal->withdrawal_id));
+    }
+    commerce_hipay_ws_transfer_save($transfer);
+
+    // Create new revisions of all related orders, if order auto-revisioning
+    // is enabled.
+    if (variable_get('commerce_order_auto_revision', TRUE) && !empty($withdrawal->hipay_ws_withdrawal_transfer)) {
+      foreach ($transfer_wrapper->hipay_ws_transfer_order as $order_wrapper) {
+        $order = $order_wrapper->value();
+        $order->revision = TRUE;
+        $order->log = ($feedback['status'] == COMMERCE_HIPAY_WS_NOTIFICATION_STATUS_OK) ? t('Withdrawal @withdrawal_id for transfer @transfer_id has been validated.', array(
+          '@withdrawal_id' => $withdrawal->withdrawal_id,
+          '@transfer_id' => $transfer->transfer_id,
+        )) : t('Withdrawal @withdrawal_id validation for transfer @transfer_id failed.', array(
+          '@withdrawal_id' => $withdrawal->withdrawal_id,
+          '@transfer_id' => $transfer->transfer_id,
+        ));
+        commerce_order_save($order);
+      }
+    }
+  }
+
+  // Invoke the rules event to allow other modules to react to the notification.
+  return rules_invoke_all('commerce_hipay_ws_withdrawal_validation', $withdrawal, $feedback);
 }
