@@ -728,17 +728,8 @@ function commerce_hipay_ws_form_rules_ui_edit_element_alter(&$form, &$form_state
 
     // Submitted bank details.
     if (!empty($form['parameter']['payment_method']['settings']['payment_method']['settings']['bank_account'])) {
-      $bank_account = $form['parameter']['payment_method']['settings']['payment_method']['settings']['bank_account'];
-
-      // Add custom validate and submit callbacks only
-      // if bank account hasn't been created yet.
-      if (
-        isset($bank_account['status'])
-        && $bank_account['status'] == COMMERCE_HIPAY_WS_ACCOUNT_NO_BANK_INFO
-      ) {
-        $form['#validate'][] = 'commerce_hipay_ws_settings_form_validate_bank_account';
-        $form['#submit'][] = 'commerce_hipay_ws_settings_form_submit_create_bank_account';
-      }
+      $form['#validate'][] = 'commerce_hipay_ws_settings_form_validate_bank_account';
+      $form['#submit'][] = 'commerce_hipay_ws_settings_form_submit_create_bank_account';
     }
   }
 }
@@ -806,6 +797,8 @@ function commerce_hipay_ws_settings_form_validate_bank_account(&$form, &$form_st
  * @return bool|void
  */
 function commerce_hipay_ws_settings_form_submit_create_bank_account(&$form, &$form_state) {
+  global $user;
+
   $bank_account = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings']['bank_account'];
 
   // If bank country was not selected, do not try to create the bank account.
@@ -813,8 +806,53 @@ function commerce_hipay_ws_settings_form_submit_create_bank_account(&$form, &$fo
     return;
   }
 
+  // Submitted payment method settings.
+  $settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
+
+  // Try to load the existing Hipay bank account entity from provided account_id
+  // value, and if it doesn't exist yet, create a new one.
+  if (!$hipay_bank_account = commerce_hipay_ws_bank_account_load_by_hipay_account_id($settings['account_id'])) {
+    $hipay_bank_account = commerce_hipay_ws_bank_account_new();
+    $hipay_bank_account->uid = $user->uid;
+    $hipay_bank_account->hipay_account_id = $settings['account_id'];
+    $hipay_bank_account->hipay_status = COMMERCE_HIPAY_WS_ACCOUNT_NO_BANK_INFO;
+  }
+
+  // Update Hipay bank account values.
+  $hipay_bank_account_wrapper = entity_metadata_wrapper('commerce_hipay_ws_bank_account', $hipay_bank_account);
+  $hipay_bank_account_wrapper->hipay_ws_bank_address = array(
+    'thoroughfare' => $bank_account['bankAddress'],
+    'postal_code' => $bank_account['bankZipCode'],
+    'locality' => $bank_account['bankCity'],
+    'country' => $bank_account['bankCountry'],
+  );
+  $hipay_bank_account_wrapper->hipay_ws_bank_name = $bank_account['bankName'];
+  $hipay_bank_account_wrapper->hipay_ws_bank_iban = $bank_account['iban'];
+  $hipay_bank_account_wrapper->hipay_ws_bank_swift = $bank_account['swift'];
+  $hipay_bank_account_wrapper->hipay_ws_bank_account_number = $bank_account['acct_num'];
+  $hipay_bank_account_wrapper->hipay_ws_bank_aba_number = $bank_account['aba_num'];
+  $hipay_bank_account_wrapper->hipay_ws_bank_transit_number = $bank_account['transit_num'];
+
+  // Make sure the bank account is assigned to the Hipay user account.
+  $hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($settings['account_id']);
+  $hipay_bank_account_wrapper->hipay_ws_bank_user_account = $hipay_user_account->user_account_id;
+
+  // Save updated Hipay bank account.
+  commerce_hipay_ws_bank_account_save($hipay_bank_account);
+
+  // Re-fetch the bank account infos to update the local Hipay bank account
+  // entity status value.
+  $context = array('commerce_hipay_ws_bank_account' => $hipay_bank_account);
+  commerce_hipay_ws_api_bank_account_get_info_status(array(), $context);
+
+  // If bank account has been already created in Hiopay Wallet,
+  // we do not want to do it again.
+  if ($bank_account['status'] != COMMERCE_HIPAY_WS_ACCOUNT_NO_BANK_INFO) {
+    return;
+  }
+
   // Do the API call.
-  if (!$response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_REGISTER, $bank_account)) {
+  if (!$response = commerce_hipay_ws_api_bank_account_create($hipay_bank_account)) {
     drupal_set_message(t('There was an error calling Hipay Wallet API. See log for more details.'), 'error');
     return FALSE;
   }
