@@ -83,6 +83,8 @@ function commerce_hipay_ws_withdrawal_view($entity, $view_mode = 'full') {
  * @see commerce_hipay_ws_views_data_alter()
  */
 function commerce_hipay_ws_withdrawal_views_data_alter(&$data) {
+  // Withdrawals.
+  $data['commerce_hipay_ws_withdrawal']['amount']['field']['handler'] = 'commerce_payment_handler_field_amount';
   $data['commerce_hipay_ws_withdrawal']['link'] = array(
     'field' => array(
       'title' => t('Link'),
@@ -99,6 +101,7 @@ function commerce_hipay_ws_withdrawal_views_data_alter(&$data) {
   );
 
   // Withdrawal revisions.
+  $data['commerce_hipay_ws_withdrawal_revision']['amount']['field']['handler'] = 'commerce_payment_handler_field_amount';
   $data['commerce_hipay_ws_withdrawal_revision']['revision_id'] = array(
     'title' => t('Revision ID'),
     'help' => t('The revision ID of the Hipay withdrawal revision.'),
@@ -284,11 +287,6 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
   $handler->display->display_options['fields']['amount']['id'] = 'amount';
   $handler->display->display_options['fields']['amount']['table'] = 'commerce_hipay_ws_withdrawal';
   $handler->display->display_options['fields']['amount']['field'] = 'amount';
-  $handler->display->display_options['fields']['amount']['precision'] = '0';
-  /* Field: Hipay Wallet withdrawal: Currency Code */
-  $handler->display->display_options['fields']['currency_code']['id'] = 'currency_code';
-  $handler->display->display_options['fields']['currency_code']['table'] = 'commerce_hipay_ws_withdrawal';
-  $handler->display->display_options['fields']['currency_code']['field'] = 'currency_code';
   /* Field: Hipay Wallet withdrawal: Status */
   $handler->display->display_options['fields']['status']['id'] = 'status';
   $handler->display->display_options['fields']['status']['table'] = 'commerce_hipay_ws_withdrawal';
@@ -324,7 +322,7 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
   $handler->display->display_options['tab_options']['name'] = 'management';
   $translatables['hipay_ws_withdrawals'] = array(
     t('Master'),
-    t('Hipay Wallet withdrawals'),
+    t('Withdrawals'),
     t('more'),
     t('Apply'),
     t('Reset'),
@@ -344,7 +342,6 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
     t('Account ID'),
     t('Transfer ID'),
     t('Amount'),
-    t('Currency Code'),
     t('Status'),
     t('Hipay status'),
     t('Hipay transaction ID'),
@@ -376,10 +373,14 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
   $handler->display->display_options['style_plugin'] = 'table';
   $handler->display->display_options['style_options']['columns'] = array(
     'revision_id' => 'revision_id',
-    'status' => 'status',
+    'revision_timestamp' => 'revision_timestamp',
+    'name' => 'name',
     'transaction_id' => 'transaction_id',
+    'amount' => 'amount',
+    'status' => 'status',
     'remote_status' => 'remote_status',
     'description' => 'description',
+    'log' => 'log',
   );
   $handler->display->display_options['style_options']['default'] = 'revision_id';
   $handler->display->display_options['style_options']['info'] = array(
@@ -390,7 +391,14 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
       'separator' => '',
       'empty_column' => 0,
     ),
-    'status' => array(
+    'revision_timestamp' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'name' => array(
       'sortable' => 1,
       'default_sort_order' => 'asc',
       'align' => '',
@@ -398,6 +406,20 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
       'empty_column' => 0,
     ),
     'transaction_id' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'amount' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'status' => array(
       'sortable' => 1,
       'default_sort_order' => 'asc',
       'align' => '',
@@ -414,6 +436,11 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
     'description' => array(
       'sortable' => 1,
       'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'log' => array(
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -441,7 +468,7 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
   $handler->display->display_options['fields']['name']['field'] = 'name';
   $handler->display->display_options['fields']['name']['relationship'] = 'revision_uid';
   $handler->display->display_options['fields']['name']['label'] = 'Created by';
-  /* Field: Hipay Wallet withdrawal Revisions: Transaction ID */
+  /* Field: Hipay Wallet withdrawal Revisions: Hipay transaction ID */
   $handler->display->display_options['fields']['transaction_id']['id'] = 'transaction_id';
   $handler->display->display_options['fields']['transaction_id']['table'] = 'commerce_hipay_ws_withdrawal_revision';
   $handler->display->display_options['fields']['transaction_id']['field'] = 'transaction_id';
@@ -449,20 +476,15 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
   $handler->display->display_options['fields']['amount']['id'] = 'amount';
   $handler->display->display_options['fields']['amount']['table'] = 'commerce_hipay_ws_withdrawal_revision';
   $handler->display->display_options['fields']['amount']['field'] = 'amount';
-  $handler->display->display_options['fields']['amount']['precision'] = '0';
-  /* Field: Hipay Wallet withdrawal Revisions: Currency Code */
-  $handler->display->display_options['fields']['currency_code']['id'] = 'currency_code';
-  $handler->display->display_options['fields']['currency_code']['table'] = 'commerce_hipay_ws_transfer_revision';
-  $handler->display->display_options['fields']['currency_code']['field'] = 'currency_code';
   /* Field: Hipay Wallet withdrawal Revisions: Status */
   $handler->display->display_options['fields']['status']['id'] = 'status';
   $handler->display->display_options['fields']['status']['table'] = 'commerce_hipay_ws_withdrawal_revision';
   $handler->display->display_options['fields']['status']['field'] = 'status';
-  /* Field: Hipay Wallet withdrawal Revisions: Remote status */
+  /* Field: Hipay Wallet withdrawal Revisions: Hipay status */
   $handler->display->display_options['fields']['remote_status']['id'] = 'remote_status';
   $handler->display->display_options['fields']['remote_status']['table'] = 'commerce_hipay_ws_withdrawal_revision';
   $handler->display->display_options['fields']['remote_status']['field'] = 'remote_status';
-  /* Field: Hipay Wallet withdrawal Revisions: Remote status description */
+  /* Field: Hipay Wallet withdrawal Revisions: Hipay status description */
   $handler->display->display_options['fields']['description']['id'] = 'description';
   $handler->display->display_options['fields']['description']['table'] = 'commerce_hipay_ws_withdrawal_revision';
   $handler->display->display_options['fields']['description']['field'] = 'description';
@@ -487,7 +509,7 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
   $handler->display->display_options['menu']['type'] = 'tab';
   $handler->display->display_options['menu']['title'] = 'revisions';
   $handler->display->display_options['menu']['description'] = 'View revisions of this Hipay withdrawal.';
-  $handler->display->display_options['menu']['weight'] = 20;
+  $handler->display->display_options['menu']['weight'] = '10';
   $handler->display->display_options['menu']['context'] = 0;
   $handler->display->display_options['menu']['context_only_inline'] = 0;
   $translatables['hipay_ws_withdrawal_revisions'] = array(
@@ -510,13 +532,10 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
     t('Revision ID'),
     t('Created on'),
     t('Created by'),
-    t('Transaction ID'),
+    t('Hipay transaction ID'),
     t('Amount'),
-    t('.'),
-    t(','),
-    t('Currency Code'),
     t('Status'),
-    t('Remote status'),
+    t('Hipay status'),
     t('Description'),
     t('Log message'),
     t('All'),
