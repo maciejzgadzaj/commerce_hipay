@@ -218,3 +218,77 @@ function commerce_hipay_ws_api_user_account_check_identified($user_account_id) {
 
   return TRUE;
 }
+
+/**
+ * Returns a list of transactions for a Hipay user account.
+ *
+ * @TODO: Refactor it to handle limit/offset/ordering?
+ * Currently a call to Hipay Wallet's "getTransactions" API returns only 4
+ * transactions per page, and there is no way to change it, meaning that to get
+ * all transactions we need to make multiple calls. Also there is no way of
+ * ordering the transaction based on any criteria.
+ * See http://help.hipay.com/Tickets/Ticket/View/13943
+ *
+ * @param int $hipay_account_id
+ *   A Hipay user account to return the list of transactions for.
+ *
+ * @return array
+ *   An array of transactions for a Hipay user account.
+ */
+function commerce_hipay_ws_api_user_account_get_transactions($hipay_account_id) {
+  $transactions = array();
+
+  $hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($hipay_account_id);
+
+  // Hipay servers run on UTC time, so we need to convert our time
+  // to match theirs.
+  $end_date = format_date(REQUEST_TIME, 'custom', 'Y-m-d H:i:s', 'UTC');
+
+  // Hipay allows to get transactions for max period of 3 months.
+  $three_months_ago = strtotime('-3 months');
+  $start_timestamp = ($hipay_user_account->created > $three_months_ago) ? $hipay_user_account->created : $three_months_ago;
+  $start_date = format_date($start_timestamp, 'custom', 'Y-m-d H:i:s', 'UTC');
+
+  $parameters = array(
+    'wsSubAccountId' => $hipay_account_id,
+    'startDate' => $start_date,
+    'endDate' => $end_date,
+    'pageNumber' => 1,
+  );
+  $context = array('commerce_hipay_ws_user_account' => $hipay_user_account);
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_TRANSACTIONS, $parameters, NULL, $context);
+
+  if (
+    isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS
+    && isset($response['transactions']['item'])
+  ) {
+    // If there is only one transaction, 'item', we need to put it into
+    // a sub-array (as is the case with multiple transactions).
+    if (!isset($response['transactions']['item'][0])) {
+      $response['transactions']['item'] = array($response['transactions']['item']);
+    }
+
+    $transactions = $response['transactions']['item'];
+
+    // Hipay paginates the result, returning only 4 transactions per page.
+    // Therefore, if there is more than one page of transactions, we need
+    // to fetch all other pages as well.
+    if ($response['pageCount'] > 1) {
+      for ($page = 2; $page <= $response['pageCount']; $page++) {
+        $parameters['pageNumber'] = $page;
+        $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_TRANSACTIONS, $parameters, NULL, $context);
+        if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+          // If there is only one transaction, 'item', we need to put it into
+          // a sub-array (as is the case with multiple transactions).
+          if (!isset($response['transactions']['item'][0])) {
+            $response['transactions']['item'] = array($response['transactions']['item']);
+          }
+
+          $transactions = array_merge($transactions, $response['transactions']['item']);
+        }
+      }
+    }
+  }
+
+  return array_reverse($transactions);
+}
