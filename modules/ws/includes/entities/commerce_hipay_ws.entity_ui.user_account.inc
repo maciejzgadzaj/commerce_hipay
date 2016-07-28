@@ -859,7 +859,7 @@ function commerce_hipay_ws_user_account_views_default_views() {
 
   /* Display: Master */
   $handler = $view->new_display('default', 'Master', 'default');
-  $handler->display->display_options['title'] = 'Hipay Wallet user accounts';
+  $handler->display->display_options['title'] = 'User accounts';
   $handler->display->display_options['use_more_always'] = FALSE;
   $handler->display->display_options['access']['type'] = 'perm';
   $handler->display->display_options['access']['perm'] = 'edit own commerce_hipay_ws_user_account entities';

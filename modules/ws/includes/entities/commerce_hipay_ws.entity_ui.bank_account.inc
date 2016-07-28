@@ -646,7 +646,7 @@ function commerce_hipay_ws_bank_account_views_default_views() {
 
   /* Display: Master */
   $handler = $view->new_display('default', 'Master', 'default');
-  $handler->display->display_options['title'] = 'Hipay Wallet bank accounts';
+  $handler->display->display_options['title'] = 'Bank accounts';
   $handler->display->display_options['use_more_always'] = FALSE;
   $handler->display->display_options['access']['type'] = 'perm';
   $handler->display->display_options['access']['perm'] = 'edit own commerce_hipay_ws_bank_account entities';

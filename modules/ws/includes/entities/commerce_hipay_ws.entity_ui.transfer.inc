@@ -178,7 +178,7 @@ function commerce_hipay_ws_transfer_views_default_views() {
 
   /* Display: Master */
   $handler = $view->new_display('default', 'Master', 'default');
-  $handler->display->display_options['title'] = 'Hipay Wallet transfers';
+  $handler->display->display_options['title'] = 'Transfers';
   $handler->display->display_options['use_more_always'] = FALSE;
   $handler->display->display_options['access']['type'] = 'perm';
   $handler->display->display_options['access']['perm'] = 'administer commerce_hipay_ws_transfer entities';
