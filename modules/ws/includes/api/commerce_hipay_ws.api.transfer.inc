@@ -27,7 +27,7 @@ function commerce_hipay_ws_api_transfer_execute($transfer) {
   $parameters = array(
     'wsLogin' => $sender_account->hipay_ws_login,
     'wsPassword' => $sender_account->hipay_ws_password,
-    'amount' => commerce_currency_amount_to_decimal($transfer->amount, $transfer->currency_code),
+    'amount' => number_format(commerce_currency_amount_to_decimal($transfer->amount, $transfer->currency_code), 2),
     'recipientUserId' => $recipient_account->hipay_account_id,
     'publicLabel' => substr($transfer->public_label, 0, 255),
     'privateLabel' => substr($transfer->private_label, 0, 255),
@@ -64,6 +64,15 @@ function commerce_hipay_ws_api_transfer_execute($transfer) {
   // Save new transfer revision.
   commerce_hipay_ws_transfer_save($transfer);
 
+  // Error code was returned in the response.
+  if (!isset($response['code']) || $response['code'] !== COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+    watchdog('commerce_hipay_ws', 'Transfer @transfer_id: received error @error_code: @error_description', array(
+      '@transfer_id' => $transfer->transfer_id,
+      '@error_code' => $response['code'],
+      '@error_description' => $response['description'],
+    ), WATCHDOG_ERROR);
+  }
+
   // Create new order revision if required.
   if (variable_get('commerce_order_auto_revision', TRUE)) {
     if (!empty($transfer->hipay_ws_transfer_order)) {
@@ -71,25 +80,10 @@ function commerce_hipay_ws_api_transfer_execute($transfer) {
       foreach ($transfer_wrapper->hipay_ws_transfer_order as $order_wrapper) {
         $order = $order_wrapper->value();
         $order->revision = TRUE;
-        $order->log = (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) ? t('Transfer @transfer_id for line item @line_item_id executed successfully.', array(
-          '@transfer_id' => $transfer->transfer_id,
-          '@line_item_id' => $transfer->line_item_id,
-        )) : t('Transfer @transfer_id execution for line item @line_item_id failed.', array(
-          '@transfer_id' => $transfer->transfer_id,
-          '@line_item_id' => $transfer->line_item_id,
-        ));
+        $order->log = (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) ? t('Transfer @transfer_id executed successfully.', array('@transfer_id' => $transfer->transfer_id)) : t('Transfer @transfer_id execution failed.', array('@transfer_id' => $transfer->transfer_id));
         commerce_order_save($order);
       }
     }
-  }
-
-  // Error code was returned in the response.
-  if (!isset($response['code']) || $response['code'] !== COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-    watchdog('commerce_hipay_ws', 'Transfer: received error @error_code: @error_description', array(
-      '@error_code' => $response['code'],
-      '@error_description' => $response['description'],
-    ), WATCHDOG_ERROR);
-    return FALSE;
   }
 
   return $response;
