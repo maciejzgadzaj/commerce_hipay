@@ -56,7 +56,6 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
       'contactEmail' => $wrapper->hipay_ws_user_contact_email->value(),
       'phoneNumber' => $wrapper->hipay_ws_user_phone_number->value(),
       'termsAgreed' => 1,
-      'callbackUrl' => url('commerce-hipay-ws/notify', array('absolute' => TRUE)),
       'legalStatus' => $wrapper->hipay_ws_user_legal_status->value(),
       'structure' => $wrapper->hipay_ws_user_structure->value(),
       'companyName' => $wrapper->hipay_ws_user_company_name->value(),
@@ -79,6 +78,16 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
 //      'receiveCommercialInformation' => 0,
     ),
   );
+
+  if ($payment_method_instance['settings']['api']['user_account']['callback_url'] == COMMERCE_HIPAY_WS_API_CALLBACK_URL_SITE_BASE_URL) {
+    $parameters['userAccountDetails']['callbackUrl'] = url('commerce-hipay-ws/notify', array('absolute' => TRUE));
+  }
+  elseif (
+    $payment_method_instance['settings']['api']['user_account']['callback_url'] == COMMERCE_HIPAY_WS_API_CALLBACK_URL_CUSTOM_URL
+    && !empty($payment_method_instance['settings']['api']['user_account']['callback_url_custom'])
+  ) {
+    $parameters['userAccountDetails']['callbackUrl'] = $payment_method_instance['settings']['api']['user_account']['callback_url_custom'];
+  }
 
   // If we have website data already configured, add it to the call as well.
   if (

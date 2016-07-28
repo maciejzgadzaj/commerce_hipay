@@ -230,6 +230,10 @@ function commerce_hipay_ws_settings_default() {
       ),
       'cache' => FALSE,
       'cache_lifetime' => 0,
+      'user_account' => array(
+        'callback_url' => 'dont_send',
+        'callback_url_custom' => '',
+      ),
     ),
     'website' => array(
       'business_line_id' => '',
@@ -424,6 +428,39 @@ function commerce_hipay_ws_settings_form($settings = array()) {
     '#states' => array(
       'visible' => array(
         ':input[name="parameter[payment_method][settings][payment_method][settings][api][cache]"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+
+  $form['api']['user_account'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('User account API settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+
+  $form['api']['user_account']['callback_url'] = array(
+    '#type' => 'radios',
+    '#title' => t('Callback URL'),
+    '#description' => t('Main Hipay Wallet account callback URL is defined by providing it directly to Hipay Wallet support. However, each created Hipay user account could have its own callback URL value.')
+      . '<br />' . t('- <em>Do not send at all</em> - will not send the <em>callbackUrl</em> element in the <em>createFullUseraccount</em> API request, and the main Hipay Wallet account callback URL will be used. This is the default value.')
+      . '<br />' . t('- <em>Use the base URL of the site</em> - will send the <em>callbackUrl</em> value build from the current <em>base_url</em> value of the site.')
+      . '<br />' . t('- <em>Use a custom URL</em> will allow you to provide a custom value for the <em>callbackURL</em> element of the <em>createFullUseraccount</em> API request.'),
+    '#options' => array(
+      COMMERCE_HIPAY_WS_API_CALLBACK_URL_DONT_SEND => t('Do not send at all'),
+      COMMERCE_HIPAY_WS_API_CALLBACK_URL_SITE_BASE_URL => t('Use the base URL of the site'),
+      COMMERCE_HIPAY_WS_API_CALLBACK_URL_CUSTOM_URL => t('Use a custom URL'),
+    ),
+    '#default_value' => $settings['api']['user_account']['callback_url'],
+  );
+
+  $form['api']['user_account']['callback_url_custom'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Custom callback URL'),
+    '#default_value' => $settings['api']['user_account']['callback_url_custom'],
+    '#states' => array(
+      'visible' => array(
+        ':input[name="parameter[payment_method][settings][payment_method][settings][api][user_account][callback_url]"]' => array('value' => 'custom_url'),
       ),
     ),
   );
