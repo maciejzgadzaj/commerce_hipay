@@ -79,6 +79,90 @@ function commerce_hipay_ws_api_upload($account, $kyc_document, $payment_method_i
 }
 
 /**
+ * Processes Hipay Wallet document validation notification.
+ *
+ * @param array $feedback
+ *   An array of XML parameters received in the notification.
+ *
+ * @return bool
+ *   An boolean indicating whether the notification was processed successfully.
+ *
+ * @see commerce_hipay_ws_callback_notification_process_feedback_xml()
+ */
+function commerce_hipay_ws_api_upload_validate_notification($feedback) {
+  // Make sure we have received all required parameters.
+  $required_parameters = array('account_id', 'document_type', 'status');
+  foreach ($required_parameters as $required_parameter) {
+    if (empty($feedback[$required_parameter])) {
+      watchdog('commerce_hipay_ws', 'Notification: document_validation: !param_name parameter missing or empty.', array('!param_name' => $required_parameter), WATCHDOG_ERROR);
+      return FALSE;
+    }
+  }
+
+  // Try to load the Hipay user account from the received parameter.
+  if (!$hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($feedback['account_id'])) {
+    watchdog('commerce_hipay_ws', 'Notification: document_validation: unable to load a Hipay user account entity from account_id parameter: @account_id.', array('@account_id' => $feedback['account_id']), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  $update_result = FALSE;
+  if (!empty($hipay_user_account->hipay_ws_user_kyc_documents[LANGUAGE_NONE])) {
+    foreach ($hipay_user_account->hipay_ws_user_kyc_documents[LANGUAGE_NONE] as $delta => &$kyc_document) {
+      if ($kyc_document['kyc_type'] == $feedback['document_type']) {
+
+        // Update custom KYC document file field properties.
+        $kyc_document['kyc_status'] = $feedback['status'];
+        $kyc_document['kyc_message'] = $feedback['notification_message'];
+
+        // Save new custom KYC document file field properties.
+        commerce_hipay_ws_file_kyc_document_update('commerce_hipay_ws_user_account', $hipay_user_account);
+
+        // Create new Hipay user account revision.
+        $hipay_user_account->revision = TRUE;
+        $hipay_user_account->log = t('Updated KYC document %filename (@kyc_type) status to %kyc_status from received Hipay Wallet notification.', array(
+          '%filename' => $kyc_document['filename'],
+          '@kyc_type' => $kyc_document['kyc_type'],
+          '%kyc_status' => $kyc_document['kyc_status'],
+        ));
+        commerce_hipay_ws_user_account_save($hipay_user_account);
+
+        // Add watchdog entry.
+        watchdog('commerce_hipay_ws', 'Notification: document_validation: Updated Hipay user account @account_id KYC document @document_id status to %kyc_status (@kyc_message).', array(
+          '@account_id' => $hipay_user_account->user_account_id,
+          '@document_id' => $kyc_document['fid'],
+          '%kyc_status' => $feedback['status'],
+          '@kyc_message' => $feedback['notification_message'],
+        ), WATCHDOG_NOTICE);
+
+        // Mark update as successful.
+        $update_result = TRUE;
+      }
+    }
+  }
+
+  // If $update_result at this point is still FALSE, it means that we were
+  // unable to find a KYC document of the provided kyc_type in this Hipay user
+  // account.
+  if ($update_result === FALSE) {
+    watchdog('commerce_hipay_ws', 'Notification: document_validation: unable to find a KYC document type @kyc_type in Hipay user account @user_account_id (@hipay_account_id).', array(
+      '@kyc_type' => $feedback['document_type'],
+      '@user_account_id' => $hipay_user_account->user_account_id,
+      '@hipay_account_id' => $feedback['account_id'],
+    ), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  // Invoke the rules event to allow other modules to react to the notification.
+  foreach (rules_invoke_all('commerce_hipay_ws_document_validation', $hipay_user_account, $feedback) as $result) {
+    // If any of the hook implementations returns FALSE, alter the function
+    // update result respectively.
+    $update_result = $update_result && $result;
+  }
+
+  return $update_result;
+}
+
+/**
  * Returns types of KYC documents (classification numbers).
  *
  * @return array

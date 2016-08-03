@@ -1199,6 +1199,8 @@ function commerce_hipay_ws_commerce_hipay_ws_api_request_alter(&$parameters, $re
  *   A string containing XML feedback received from Hipay Wallet API.
  */
 function commerce_hipay_ws_callback_notification_process_feedback_xml($xml_string) {
+  $result = FALSE;
+
   if ($xml = simplexml_load_string($xml_string)) {
     $feedback_xml = json_decode(json_encode($xml->result), TRUE);
 
@@ -1207,21 +1209,32 @@ function commerce_hipay_ws_callback_notification_process_feedback_xml($xml_strin
 
         // Hipay user account has been identified.
         case 'identification':
-          commerce_hipay_ws_api_user_account_validate_notification($feedback_xml);
+          $result = commerce_hipay_ws_api_user_account_validate_notification($feedback_xml);
+          break;
+
+        // KYC document has just been rejected.
+        // (There are no 'document_validation' notifications for successfully
+        // validated KYC documents, instead Hipay sends the 'identification'
+        // notification for the seller account if all documents are ok.)
+        case 'document_validation':
+          $result = commerce_hipay_ws_api_upload_validate_notification($feedback_xml);
           break;
 
         // Hipay bank account information has been validated.
         case 'bank_info_validation':
-          commerce_hipay_ws_api_bank_account_validate_notification($feedback_xml);
+          $result = commerce_hipay_ws_api_bank_account_validate_notification($feedback_xml);
           break;
 
         case 'withdraw_validation':
-          commerce_hipay_ws_api_withdrawal_validate_notification($feedback_xml);
+          $result = commerce_hipay_ws_api_withdrawal_validate_notification($feedback_xml);
           break;
 
       }
     }
+  }
 
+  if ($result === FALSE) {
+    drupal_add_http_header('status', '503 Error processing notification. Please retry.');
   }
 }
 

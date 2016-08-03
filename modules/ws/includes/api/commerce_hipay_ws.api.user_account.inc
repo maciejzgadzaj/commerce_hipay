@@ -135,6 +135,8 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
  *
  * @return bool
  *   An boolean indicating whether the notification was processed successfully.
+ *
+ * @see commerce_hipay_ws_callback_notification_process_feedback_xml()
  */
 function commerce_hipay_ws_api_user_account_validate_notification($feedback) {
   // Make sure we have received all required parameters.
@@ -158,6 +160,15 @@ function commerce_hipay_ws_api_user_account_validate_notification($feedback) {
   $user_account->log = 'Updated identified status from received Hipay Wallet notificaton.';
   commerce_hipay_ws_user_account_save($user_account);
 
+  // Also update statuses of all KYC documents to validated.
+  if (!empty($user_account->hipay_ws_user_kyc_documents[LANGUAGE_NONE])) {
+    foreach ($user_account->hipay_ws_user_kyc_documents[LANGUAGE_NONE] as $delta => &$kyc_document) {
+      $kyc_document['kyc_status'] = COMMERCE_HIPAY_WS_KYC_STATUS_VALIDATED;
+      $kyc_document['kyc_message'] = 'Account identified';
+    }
+    commerce_hipay_ws_file_kyc_document_update('commerce_hipay_ws_user_account', $user_account);
+  }
+
   // Add watchdog entry.
   watchdog('commerce_hipay_ws', 'Notification: identification: Updated Hipay user account %account_id identified status to %status.', array(
     '%account_id' => $user_account->user_account_id,
@@ -165,7 +176,14 @@ function commerce_hipay_ws_api_user_account_validate_notification($feedback) {
   ), WATCHDOG_NOTICE);
 
   // Invoke the rules event to allow other modules to react to the notification.
-  return rules_invoke_all('commerce_hipay_ws_user_account_identification', $user_account, $feedback);
+  $update_result = TRUE;
+  foreach (rules_invoke_all('commerce_hipay_ws_user_account_identification', $user_account, $feedback) as $result) {
+    // If any of the hook implementations returns FALSE, alter the function
+    // update result respectively.
+    $update_result = $update_result && $result;
+  }
+
+  return $update_result;
 }
 
 /**

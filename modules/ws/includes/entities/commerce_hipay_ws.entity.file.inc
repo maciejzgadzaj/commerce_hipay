@@ -5,6 +5,11 @@
  */
 define('COMMERCE_HIPAY_WS_KYC_DOCUMENTS_TABLE', 'commerce_hipay_ws_kyc_document');
 
+define('COMMERCE_HIPAY_WS_KYC_STATUS_CREATED', 'created');
+define('COMMERCE_HIPAY_WS_KYC_STATUS_UPLOADED', 'uploaded');
+define('COMMERCE_HIPAY_WS_KYC_STATUS_NOK', 'nok');
+define('COMMERCE_HIPAY_WS_KYC_STATUS_VALIDATED', 'validated');
+
 /**
  * Defines the current version of the database schema for KYC documents info.
  *
@@ -61,11 +66,25 @@ function commerce_hipay_ws_file_schema() {
         'default' => 0,
       ),
       'kyc_uploaded' => array(
-        'description' => 'The Unix timestamp when this KYC document expires.',
+        'description' => 'The Unix timestamp when this KYC document was uploaded.',
         'type' => 'int',
         'not null' => FALSE,
         'unsigned' => TRUE,
         'default' => 0,
+      ),
+      'kyc_status' => array(
+        'description' => 'Hipay status of this KYC document.',
+        'type' => 'varchar',
+        'length' => 30,
+        'not null' => TRUE,
+        'default' => COMMERCE_HIPAY_WS_KYC_STATUS_CREATED,
+      ),
+      'kyc_message' => array(
+        'description' => 'Hipay status message of this KYC document.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
       ),
     ),
     'primary key' => array(
@@ -382,6 +401,8 @@ function theme_kyc_documents_table($variables) {
     t('Document type'),
     t('Validity'),
     t('Uploaded date'),
+    t('Status'),
+    t('Message'),
   );
 
   $kyc_types = options_array_flatten(commerce_hipay_ws_api_upload_kyc_document_types());
@@ -390,9 +411,11 @@ function theme_kyc_documents_table($variables) {
   foreach ($variables['items'] as $delta => $item) {
     $rows[] = array(
       theme('file_link', array('file' => (object) $item)),
-      $kyc_types[$item['kyc_type']],
+      t('@type_name (@type_id)', array('@type_name' => $kyc_types[$item['kyc_type']], '@type_id' => $item['kyc_type'])),
       (!empty($item['kyc_validity'])) ? date('Y-m-d', $item['kyc_validity']) : '-',
-      (!empty($item['kyc_uploaded'])) ? date('Y-m-d H:i:s', $item['kyc_uploaded']) : '-'
+      (!empty($item['kyc_uploaded'])) ? date('Y-m-d H:i:s', $item['kyc_uploaded']) : '-',
+      $item['kyc_status'],
+      $item['kyc_message'],
     );
   }
 

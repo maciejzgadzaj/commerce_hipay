@@ -153,6 +153,8 @@ function commerce_hipay_ws_api_withdrawal_validate($withdrawal) {
  *
  * @return bool
  *   An boolean indicating whether the notification was processed successfully.
+ *
+ * @see commerce_hipay_ws_callback_notification_process_feedback_xml()
  */
 function commerce_hipay_ws_api_withdrawal_validate_notification($feedback) {
   // Make sure we have received all required parameters.
@@ -228,5 +230,12 @@ function commerce_hipay_ws_api_withdrawal_validate_notification($feedback) {
   }
 
   // Invoke the rules event to allow other modules to react to the notification.
-  return rules_invoke_all('commerce_hipay_ws_withdrawal_validation', $withdrawal, $feedback);
+  $update_result = TRUE;
+  foreach (rules_invoke_all('commerce_hipay_ws_withdrawal_validation', $withdrawal, $feedback) as $result) {
+    // If any of the hook implementations returns FALSE, alter the function
+    // update result respectively.
+    $update_result = $update_result && $result;
+  }
+
+  return $update_result;
 }

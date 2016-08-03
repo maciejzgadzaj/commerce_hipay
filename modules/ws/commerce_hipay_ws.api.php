@@ -56,12 +56,51 @@ function hook_commerce_hipay_ws_api_notification($feedback) {
 }
 
 /**
+ * Allows other modules to respond to Hipay KYC document validation notification.
+ *
+ * For the moment Hipay sends 'document_validation' notifications only in case
+ * if the KYC document gets rejected. If all seller KYC documents are validated,
+ * there will be no notifications for any of them, instead Hipay will send the
+ * user account identification notification.
+ *
+ * This hook implementations are called only if the initial processing done in
+ * commerce_hipay_ws_api_upload_validate_notification() function is successful.
+ *
+ * @param object $hipay_user_account
+ *   A Hipay user account entity which the KYC document has just been rejected
+ *   for.
+ * @param array $feedback
+ *   An array of XML feedback values received in Hipay Wallet notification.
+ *
+ * @return false|mixed
+ *   Hook implementations should return FALSE if notification processing should
+ *   be considered as failed (and the HTTP error code 503 should be returned in
+ *   the response to Hipay Wallet), or anything else (including nothing) if it
+ *   was successful.
+ *
+ * @see commerce_hipay_ws_api_upload_validate_notification()
+ */
+function hook_commerce_hipay_ws_document_validation($hipay_user_account, $feedback) {
+  // No example.
+}
+
+/**
  * Allows other modules to respond to Hipay user account identification notification.
+ *
+ * This hook implementations are called only if the initial processing done in
+ * commerce_hipay_ws_api_user_account_validate_notification() function is
+ * successful.
  *
  * @param object $hipay_user_account
  *   A Hipay user account entity that has just been validated.
  * @param array $feedback
  *   An array of XML feedback values received in Hipay Wallet notification.
+ *
+ * @return false|mixed
+ *   Hook implementations should return FALSE if notification processing should
+ *   be considered as failed (and the HTTP error code 503 should be returned in
+ *   the response to Hipay Wallet), or anything else (including nothing) if it
+ *   was successful.
  *
  * @see commerce_hipay_ws_api_user_account_validate_notification()
  */
@@ -72,10 +111,20 @@ function hook_commerce_hipay_ws_user_account_identification($hipay_user_account,
 /**
  * Allows other modules to respond to Hipay bank account validation notification.
  *
+ * This hook implementations are called only if the initial processing done in
+ * commerce_hipay_ws_api_bank_account_validate_notification() function is
+ * successful.
+ *
  * @param object $hipay_bank_account
  *   A Hipay bank account entity that has just been validated.
  * @param array $feedback
  *   An array of XML feedback values received in Hipay Wallet notification.
+ *
+ * @return false|mixed
+ *   Hook implementations should return FALSE if notification processing should
+ *   be considered as failed (and the HTTP error code 503 should be returned in
+ *   the response to Hipay Wallet), or anything else (including nothing) if it
+ *   was successful.
  *
  * @see commerce_hipay_ws_api_bank_account_validate_notification()
  */
@@ -86,10 +135,20 @@ function hook_commerce_hipay_ws_bank_account_validation($hipay_bank_account, $fe
 /**
  * Allows other modules to respond to Hipay withdrawal validation notification.
  *
+ * This hook implementations are called only if the initial processing done in
+ * commerce_hipay_ws_api_withdrawal_validate_notification() function is
+ * successful.
+ *
  * @param object $withdrawal
  *   A Hipay withdrawal entity that has just been validated.
  * @param array $feedback
  *   An array of XML feedback values received in Hipay Wallet notification.
+ *
+ * @return false|mixed
+ *   Hook implementations should return FALSE if notification processing should
+ *   be considered as failed (and the HTTP error code 503 should be returned in
+ *   the response to Hipay Wallet), or anything else (including nothing) if it
+ *   was successful.
  *
  * @see commerce_hipay_ws_api_withdrawal_validate_notification()
  */

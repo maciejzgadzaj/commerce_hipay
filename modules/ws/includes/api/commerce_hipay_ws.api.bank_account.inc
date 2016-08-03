@@ -87,6 +87,8 @@ function commerce_hipay_ws_api_bank_account_create($account, $payment_method_ins
  *
  * @return bool
  *   An boolean indicating whether the notification was processed successfully.
+ *
+ * @see commerce_hipay_ws_callback_notification_process_feedback_xml()
  */
 function commerce_hipay_ws_api_bank_account_validate_notification($feedback) {
   // Make sure we have received all required parameters.
@@ -117,7 +119,14 @@ function commerce_hipay_ws_api_bank_account_validate_notification($feedback) {
   ), WATCHDOG_NOTICE);
 
   // Invoke the rules event to allow other modules to react to the notification.
-  return rules_invoke_all('commerce_hipay_ws_bank_account_validation', $bank_account, $feedback);
+  $update_result = TRUE;
+  foreach (rules_invoke_all('commerce_hipay_ws_bank_account_validation', $bank_account, $feedback) as $result) {
+    // If any of the hook implementations returns FALSE, alter the function
+    // update result respectively.
+    $update_result = $update_result && $result;
+  }
+
+  return $update_result;
 }
 
 /**
