@@ -59,6 +59,10 @@ function commerce_hipay_ws_api_bank_account_create($account, $payment_method_ins
     }
   }
 
+  // Add request parameters array to the user account entity payload.
+  $payload_key = COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_REGISTER . '-request-' . time();
+  $account->data['payload'][$payload_key] = $parameters;
+
   $context = array(
     'hipay_user_account' => $hipay_user_account,
     'hipay_bank_account' => $account,
@@ -67,14 +71,23 @@ function commerce_hipay_ws_api_bank_account_create($account, $payment_method_ins
   // Perform the call to Hipay Wallet API.
   $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_REGISTER, $parameters, $context);
 
+  // Add the response to the user account entity payload.
+  $payload_key = COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_REGISTER . '-response-' . time();
+  $account->data['payload'][$payload_key] = $response;
+
   // If everything went fine, create new revision of Hipay bank account entity
   // to keep track of the account creation in Hipay Wallet.
   if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     $account->hipay_account_id = $hipay_user_account->hipay_account_id;
-    $account->revision = TRUE;
     $account->log = 'Created bank account in Hipay Wallet.';
-    commerce_hipay_ws_bank_account_save($account);
   }
+  else {
+    $account->log = 'Failed creating bank account in Hipay Wallet.';
+  }
+
+  // Save the new bank account entity revision.
+  $account->revision = TRUE;
+  commerce_hipay_ws_bank_account_save($account);
 
   return $response;
 }
@@ -108,6 +121,12 @@ function commerce_hipay_ws_api_bank_account_validate_notification($feedback) {
 
   // Update the Hipay user account entity with the new identification status.
   $bank_account->hipay_status = ($feedback['status'] == COMMERCE_HIPAY_WS_NOTIFICATION_STATUS_OK) ? COMMERCE_HIPAY_WS_ACCOUNT_BANK_INFO_VALIDATED : COMMERCE_HIPAY_WS_ACCOUNT_BANK_INFO_VALIDATION_IN_PROGRESS;
+
+  // Store the full notification in entity data.
+  $payload_key = 'notification-' . $feedback['operation'] . '-' . REQUEST_TIME;
+  $bank_account->data['payload'][$payload_key] = $feedback;
+
+  // Create new revision and save updated bank account entity.
   $bank_account->revision = TRUE;
   $bank_account->log = 'Updated status from received Hipay Wallet notificaton.';
   commerce_hipay_ws_bank_account_save($bank_account);

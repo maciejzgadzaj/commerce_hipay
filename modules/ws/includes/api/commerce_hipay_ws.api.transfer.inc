@@ -35,11 +35,19 @@ function commerce_hipay_ws_api_transfer_execute($transfer) {
     'merchantUniqueId' => $transfer->transfer_id,
   );
 
+  // Add request parameters array to the user account entity payload.
+  $payload_key = COMMERCE_HIPAY_WS_RESOURCE_SOAP_TRANSFER . '-request-' . time();
+  $transfer->data['payload'][$payload_key] = $parameters;
+
   // Call Hipay API.
   if (!$response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_TRANSFER, $parameters)) {
     watchdog('commerce_hipay_ws', 'Transfer: error when calling Hipay API', array(), WATCHDOG_ERROR);
     return FALSE;
   }
+
+  // Add the response to the user account entity payload.
+  $payload_key = COMMERCE_HIPAY_WS_RESOURCE_SOAP_TRANSFER . '-response-' . time();
+  $transfer->data['payload'][$payload_key] = $response;
 
   // Update the transfer entity with values received in Hipay response,
   // creating new revision.

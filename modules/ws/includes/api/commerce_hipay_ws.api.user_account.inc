@@ -106,6 +106,10 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
     );
   }
 
+  // Add request parameters array to the user account entity payload.
+  $payload_key = COMMERCE_HIPAY_WS_RESOURCE_SOAP_CREATE_FULL_USER_ACCOUNT . '-request-' . time();
+  $account->data['payload'][$payload_key] = $parameters;
+
   $context = array(
     'hipay_user_account' => $account,
   );
@@ -113,16 +117,25 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
   // Perform the call to Hipay Wallet API.
   $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_CREATE_FULL_USER_ACCOUNT, $parameters, $context);
 
+  // Add the response to the user account entity payload.
+  $payload_key = COMMERCE_HIPAY_WS_RESOURCE_SOAP_CREATE_FULL_USER_ACCOUNT . '-response-' . time();
+  $account->data['payload'][$payload_key] = $response;
+
   // If everything went fine, add new Hipay user account data to the entity.
   if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     $account->hipay_account_id = $response['userAccountId'];
     $account->hipay_space_id = $response['userSpaceId'];
     $account->hipay_ws_login = $response['wsLogin'];
     $account->hipay_ws_password = $response['wsPassword'];
-    $account->revision = TRUE;
     $account->log = 'Created user account in Hipay Wallet.';
-    commerce_hipay_ws_user_account_save($account);
   }
+  else {
+    $account->log = 'Failed creating user account in Hipay Wallet.';
+  }
+
+  // Save the new user account entity revision.
+  $account->revision = TRUE;
+  commerce_hipay_ws_user_account_save($account);
 
   return $response;
 }
@@ -156,6 +169,12 @@ function commerce_hipay_ws_api_user_account_validate_notification($feedback) {
 
   // Update the Hipay user account entity with the new identification status.
   $user_account->hipay_identified = ($feedback['status'] == COMMERCE_HIPAY_WS_NOTIFICATION_STATUS_OK) ? COMMERCE_HIPAY_WS_ACCOUNT_IDENTIFIED : COMMERCE_HIPAY_WS_ACCOUNT_NOT_IDENTIFIED;
+
+  // Store the full notification in entity data.
+  $payload_key = 'notification-' . $feedback['operation'] . '-' . REQUEST_TIME;
+  $user_account->data['payload'][$payload_key] = $feedback;
+
+  // Create new revision and save updated user account entity.
   $user_account->revision = TRUE;
   $user_account->log = 'Updated identified status from received Hipay Wallet notificaton.';
   commerce_hipay_ws_user_account_save($user_account);
@@ -163,8 +182,11 @@ function commerce_hipay_ws_api_user_account_validate_notification($feedback) {
   // Also update statuses of all KYC documents to validated.
   if (!empty($user_account->hipay_ws_user_kyc_documents[LANGUAGE_NONE])) {
     foreach ($user_account->hipay_ws_user_kyc_documents[LANGUAGE_NONE] as $delta => &$kyc_document) {
-      $kyc_document['kyc_status'] = COMMERCE_HIPAY_WS_KYC_STATUS_VALIDATED;
-      $kyc_document['kyc_message'] = 'Account identified';
+      // Except these KYC documents that were rejected before.
+      if ($kyc_document['kyc_status'] != COMMERCE_HIPAY_WS_KYC_STATUS_NOK) {
+        $kyc_document['kyc_status'] = COMMERCE_HIPAY_WS_KYC_STATUS_VALIDATED;
+        $kyc_document['kyc_message'] = 'Account identified';
+      }
     }
     commerce_hipay_ws_file_kyc_document_update('commerce_hipay_ws_user_account', $user_account);
   }

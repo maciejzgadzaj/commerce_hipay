@@ -40,6 +40,10 @@ function commerce_hipay_ws_api_upload($account, $kyc_document, $payment_method_i
     $parameters['validity_date'] = date('Y-m-d', $kyc_document['kyc_validity']);
   }
 
+  // Add request parameters array to the user account entity payload.
+  $payload_key = COMMERCE_HIPAY_WS_RESOURCE_REST_UPLOAD . '-request-' . time();
+  $account->data['payload'][$payload_key] = $parameters;
+
   $context = array(
     'hipay_user_account' => $account,
     'kyc_document' => $kyc_document,
@@ -47,6 +51,10 @@ function commerce_hipay_ws_api_upload($account, $kyc_document, $payment_method_i
 
   // Perform the call to Hipay Wallet API.
   $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_REST_UPLOAD, $parameters, $context, FALSE);
+
+  // Add the response to the user account entity payload.
+  $payload_key = COMMERCE_HIPAY_WS_RESOURCE_REST_UPLOAD . '-response-' . time();
+  $account->data['payload'][$payload_key] = $response;
 
   // If everything went fine, add new uploaded date to the KYC document
   // file field.
@@ -105,6 +113,10 @@ function commerce_hipay_ws_api_upload_validate_notification($feedback) {
     return FALSE;
   }
 
+  // Store the full notification in entity data.
+  $payload_key = 'notification-' . $feedback['operation'] . '-' . REQUEST_TIME;
+  $hipay_user_account->data['payload'][$payload_key] = $feedback;
+
   $update_result = FALSE;
   if (!empty($hipay_user_account->hipay_ws_user_kyc_documents[LANGUAGE_NONE])) {
     foreach ($hipay_user_account->hipay_ws_user_kyc_documents[LANGUAGE_NONE] as $delta => &$kyc_document) {
@@ -124,7 +136,6 @@ function commerce_hipay_ws_api_upload_validate_notification($feedback) {
           '@kyc_type' => $kyc_document['kyc_type'],
           '%kyc_status' => $kyc_document['kyc_status'],
         ));
-        commerce_hipay_ws_user_account_save($hipay_user_account);
 
         // Add watchdog entry.
         watchdog('commerce_hipay_ws', 'Notification: document_validation: Updated Hipay user account @account_id KYC document @document_id status to %kyc_status (@kyc_message).', array(
@@ -139,6 +150,10 @@ function commerce_hipay_ws_api_upload_validate_notification($feedback) {
       }
     }
   }
+
+  // Save new Hipay user account entity revision (if it was created)
+  // and notification payload in entity data.
+  commerce_hipay_ws_user_account_save($hipay_user_account);
 
   // If $update_result at this point is still FALSE, it means that we were
   // unable to find a KYC document of the provided kyc_type in this Hipay user

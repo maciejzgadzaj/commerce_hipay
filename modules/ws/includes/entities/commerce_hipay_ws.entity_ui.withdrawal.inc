@@ -26,6 +26,25 @@ function commerce_hipay_ws_withdrawal_menu() {
     'file' => 'includes/entities/commerce_hipay_ws.entity_ui.withdrawal.inc',
   );
 
+  $items['admin/commerce/hipay-wallet/withdrawals/%commerce_hipay_ws_withdrawal/view/entity'] = array(
+    'title' => 'local',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'file' => 'includes/entities/commerce_hipay_ws.entity_ui.withdrawal.inc',
+  );
+
+  $items['admin/commerce/hipay-wallet/withdrawals/%commerce_hipay_ws_withdrawal/view/payload'] = array(
+    'title' => 'payload',
+    'page callback' => 'commerce_hipay_ws_withdrawal_view_payload_info',
+    'page arguments' => array(4),
+    'access arguments' => array('access Hipay Wallet API calls payload'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -2,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'file' => 'includes/entities/commerce_hipay_ws.entity_ui.withdrawal.inc',
+  );
+
   return $items;
 }
 
@@ -75,6 +94,29 @@ function commerce_hipay_ws_withdrawal_access($op, $entity = NULL, $account = NUL
  */
 function commerce_hipay_ws_withdrawal_view($entity, $view_mode = 'full') {
   return entity_view('commerce_hipay_ws_withdrawal', array($entity->withdrawal_id => $entity), $view_mode, NULL, TRUE);
+}
+
+/**
+ * Menu calback: displays payload information.
+ *
+ * @param object $entity
+ *   An entity to render.
+ * @param string $view_mode
+ *   A view mode as used by this entity type, e.g. 'full', 'teaser'...
+
+ * @return string
+ *   The payload information.
+ *
+ * @see commerce_hipay_ws_withdrawal_menu()
+ */
+function commerce_hipay_ws_withdrawal_view_payload_info($entity, $view_mode = 'full') {
+  $markup = '';
+
+  if (!empty($entity->data['payload'])) {
+    $markup = '<pre>' . check_plain(print_r($entity->data['payload'], TRUE)) . '</pre>';
+  }
+
+  return $markup;
 }
 
 /**

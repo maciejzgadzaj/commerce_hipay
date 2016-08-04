@@ -61,6 +61,11 @@ function commerce_hipay_ws_permission() {
       'description' => t('Allows users to administer Hipay Wallet configuration.'),
       'restrict access' => TRUE,
     ),
+    'access Hipay Wallet API calls payload' => array(
+      'title' => t('Access Hipay Wallet API calls payload'),
+      'description' => t('Allows users to administer Hipay Wallet configuration.'),
+      'restrict access' => TRUE,
+    ),
   );
 
   $permissions += commerce_entity_access_permissions('commerce_hipay_ws_user_account');

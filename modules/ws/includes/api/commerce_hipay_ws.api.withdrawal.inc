@@ -30,11 +30,19 @@ function commerce_hipay_ws_api_withdrawal_execute($withdrawal) {
     'label' => substr($withdrawal->label, 0, 255),
   );
 
+  // Add request parameters array to the user account entity payload.
+  $payload_key = COMMERCE_HIPAY_WS_RESOURCE_SOAP_WITHDRAWAL . '-request-' . time();
+  $withdrawal->data['payload'][$payload_key] = $parameters;
+
   // Call Hipay API.
   if (!$response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_WITHDRAWAL, $parameters)) {
     watchdog('commerce_hipay_ws', 'Withdrawal: error when calling Hipay API', array(), WATCHDOG_ERROR);
     return FALSE;
   }
+
+  // Add the response to the user account entity payload.
+  $payload_key = COMMERCE_HIPAY_WS_RESOURCE_SOAP_WITHDRAWAL . '-response-' . time();
+  $withdrawal->data['payload'][$payload_key] = $response;
 
   // Update the withdrawal entity with values received in Hipay response,
   // creating new revision.
@@ -181,6 +189,10 @@ function commerce_hipay_ws_api_withdrawal_validate_notification($feedback) {
     ), WATCHDOG_ERROR);
     return FALSE;
   }
+
+  // Store the full notification in entity data.
+  $payload_key = 'notification-' . $feedback['operation'] . '-' . REQUEST_TIME;
+  $withdrawal->data['payload'][$payload_key] = $feedback;
 
   // Update the Hipay withdrawal entity with the new status.
   $withdrawal->status = ($feedback['status'] == COMMERCE_HIPAY_WS_NOTIFICATION_STATUS_OK) ? COMMERCE_HIPAY_WS_WITHDRAWAL_STATUS_VALIDATED : COMMERCE_HIPAY_WS_WITHDRAWAL_STATUS_FAILED;
