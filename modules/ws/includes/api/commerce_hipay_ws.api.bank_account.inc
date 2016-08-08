@@ -166,7 +166,7 @@ function commerce_hipay_ws_api_bank_account_get_info_fields($country, $reset = F
 }
 
 /**
- * Get the bank information for an account.
+ * Get the bank status information for an account.
  *
  * @param array $parameters
  *   An array of parameters to pass to the API call.
@@ -193,6 +193,24 @@ function commerce_hipay_ws_api_bank_account_get_info_status($parameters = array(
       commerce_hipay_ws_bank_account_save($hipay_bank_account);
     }
   }
+
+  return $response;
+}
+
+/**
+ * Fetches the bank information for an account from Hipay Wallet.
+ *
+ * @param array $parameters
+ *   An array of parameters to pass to the API call.
+ * @param array $context
+ *   An array of request context.
+ *
+ * @return array
+ *   An array of Hipay Wallet API response parameters.
+ */
+function commerce_hipay_ws_api_bank_account_infos_check($parameters = array(), $context = array()) {
+  // Fetch the bank account info status from Hipay Wallet API.
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_CHECK, $parameters, $context);
 
   return $response;
 }
