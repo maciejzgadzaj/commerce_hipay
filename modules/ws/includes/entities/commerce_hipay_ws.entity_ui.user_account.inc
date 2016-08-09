@@ -987,6 +987,7 @@ function commerce_hipay_ws_user_account_views_default_views() {
   $handler->display->display_options['filters']['type']['field'] = 'type';
   $handler->display->display_options['filters']['type']['value'] = array(
     'hipay_user_account' => 'hipay_user_account',
+    'hipay_system_account' => 'hipay_system_account',
   );
 
   /* Display: Page: Admin: Accounts */
@@ -1096,7 +1097,7 @@ function commerce_hipay_ws_user_account_views_default_views() {
   $handler->display->display_options['tab_options']['weight'] = '0';
   $translatables['hipay_ws_user_accounts'] = array(
     t('Master'),
-    t('Hipay Wallet user accounts'),
+    t('User accounts'),
     t('more'),
     t('Apply'),
     t('Reset'),

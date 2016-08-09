@@ -245,6 +245,13 @@ function commerce_hipay_ws_user_account_entity_info() {
             'access arguments' => array('administer commerce_hipay_ws_user_account entities'),
           ),
         ),
+        // Hipay system accounts are used to store information only for the main
+        // technical account and fee accounts - all of which are created by
+        // Hipay Wallet staff and should not be managed from Drupal - therefore
+        // we do not provide any admin features here.
+        'hipay_system_account' => array(
+          'label' => t('System account'),
+        ),
         'hipay_user_subaccount' => array(
           'label' => t('User sub-account'),
           'admin' => array(
@@ -402,15 +409,24 @@ function commerce_hipay_ws_user_account_title($entity) {
  * @see commerce_hipay_ws_user_account_entity_info()
  */
 function commerce_hipay_ws_user_account_label($entity, $entity_type) {
-  $wrapper = entity_metadata_wrapper('commerce_hipay_ws_user_account', $entity);
-  $additional_info = '';
+  $label = $additional_info = '';
 
-  if ($entity->type == 'hipay_user_subaccount') {
-    $additional_info = ' (' . $wrapper->hipay_ws_user_currency->value() . ')';
-    $wrapper = $wrapper->hipay_ws_user_user_account;
+  if (isset($entity->hipay_ws_user_email)) {
+    $wrapper = entity_metadata_wrapper('commerce_hipay_ws_user_account', $entity);
+    $label = $wrapper->hipay_ws_user_email->value();
   }
 
-  return $wrapper->hipay_ws_user_email->value() . $additional_info;
+  if ($entity->type == 'hipay_user_subaccount') {
+    $wrapper = $wrapper->hipay_ws_user_user_account;
+    $label = $wrapper->hipay_ws_user_email->value();
+    $additional_info = ' (' . $wrapper->hipay_ws_user_currency->value() . ')';
+  }
+
+  if ($entity->type == 'hipay_system_account') {
+    $label = t('System account');
+  }
+
+  return $label . $additional_info;
 }
 
 /**
@@ -1354,6 +1370,34 @@ function commerce_hipay_ws_user_account_field_instances() {
 
   $field_instances['hipay_ws_user_currency'] = array(
     'bundle' => 'hipay_user_account',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => '',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'list',
+        'settings' => array(),
+        'type' => 'list_default',
+        'weight' => 5,
+      ),
+    ),
+    'entity_type' => 'commerce_hipay_ws_user_account',
+    'field_name' => 'hipay_ws_user_currency',
+    'label' => 'Principal currency',
+    'required' => 1,
+    'settings' => array(),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'options',
+      'settings' => array(),
+      'type' => 'options_select',
+      'weight' => 5,
+    ),
+  );
+
+  $field_instances['hipay_ws_system_currency'] = array(
+    'bundle' => 'hipay_system_account',
     'default_value' => NULL,
     'deleted' => 0,
     'description' => '',
