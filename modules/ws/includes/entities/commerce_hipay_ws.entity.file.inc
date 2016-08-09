@@ -269,7 +269,9 @@ function commerce_hipay_ws_field_attach_update($entity_type, $entity) {
  */
 function commerce_hipay_ws_file_kyc_document_update($entity_type, $entity) {
   $wrapper = entity_metadata_wrapper($entity_type, $entity);
-  $kyc_documents = $wrapper->hipay_ws_user_kyc_documents->value();
+  if (isset($entity->hipay_ws_user_kyc_documents)) {
+    $kyc_documents = $wrapper->hipay_ws_user_kyc_documents->value();
+  }
 
   if (!empty($kyc_documents)) {
     foreach ($kyc_documents as $delta => $kyc_document) {

@@ -328,7 +328,9 @@ function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'f
 
   // KYC documents.
   $wrapper = entity_metadata_wrapper('commerce_hipay_ws_user_account', $entity);
-  $kyc_documents = $wrapper->hipay_ws_user_kyc_documents->value();
+  if (isset($entity->hipay_ws_user_kyc_documents)) {
+    $kyc_documents = $wrapper->hipay_ws_user_kyc_documents->value();
+  }
 
   if (!empty($kyc_documents)) {
     $return['kyc_documents_title'] = array(
@@ -430,7 +432,9 @@ function commerce_hipay_ws_user_account_view_hipay_kyc_upload_form($form, &$form
  */
 function commerce_hipay_ws_user_account_view_hipay_kyc_upload_form_submit($form, $form_state) {
   $user_account = $form_state['commerce_hipay_ws_user_account'];
-  commerce_hipay_ws_user_account_upload_kyc_documents($user_account);
+  if (!empty($user_account->hipay_ws_user_kyc_documents)) {
+    commerce_hipay_ws_user_account_upload_kyc_documents($user_account);
+  }
 }
 
 /**
