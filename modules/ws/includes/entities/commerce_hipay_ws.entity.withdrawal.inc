@@ -275,7 +275,6 @@ function commerce_hipay_ws_withdrawal_entity_info() {
       'revision table' => 'commerce_hipay_ws_withdrawal_revision',
       'load hook' => 'commerce_hipay_ws_withdrawal_load',
       'uri callback' => 'commerce_hipay_ws_withdrawal_uri',
-      'access callback' => 'commerce_entity_access',
       'label callback' => 'commerce_hipay_ws_withdrawal_label',
       'fieldable' => TRUE,
       'entity keys' => array(

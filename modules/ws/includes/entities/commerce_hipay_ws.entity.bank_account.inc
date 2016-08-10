@@ -182,7 +182,6 @@ function commerce_hipay_ws_bank_account_entity_info() {
       'revision table' => 'commerce_hipay_ws_bank_account_revision',
       'load hook' => 'commerce_hipay_ws_user_account_load',
       'uri callback' => 'commerce_hipay_ws_bank_account_uri',
-      'access callback' => 'commerce_entity_access',
       'label callback' => 'commerce_hipay_ws_bank_account_label',
       'fieldable' => TRUE,
       'entity keys' => array(
@@ -416,8 +415,8 @@ function commerce_hipay_ws_bank_account_type_options_list() {
   $hipay_entity_types = commerce_hipay_ws_entity_info();
   $options_list = array();
 
-  foreach ($hipay_entity_types['commerce_hipay_ws_bank_account']['bundles'] as $bundl_name => $bundle) {
-    $options_list[$bundl_name] = $bundle['label'];
+  foreach ($hipay_entity_types['commerce_hipay_ws_bank_account']['bundles'] as $bundle_name => $bundle) {
+    $options_list[$bundle_name] = $bundle['label'];
   }
 
   return $options_list;

@@ -287,7 +287,6 @@ function commerce_hipay_ws_transfer_entity_info() {
       'revision table' => 'commerce_hipay_ws_transfer_revision',
       'load hook' => 'commerce_hipay_ws_transfer_load',
       'uri callback' => 'commerce_hipay_ws_transfer_uri',
-      'access callback' => 'commerce_entity_access',
       'label callback' => 'commerce_hipay_ws_transfer_label',
       'fieldable' => TRUE,
       'entity keys' => array(
