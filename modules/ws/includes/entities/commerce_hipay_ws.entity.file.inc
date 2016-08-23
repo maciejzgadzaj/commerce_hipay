@@ -280,11 +280,11 @@ function commerce_hipay_ws_file_kyc_document_update($entity_type, $entity) {
       // Remove empty values.
       $record = array_filter($record);
       // Make sure kyc_validity is a timestamp (if set).
-      if (!empty($record['kyc_validity']) && ($validity = strtotime($record['kyc_validity']))) {
+      if (!empty($record['kyc_validity']) && !commerce_hipay_ws_valid_timestamp($record['kyc_validity']) && ($validity = strtotime($record['kyc_validity']))) {
         $record['kyc_validity'] = $validity;
       }
       // Make sure kyc_uploaded is a timestamp (if set).
-      if (!empty($record['kyc_uploaded']) && ($uploaded = strtotime($record['kyc_uploaded']))) {
+      if (!empty($record['kyc_uploaded']) && !commerce_hipay_ws_valid_timestamp($record['kyc_uploaded']) && ($uploaded = strtotime($record['kyc_uploaded']))) {
         $record['kyc_uploaded'] = $uploaded;
       }
 
@@ -306,6 +306,23 @@ function commerce_hipay_ws_file_kyc_document_update($entity_type, $entity) {
     // Clear field cache to force reload of the new KYC document values.
     cache_clear_all("field:$entity_type:" . $entity->user_account_id, 'cache_field');
   }
+}
+
+/**
+ * Checks whether provided string is a valid timestamp.
+ *
+ * @param string $timestamp
+ *   A string to check for being a valid timestamp.
+ *
+ * @return bool
+ *   A boolean indicating whether provided string is a valid timestamp.
+ *
+ * @see commerce_hipay_ws_file_kyc_document_update()
+ */
+function commerce_hipay_ws_valid_timestamp($timestamp) {
+  return ((string) (int) $timestamp === $timestamp)
+    && ($timestamp <= PHP_INT_MAX)
+    && ($timestamp >= ~PHP_INT_MAX);
 }
 
 /**
