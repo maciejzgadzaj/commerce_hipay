@@ -600,6 +600,7 @@ function commerce_hipay_ws_bank_account_views_data_alter(&$data) {
       'handler' => 'commerce_hipay_ws_bank_account_handler_operations_field',
     ),
   );
+  $data['commerce_hipay_ws_bank_account']['hipay_account_id']['field']['handler'] = 'commerce_hipay_ws_handler_link_account_id';
 
   // Bank account revisions.
   $data['commerce_hipay_ws_bank_account_revision']['revision_id'] = array(
@@ -760,6 +761,7 @@ function commerce_hipay_ws_bank_account_views_default_views() {
   $handler->display->display_options['fields']['hipay_account_id']['table'] = 'commerce_hipay_ws_user_account';
   $handler->display->display_options['fields']['hipay_account_id']['field'] = 'hipay_account_id';
   $handler->display->display_options['fields']['hipay_account_id']['relationship'] = 'hipay_ws_bank_user_account_target_id';
+  $handler->display->display_options['fields']['hipay_account_id']['link_to_entity'] = TRUE;
   /* Field: Hipay Wallet user account: Rendered Hipay Wallet user account */
   $handler->display->display_options['fields']['rendered_entity']['id'] = 'rendered_entity';
   $handler->display->display_options['fields']['rendered_entity']['table'] = 'views_entity_commerce_hipay_ws_user_account';
@@ -843,7 +845,7 @@ function commerce_hipay_ws_bank_account_views_default_views() {
   $handler->display->display_options['menu']['context_only_inline'] = 0;
   $translatables['hipay_ws_bank_accounts'] = array(
     t('Master'),
-    t('Hipay Wallet bank accounts'),
+    t('Bank accounts'),
     t('more'),
     t('Apply'),
     t('Reset'),

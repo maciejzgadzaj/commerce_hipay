@@ -141,6 +141,9 @@ function commerce_hipay_ws_withdrawal_views_data_alter(&$data) {
       'handler' => 'commerce_hipay_ws_withdrawal_handler_operations_field',
     ),
   );
+  $data['commerce_hipay_ws_withdrawal']['withdrawal_id']['field']['handler'] = 'commerce_hipay_ws_handler_link_withdrawal_id';
+  $data['commerce_hipay_ws_withdrawal']['user_account_id']['field']['handler'] = 'commerce_hipay_ws_handler_link_account_id';
+  $data['field_data_hipay_ws_withdrawal_transfer']['hipay_ws_withdrawal_transfer']['field']['handler'] = 'commerce_hipay_ws_withdrawal_handler_link_transfer_id';
 
   // Withdrawal revisions.
   $data['commerce_hipay_ws_withdrawal_revision']['amount']['field']['handler'] = 'commerce_payment_handler_field_amount';
@@ -309,12 +312,13 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
   $handler->display->display_options['fields']['withdrawal_id']['id'] = 'withdrawal_id';
   $handler->display->display_options['fields']['withdrawal_id']['table'] = 'commerce_hipay_ws_withdrawal';
   $handler->display->display_options['fields']['withdrawal_id']['field'] = 'withdrawal_id';
+  $handler->display->display_options['fields']['withdrawal_id']['link_to_entity'] = TRUE;
   /* Field: Hipay Wallet withdrawal: Hipay user account ID */
-  $handler->display->display_options['fields']['sender_account_id']['id'] = 'user_account_id';
+  $handler->display->display_options['fields']['sender_account_id']['id'] = 'sender_account_id';
   $handler->display->display_options['fields']['sender_account_id']['table'] = 'commerce_hipay_ws_withdrawal';
   $handler->display->display_options['fields']['sender_account_id']['field'] = 'user_account_id';
   $handler->display->display_options['fields']['sender_account_id']['label'] = 'Account ID';
-  $handler->display->display_options['fields']['sender_account_id']['separator'] = '';
+  $handler->display->display_options['fields']['sender_account_id']['link_to_entity'] = TRUE;
   /* Field: Hipay Wallet withdrawal: Transfer */
   $handler->display->display_options['fields']['hipay_ws_withdrawal_transfer']['id'] = 'hipay_ws_withdrawal_transfer';
   $handler->display->display_options['fields']['hipay_ws_withdrawal_transfer']['table'] = 'field_data_hipay_ws_withdrawal_transfer';
@@ -325,6 +329,7 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
     'link' => 1,
   );
   $handler->display->display_options['fields']['hipay_ws_withdrawal_transfer']['delta_offset'] = '0';
+  $handler->display->display_options['fields']['hipay_ws_withdrawal_transfer']['link_to_entity'] = TRUE;
   /* Field: Hipay Wallet withdrawal: Amount */
   $handler->display->display_options['fields']['amount']['id'] = 'amount';
   $handler->display->display_options['fields']['amount']['table'] = 'commerce_hipay_ws_withdrawal';
@@ -379,8 +384,6 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
     t('next ›'),
     t('last »'),
     t('Withdrawal ID'),
-    t('.'),
-    t(','),
     t('Account ID'),
     t('Transfer ID'),
     t('Amount'),

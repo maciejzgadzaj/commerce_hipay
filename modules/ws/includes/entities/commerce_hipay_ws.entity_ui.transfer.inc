@@ -141,6 +141,10 @@ function commerce_hipay_ws_transfer_views_data_alter(&$data) {
       'handler' => 'commerce_hipay_ws_transfer_handler_operations_field',
     ),
   );
+  $data['commerce_hipay_ws_transfer']['transfer_id']['field']['handler'] = 'commerce_hipay_ws_handler_link_transfer_id';
+  $data['commerce_hipay_ws_transfer']['sender_account_id']['field']['handler'] = 'commerce_hipay_ws_handler_link_account_id';
+  $data['commerce_hipay_ws_transfer']['recipient_account_id']['field']['handler'] = 'commerce_hipay_ws_handler_link_account_id';
+  $data['field_data_hipay_ws_transfer_order']['hipay_ws_transfer_order']['field']['handler'] = 'commerce_hipay_ws_handler_link_order_id';
 
   // Transfer revisions.
   $data['commerce_hipay_ws_transfer_revision']['amount']['field']['handler'] = 'commerce_payment_handler_field_amount';
@@ -200,6 +204,7 @@ function commerce_hipay_ws_transfer_views_data_alter(&$data) {
       'handler' => 'views_handler_filter_date',
     ),
   );
+  $data['commerce_hipay_ws_transfer_revision']['transfer_id']['field']['handler'] = 'commerce_hipay_ws_handler_link_transfer_id';
 }
 
 /**
@@ -323,28 +328,25 @@ function commerce_hipay_ws_transfer_views_default_views() {
   $handler->display->display_options['fields']['transfer_id']['id'] = 'transfer_id';
   $handler->display->display_options['fields']['transfer_id']['table'] = 'commerce_hipay_ws_transfer';
   $handler->display->display_options['fields']['transfer_id']['field'] = 'transfer_id';
+  $handler->display->display_options['fields']['transfer_id']['link_to_entity'] = TRUE;
   /* Field: Hipay Wallet transfer: Sender Hipay user account ID */
   $handler->display->display_options['fields']['sender_account_id']['id'] = 'sender_account_id';
   $handler->display->display_options['fields']['sender_account_id']['table'] = 'commerce_hipay_ws_transfer';
   $handler->display->display_options['fields']['sender_account_id']['field'] = 'sender_account_id';
   $handler->display->display_options['fields']['sender_account_id']['label'] = 'Sender account ID';
-  $handler->display->display_options['fields']['sender_account_id']['separator'] = '';
+  $handler->display->display_options['fields']['sender_account_id']['link_to_entity'] = TRUE;
   /* Field: Hipay Wallet transfer: Recipient Hipay user account ID */
   $handler->display->display_options['fields']['recipient_account_id']['id'] = 'recipient_account_id';
   $handler->display->display_options['fields']['recipient_account_id']['table'] = 'commerce_hipay_ws_transfer';
   $handler->display->display_options['fields']['recipient_account_id']['field'] = 'recipient_account_id';
   $handler->display->display_options['fields']['recipient_account_id']['label'] = 'Recipient account ID';
-  $handler->display->display_options['fields']['recipient_account_id']['separator'] = '';
+  $handler->display->display_options['fields']['recipient_account_id']['link_to_entity'] = TRUE;
   /* Field: Hipay Wallet transfer: Order */
   $handler->display->display_options['fields']['hipay_ws_transfer_order']['id'] = 'hipay_ws_transfer_order';
   $handler->display->display_options['fields']['hipay_ws_transfer_order']['table'] = 'field_data_hipay_ws_transfer_order';
   $handler->display->display_options['fields']['hipay_ws_transfer_order']['field'] = 'hipay_ws_transfer_order';
   $handler->display->display_options['fields']['hipay_ws_transfer_order']['label'] = 'Order ID';
-  $handler->display->display_options['fields']['hipay_ws_transfer_order']['type'] = 'entityreference_entity_id';
-  $handler->display->display_options['fields']['hipay_ws_transfer_order']['settings'] = array(
-    'link' => 0,
-  );
-  $handler->display->display_options['fields']['hipay_ws_transfer_order']['delta_offset'] = '0';
+  $handler->display->display_options['fields']['hipay_ws_transfer_order']['link_to_entity'] = TRUE;
   /* Field: Hipay Wallet transfer: Line item */
   $handler->display->display_options['fields']['hipay_ws_transfer_line_item']['id'] = 'hipay_ws_transfer_line_item';
   $handler->display->display_options['fields']['hipay_ws_transfer_line_item']['table'] = 'field_data_hipay_ws_transfer_line_item';
@@ -409,8 +411,6 @@ function commerce_hipay_ws_transfer_views_default_views() {
     t('next ›'),
     t('last »'),
     t('Transfer ID'),
-    t('.'),
-    t(','),
     t('Sender account ID'),
     t('Recipient account ID'),
     t('Order ID'),
