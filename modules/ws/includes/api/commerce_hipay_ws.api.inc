@@ -15,7 +15,7 @@
  *   A country code for provided country label.
  */
 function commerce_hipay_ws_get_code_from_country($country_label) {
-  $countries = array_flip(commerce_hipay_ws_get_countries_options());
+  $countries = array_flip(commerce_hipay_ws_get_countries('fr_FR'));
   return (isset($countries[$country_label])) ? $countries[$country_label] : FALSE;
 }
 
@@ -226,6 +226,27 @@ function commerce_hipay_ws_api_get_website_business_lines($reset = FALSE) {
 function commerce_hipay_ws_api_get_website_topics($business_line_id, $reset = FALSE) {
   $parameters = array('businessLineId' => $business_line_id);
   return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_WEBSITE_TOPICS, $reset, $parameters);
+}
+
+/**
+ * Returns an array of Hipay Wallet supported countries in a selected language.
+ *
+ * @return array
+ *   An array of countries supported by Hipay Wallet formatted in a selected
+ *   language.
+ */
+function commerce_hipay_ws_get_countries($locale = 'en_GB') {
+  $return = array();
+
+  $parameters = (!empty($locale)) ? array('locale' => $locale) : array();
+  $response = commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_COUNTRIES, TRUE, $parameters);
+  if (!empty($response['countries']['item'])) {
+    foreach ($response['countries']['item'] as $item) {
+      $return[$item['code']] = t($item['label']);
+    }
+  }
+
+  return $return;
 }
 
 /**
