@@ -407,13 +407,15 @@ function commerce_hipay_ws_settings_form($settings = array()) {
  *
  * @see commerce_hipay_ws_settings_form()
  */
-function commerce_hipay_ws_settings_form_bank($accound_id, $settings = array()) {
+function commerce_hipay_ws_settings_form_bank($account_id, $settings = array()) {
   $form = array();
 
   // Check current bank information status only if API username and password
   // have already been provided - otherwise we won't be able to make API call.
-  $parameters = array('wsSubAccountId' => $accound_id);
-  $response = commerce_hipay_ws_api_bank_account_get_info_status($parameters);
+  if (!empty($account_id)) {
+    $parameters = array('wsSubAccountId' => $account_id);
+    $response = commerce_hipay_ws_api_bank_account_get_info_status($parameters);
+  }
 
   if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     // Display current status of bank account information.
@@ -440,7 +442,7 @@ function commerce_hipay_ws_settings_form_bank($accound_id, $settings = array()) 
       // fetch all the information and display them in the form, overriding
       // whatever settings has been saved locally before.
       if ($response['status'] != COMMERCE_HIPAY_WS_ACCOUNT_BANK_INFO_VALIDATED) {
-        $parameters = array('wsSubAccountId' => $accound_id);
+        $parameters = array('wsSubAccountId' => $account_id);
         $response = commerce_hipay_ws_api_bank_account_infos_check($parameters);
 
         if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
@@ -608,10 +610,12 @@ function commerce_hipay_ws_settings_form_validate_fees_user_accounts(&$form, &$f
   $submitted_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
   if (!empty($submitted_settings['fees'])) {
     foreach ($submitted_settings['fees'] as $currency_code => $fees_account) {
-      // This will be used in case we need to set the form error on an element.
-      $form_element_parents = 'parameter][payment_method][settings][payment_method][settings][fees][' . $currency_code . '][';
-      // Validate the user account details.
-      commerce_hipay_ws_settings_form_validate_user_account($fees_account['account_id'], $form_element_parents);
+      if (!empty($fees_account['account_id'])) {
+        // This will be used in case we need to set the form error on an element.
+        $form_element_parents = 'parameter][payment_method][settings][payment_method][settings][fees][' . $currency_code . '][';
+        // Validate the user account details.
+        commerce_hipay_ws_settings_form_validate_user_account($fees_account['account_id'], $form_element_parents);
+      }
     }
   }
 }
@@ -669,10 +673,12 @@ function commerce_hipay_ws_settings_form_validate_fees_bank_accounts(&$form, &$f
   $submitted_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
   if (!empty($submitted_settings['fees'])) {
     foreach ($submitted_settings['fees'] as $currency_code => $fees_account) {
-      // This will be used in case we need to set the form error on an element.
-      $form_element_parents = 'parameter][payment_method][settings][payment_method][settings][fees][' . $currency_code . '][bank_account][';
-      // Validate the bank account details.
-      commerce_hipay_ws_settings_form_validate_bank_account($fees_account['bank_account'], $form_element_parents);
+      if (!empty($fees_account['account_id'])) {
+        // This will be used in case we need to set the form error on an element.
+        $form_element_parents = 'parameter][payment_method][settings][payment_method][settings][fees][' . $currency_code . '][bank_account][';
+        // Validate the bank account details.
+        commerce_hipay_ws_settings_form_validate_bank_account($fees_account['bank_account'], $form_element_parents);
+      }
     }
   }
 }
@@ -746,7 +752,9 @@ function commerce_hipay_ws_settings_form_submit_create_fees_user_accounts(&$form
   $submitted_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
   if (!empty($submitted_settings['fees'])) {
     foreach ($submitted_settings['fees'] as $currency_code => $fees_account) {
-      commerce_hipay_ws_settings_form_submit_create_user_account($fees_account['account_id'], $currency_code, $submitted_settings);
+      if (!empty($fees_account['account_id'])) {
+        commerce_hipay_ws_settings_form_submit_create_user_account($fees_account['account_id'], $currency_code, $submitted_settings);
+      }
     }
   }
 }
@@ -812,7 +820,9 @@ function commerce_hipay_ws_settings_form_submit_create_fees_bank_accounts(&$form
   $submitted_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
   if (!empty($submitted_settings['fees'])) {
     foreach ($submitted_settings['fees'] as $currency_code => $fees_account) {
-      commerce_hipay_ws_settings_form_submit_create_bank_account($fees_account['account_id'], $fees_account['bank_account'], $submitted_settings);
+      if (!empty($fees_account['account_id'])) {
+        commerce_hipay_ws_settings_form_submit_create_bank_account($fees_account['account_id'], $fees_account['bank_account'], $submitted_settings);
+      }
     }
   }
 }
