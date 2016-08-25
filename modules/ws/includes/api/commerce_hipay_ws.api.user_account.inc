@@ -241,6 +241,26 @@ function commerce_hipay_ws_api_user_account_get_infos($user_account_id, $context
 }
 
 /**
+ * Returns balance of the Hipay user account.
+ *
+ * @param string $user_account_id
+ *   An ID of the Hipay user account to get the balance for.
+ * @param array $context
+ *   An array of request context.
+ *
+ * @return array|null
+ *   An array of Hipay user account balance information.
+ */
+function commerce_hipay_ws_api_user_account_get_balance($user_account_id, $context = array()) {
+  $parameters = array('wsSubAccountId' => $user_account_id);
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BALANCE, $parameters);
+
+  if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS && !empty($response['balances']['item'])) {
+    return $response['balances']['item'];
+  }
+}
+
+/**
  * Check if an account is identified.
  *
  * @param string $user_account_id
