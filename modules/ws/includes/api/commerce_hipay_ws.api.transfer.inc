@@ -9,7 +9,7 @@
  * @return array|false
  *   An array of Hipay Wallet API response values, or FALSE in case of failure.
  */
-function commerce_hipay_ws_api_transfer_execute($transfer) {
+function commerce_hipay_ws_api_transfer_execute(&$transfer) {
   // Validate all transfer details.
   if (!commerce_hipay_ws_api_transfer_validate($transfer)) {
     $transfer->revision = TRUE;
