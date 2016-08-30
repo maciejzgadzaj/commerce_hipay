@@ -124,7 +124,7 @@ function commerce_hipay_ws_api_upload_validate_notification($feedback) {
 
         // Update custom KYC document file field properties.
         $kyc_document['kyc_status'] = $feedback['status'];
-        $kyc_document['kyc_message'] = $feedback['notification_message'];
+        $kyc_document['kyc_message'] = !empty($feedback['notification_message']) ? $feedback['notification_message'] : '';
 
         // Save new custom KYC document file field properties.
         commerce_hipay_ws_file_kyc_document_update('commerce_hipay_ws_user_account', $hipay_user_account);
@@ -142,7 +142,7 @@ function commerce_hipay_ws_api_upload_validate_notification($feedback) {
           '@account_id' => $hipay_user_account->user_account_id,
           '@document_id' => $kyc_document['fid'],
           '%kyc_status' => $feedback['status'],
-          '@kyc_message' => $feedback['notification_message'],
+          '@kyc_message' => !empty($feedback['notification_message']) ? $feedback['notification_message'] : '',
         ), WATCHDOG_NOTICE);
 
         // Mark update as successful.
