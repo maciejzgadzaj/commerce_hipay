@@ -813,7 +813,7 @@ function commerce_hipay_ws_settings_form_submit_create_user_account($account_id,
 function commerce_hipay_ws_settings_form_submit_create_vendor_bank_account(&$form, &$form_state) {
   $submitted_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
   $bank_account = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings']['bank_account'];
-  commerce_hipay_ws_settings_form_submit_create_bank_account($submitted_settings['account_id'], $bank_account, $submitted_settings);
+  commerce_hipay_ws_settings_form_submit_create_bank_account($submitted_settings['account_id'], $bank_account);
 }
 
 function commerce_hipay_ws_settings_form_submit_create_fees_bank_accounts(&$form, &$form_state) {
@@ -821,13 +821,13 @@ function commerce_hipay_ws_settings_form_submit_create_fees_bank_accounts(&$form
   if (!empty($submitted_settings['fees'])) {
     foreach ($submitted_settings['fees'] as $currency_code => $fees_account) {
       if (!empty($fees_account['account_id'])) {
-        commerce_hipay_ws_settings_form_submit_create_bank_account($fees_account['account_id'], $fees_account['bank_account'], $submitted_settings);
+        commerce_hipay_ws_settings_form_submit_create_bank_account($fees_account['account_id'], $fees_account['bank_account']);
       }
     }
   }
 }
 
-function commerce_hipay_ws_settings_form_submit_create_bank_account($account_id, $bank_account, $settings) {
+function commerce_hipay_ws_settings_form_submit_create_bank_account($account_id, $bank_account) {
   global $user;
 
   // If bank country was not selected, do not try to create the bank account.
@@ -840,7 +840,7 @@ function commerce_hipay_ws_settings_form_submit_create_bank_account($account_id,
   if (!$hipay_bank_account = commerce_hipay_ws_bank_account_load_by_hipay_account_id($account_id)) {
     $hipay_bank_account = commerce_hipay_ws_bank_account_new();
     $hipay_bank_account->uid = $user->uid;
-    $hipay_bank_account->hipay_account_id = $settings['account_id'];
+    $hipay_bank_account->hipay_account_id = $account_id;
     $hipay_bank_account->hipay_status = COMMERCE_HIPAY_WS_ACCOUNT_NO_BANK_INFO;
   }
 
