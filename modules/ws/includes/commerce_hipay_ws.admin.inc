@@ -870,11 +870,11 @@ function commerce_hipay_ws_settings_form_submit_create_bank_account($account_id,
   // entity status value.
   $parameters = array('wsSubAccountId' => $account_id);
   $context = array('commerce_hipay_ws_bank_account' => $hipay_bank_account);
-  commerce_hipay_ws_api_bank_account_get_info_status($parameters, $context);
+  $bank_account_info = commerce_hipay_ws_api_bank_account_get_info_status($parameters, $context);
 
   // If bank account has been already created in Hipay Wallet,
   // we do not want to create it again.
-  if (isset($bank_account['status']) && $bank_account['status'] != COMMERCE_HIPAY_WS_ACCOUNT_NO_BANK_INFO) {
+  if (isset($bank_account_info['status']) && $bank_account_info['status'] != COMMERCE_HIPAY_WS_ACCOUNT_NO_BANK_INFO) {
     return;
   }
 
