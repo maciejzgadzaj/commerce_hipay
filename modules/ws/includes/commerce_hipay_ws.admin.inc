@@ -93,13 +93,6 @@ function commerce_hipay_ws_settings_form($settings = array()) {
 
   $form = array();
 
-  // Pass the original settings to the submit callback, so that we are know
-  // if it is the very first time the payment method is being configured or not.
-  $form['settings'] = array(
-    '#type' => 'value',
-    '#value' => $settings,
-  );
-
   $form['endpoint'] = array(
     '#type' => 'radios',
     '#title' => t('Environment'),
@@ -724,8 +717,7 @@ function commerce_hipay_ws_settings_form_submit(&$form, &$form_state) {
   // If this is the first time that the payment method settings form was
   // submitted, display the message telling the user that there are more
   // settings to be provided.
-  $original_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings']['settings'];
-  if (empty($original_settings['api_password'])) {
+  if (empty($form['parameter']['payment_method']['settings']['payment_method']['settings']['api_password'])) {
     drupal_set_message(t("But wait! There's more!"), 'warning');
     $form_state['redirect'] = current_path();
   }
