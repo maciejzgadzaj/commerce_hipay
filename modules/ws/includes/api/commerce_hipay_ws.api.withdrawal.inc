@@ -18,14 +18,8 @@ function commerce_hipay_ws_api_withdrawal_execute($withdrawal) {
     return FALSE;
   }
 
-  // Load necessary data.
-  $hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($withdrawal->user_account_id);
-  $payment_method_instance = commerce_hipay_ws_payment_method_instance();
-
   // Prepare Hipay API request.
   $parameters = array(
-    'wsLogin' => $hipay_user_account->hipay_ws_login,
-    'wsPassword' => $hipay_user_account->hipay_ws_password,
     'amount' => number_format(commerce_currency_amount_to_decimal($withdrawal->amount, $withdrawal->currency_code), 2),
     'label' => substr($withdrawal->label, 0, 255),
   );

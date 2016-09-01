@@ -19,14 +19,11 @@ function commerce_hipay_ws_api_transfer_execute(&$transfer) {
   }
 
   // Load necessary data.
-  $sender_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($transfer->sender_account_id);
   $recipient_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($transfer->recipient_account_id);
   $payment_method_instance = commerce_hipay_ws_payment_method_instance();
 
   // Prepare Hipay API request.
   $parameters = array(
-    'wsLogin' => $sender_account->hipay_ws_login,
-    'wsPassword' => $sender_account->hipay_ws_password,
     'amount' => number_format(commerce_currency_amount_to_decimal($transfer->amount, $transfer->currency_code), 2),
     'recipientUserId' => $recipient_account->hipay_account_id,
     'publicLabel' => substr($transfer->public_label, 0, 255),
@@ -122,15 +119,6 @@ function commerce_hipay_ws_api_transfer_validate($transfer) {
   if (!$recipient_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($transfer->recipient_account_id)) {
     watchdog('commerce_hipay_ws', 'Transfer: unable to load recipient account from ID @recipient_account_id for transfer ID @transfer_id.', array(
       '@recipient_account_id' => $transfer->recipient_account_id,
-      '@transfer_id' => $transfer->transfer_id,
-    ), WATCHDOG_ERROR);
-    return FALSE;
-  }
-
-  // Validate the sender account API access credentials.
-  if (empty($sender_account->hipay_ws_login) || empty($sender_account->hipay_ws_password)) {
-    watchdog('commerce_hipay_ws', 'Transfer: missing Hipay API credentials for sender account ID @sender_account_id for transfer ID @transfer_id.', array(
-      '@sender_account_id' => $sender_account->hipay_account_id,
       '@transfer_id' => $transfer->transfer_id,
     ), WATCHDOG_ERROR);
     return FALSE;
