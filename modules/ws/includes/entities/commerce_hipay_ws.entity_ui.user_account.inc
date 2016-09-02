@@ -284,9 +284,14 @@ function commerce_hipay_ws_user_account_view_hipay_info($entity, $view_mode = 'f
     }
 
     // Fetch: getBalance.
-    $parameters = array('wsSubAccountId' => $entity->hipay_account_id);
-    $context = array('commerce_hipay_ws_user_account' => $entity);
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BALANCE, $parameters, NULL, $context);
+    $parameters = array(
+      'wsSubAccountId' => $entity->hipay_account_id,
+    );
+    $context = array(
+      'commerce_hipay_ws_user_account' => $entity,
+      'currency_code' => commerce_hipay_ws_user_account_get_currency($entity),
+    );
+    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BALANCE, $parameters, $context);
 
     // Display: getBalance.
     if (!empty($response['balances'])) {

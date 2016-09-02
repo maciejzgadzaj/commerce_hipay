@@ -247,14 +247,16 @@ function commerce_hipay_ws_soap($resource) {
  *   An array of Hipay Wallet API response parameters.
  */
 function commerce_hipay_ws_api_request($resource, $parameters = array(), $context = array(), $add_default_parameters = TRUE) {
-  // If no specific payment method instance was requested in function parameter,
-  // load and use the first active 'commerce_hipay_ws' payment method instance.
+  $payment_method_instance = commerce_hipay_ws_payment_method_instance();
+  if (!empty($context['payment_method_instance'])) {
+    $payment_method_instance = array_replace_recursive($payment_method_instance, $context['payment_method_instance']);
+  }
+  $context['payment_method_instance'] = $payment_method_instance;
+
+  // Return if Hipay Wallet payment method instance has not been enabled yet.
   if (empty($context['payment_method_instance'])) {
-    // Return if Hipay Wallet payment method instance has not been enabled yet.
-    if (!$context['payment_method_instance'] = commerce_hipay_ws_payment_method_instance()) {
-      watchdog('commerce_hipay_ws', 'Unable to call Hipay API: payment method instance does not exist or is not enabled.', array(), WATCHDOG_ERROR);
-      return FALSE;
-    }
+    watchdog('commerce_hipay_ws', 'Unable to call Hipay API: payment method instance does not exist or is not enabled.', array(), WATCHDOG_ERROR);
+    return FALSE;
   }
 
   // Return if Hipay Wallet payment method instance has not been configured yet.
@@ -266,9 +268,11 @@ function commerce_hipay_ws_api_request($resource, $parameters = array(), $contex
   // By default, add API access credentials to API call parameters, allowing
   // them to be overriden by parameters provided in the function call.
   if ($add_default_parameters) {
+    $default_currency_code = commerce_default_currency();
+    $currency_code = !empty($context['currency_code']) ? $context['currency_code'] : $default_currency_code;
     $parameters = array_replace_recursive(array(
-      'wsLogin' => $context['payment_method_instance']['settings']['api_username'],
-      'wsPassword' => $context['payment_method_instance']['settings']['api_password'],
+      'wsLogin' => !empty($context['payment_method_instance']['settings']['accounts'][$currency_code]['api_username']) ? $context['payment_method_instance']['settings']['accounts'][$currency_code]['api_username'] : $context['payment_method_instance']['settings']['accounts'][$default_currency_code]['api_username'],
+      'wsPassword' => !empty($context['payment_method_instance']['settings']['accounts'][$currency_code]['api_password']) ? $context['payment_method_instance']['settings']['accounts'][$currency_code]['api_password'] : $context['payment_method_instance']['settings']['accounts'][$default_currency_code]['api_password'],
       'entity' => $context['payment_method_instance']['settings']['entity'],
       'locale' => $context['payment_method_instance']['settings']['locale'],
     ), $parameters);

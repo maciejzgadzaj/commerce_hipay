@@ -111,7 +111,8 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
   $account->data['payload'][$payload_key] = $parameters;
 
   $context = array(
-    'hipay_user_account' => $account,
+    'commerce_hipay_ws_user_account' => $account,
+    'currency_code' => $wrapper->hipay_ws_user_currency->value(),
   );
 
   // Perform the call to Hipay Wallet API.
@@ -213,13 +214,19 @@ function commerce_hipay_ws_api_user_account_validate_notification($feedback) {
  *
  * @param string $user_account_id
  *   The hipay id of the account we wish to get the information of.
+ * @param array $context
+ *   An associative array containing additional information about the request.
  *
  * @return array
  *   The information or empty array.
  */
 function commerce_hipay_ws_api_user_account_get_infos($user_account_id, $context = array()) {
   $parameters = array('accountId' => $user_account_id);
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_ACCOUNT_INFOS, $parameters);
+
+  $hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($user_account_id);
+  $context['currency_code'] = commerce_hipay_ws_user_account_get_currency($hipay_user_account);
+
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_ACCOUNT_INFOS, $parameters, $context);
 
   if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
     // If we are checking account info status for a Hipay user account entity,
@@ -253,7 +260,11 @@ function commerce_hipay_ws_api_user_account_get_infos($user_account_id, $context
  */
 function commerce_hipay_ws_api_user_account_get_balance($user_account_id, $context = array()) {
   $parameters = array('wsSubAccountId' => $user_account_id);
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BALANCE, $parameters);
+
+  $hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($user_account_id);
+  $context['currency_code'] = commerce_hipay_ws_user_account_get_currency($hipay_user_account);
+
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BALANCE, $parameters, $context);
 
   if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS && !empty($response['balances']['item'])) {
     return $response['balances']['item'];
@@ -265,12 +276,17 @@ function commerce_hipay_ws_api_user_account_get_balance($user_account_id, $conte
  *
  * @param string $user_account_id
  *   The hipay id of the account we wish to check.
+ * @param array $context
+ *   An associative array containing additional information about the request.
  *
  * @return bool
  *   True if the account is identified, false if not.
  */
-function commerce_hipay_ws_api_user_account_check_identified($user_account_id) {
-  $account_info = commerce_hipay_ws_api_user_account_get_infos($user_account_id);
+function commerce_hipay_ws_api_user_account_check_identified($user_account_id, $context = array()) {
+  $hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($user_account_id);
+  $context['currency_code'] = commerce_hipay_ws_user_account_get_currency($hipay_user_account);
+
+  $account_info = commerce_hipay_ws_api_user_account_get_infos($user_account_id, $context);
 
   if (empty($account_info) || empty($account_info['identified']) || $account_info['identified'] == 'no') {
     return FALSE;
@@ -291,11 +307,13 @@ function commerce_hipay_ws_api_user_account_check_identified($user_account_id) {
  *
  * @param int $hipay_account_id
  *   A Hipay user account to return the list of transactions for.
+ * @param array $context
+ *   An associative array containing additional information about the request.
  *
  * @return array
  *   An array of transactions for a Hipay user account.
  */
-function commerce_hipay_ws_api_user_account_get_transactions($hipay_account_id) {
+function commerce_hipay_ws_api_user_account_get_transactions($hipay_account_id, $context = array()) {
   $transactions = array();
 
   $hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($hipay_account_id);
@@ -315,8 +333,10 @@ function commerce_hipay_ws_api_user_account_get_transactions($hipay_account_id) 
     'endDate' => $end_date,
     'pageNumber' => 1,
   );
-  $context = array('commerce_hipay_ws_user_account' => $hipay_user_account);
-  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_TRANSACTIONS, $parameters, NULL, $context);
+  $context['commerce_hipay_ws_user_account'] = $hipay_user_account;
+  $context['currency_code'] = commerce_hipay_ws_user_account_get_currency($hipay_user_account);
+
+  $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_TRANSACTIONS, $parameters, $context);
 
   if (
     isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS
@@ -336,7 +356,7 @@ function commerce_hipay_ws_api_user_account_get_transactions($hipay_account_id) 
     if ($response['pageCount'] > 1) {
       for ($page = 2; $page <= $response['pageCount']; $page++) {
         $parameters['pageNumber'] = $page;
-        $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_TRANSACTIONS, $parameters, NULL, $context);
+        $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_TRANSACTIONS, $parameters, $context);
         if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
           // If there is only one transaction, 'item', we need to put it into
           // a sub-array (as is the case with multiple transactions).

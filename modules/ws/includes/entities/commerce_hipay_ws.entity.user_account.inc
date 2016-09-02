@@ -2056,3 +2056,17 @@ function commerce_hipay_ws_user_account_delete_fields() {
     field_delete_field($field_base['field_name']);
   }
 }
+
+/**
+ * Returns currency code of the Hipay user account.
+ *
+ * @param object|int $hipay_user_account
+ *   A fully loaded Hipay user account entity, or its user_account_id.
+ *
+ * @return string
+ *   A currency code of the Hipay user account.
+ */
+function commerce_hipay_ws_user_account_get_currency($hipay_user_account) {
+  $hipay_user_account_wrapper = entity_metadata_wrapper('commerce_hipay_ws_user_account', $hipay_user_account);
+  return $hipay_user_account_wrapper->hipay_ws_user_currency->value();
+}

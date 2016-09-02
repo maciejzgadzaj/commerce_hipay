@@ -19,6 +19,7 @@ function commerce_hipay_ws_api_transfer_execute(&$transfer) {
   }
 
   // Load necessary data.
+  $sender_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($transfer->sender_account_id);
   $recipient_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($transfer->recipient_account_id);
   $payment_method_instance = commerce_hipay_ws_payment_method_instance();
 
@@ -32,13 +33,17 @@ function commerce_hipay_ws_api_transfer_execute(&$transfer) {
     'entity' => $payment_method_instance['settings']['entity'],
     'merchantUniqueId' => $transfer->transfer_id,
   );
+  $context = array(
+    'commerce_hipay_ws_transfer' => $transfer,
+    'currency_code' => commerce_hipay_ws_user_account_get_currency($sender_account),
+  );
 
   // Add request parameters array to the user account entity payload.
   $payload_key = COMMERCE_HIPAY_WS_RESOURCE_SOAP_TRANSFER . '-request-' . time();
   $transfer->data['payload'][$payload_key] = $parameters;
 
   // Call Hipay API.
-  if (!$response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_TRANSFER, $parameters)) {
+  if (!$response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_TRANSFER, $parameters, $context)) {
     watchdog('commerce_hipay_ws', 'Transfer: error when calling Hipay API', array(), WATCHDOG_ERROR);
     return FALSE;
   }

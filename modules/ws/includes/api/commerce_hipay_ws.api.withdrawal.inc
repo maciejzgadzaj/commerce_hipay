@@ -18,10 +18,17 @@ function commerce_hipay_ws_api_withdrawal_execute($withdrawal) {
     return FALSE;
   }
 
+  // Load necessary data.
+  $hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($withdrawal->user_account_id);
+
   // Prepare Hipay API request.
   $parameters = array(
     'amount' => number_format(commerce_currency_amount_to_decimal($withdrawal->amount, $withdrawal->currency_code), 2),
     'label' => substr($withdrawal->label, 0, 255),
+  );
+  $context = array(
+    'commerce_hipay_ws_withdrawal' => $withdrawal,
+    'currency_code' => commerce_hipay_ws_user_account_get_currency($hipay_user_account),
   );
 
   // Add request parameters array to the user account entity payload.
@@ -29,7 +36,7 @@ function commerce_hipay_ws_api_withdrawal_execute($withdrawal) {
   $withdrawal->data['payload'][$payload_key] = $parameters;
 
   // Call Hipay API.
-  if (!$response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_WITHDRAWAL, $parameters)) {
+  if (!$response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_WITHDRAWAL, $parameters, $context)) {
     watchdog('commerce_hipay_ws', 'Withdrawal: error when calling Hipay API', array(), WATCHDOG_ERROR);
     return FALSE;
   }

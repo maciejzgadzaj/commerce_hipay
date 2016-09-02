@@ -64,8 +64,9 @@ function commerce_hipay_ws_api_bank_account_create($account, $payment_method_ins
   $account->data['payload'][$payload_key] = $parameters;
 
   $context = array(
-    'hipay_user_account' => $hipay_user_account,
-    'hipay_bank_account' => $account,
+    'commerce_hipay_ws_user_account' => $hipay_user_account,
+    'commerce_hipay_ws_bank_account' => $account,
+    'currency_code' => commerce_hipay_ws_user_account_get_currency($hipay_user_account),
   );
 
   // Perform the call to Hipay Wallet API.
@@ -153,6 +154,8 @@ function commerce_hipay_ws_api_bank_account_validate_notification($feedback) {
  *
  * @param string $country
  *   Country code of the bank account.
+ * @param array $context
+ *   An associative array containing additional information about the request.
  * @param bool $reset
  *   A boolean indicating whether a cached value should be reset or not.
  *
@@ -160,9 +163,9 @@ function commerce_hipay_ws_api_bank_account_validate_notification($feedback) {
  *   An array of Hipay Wallet API response parameters, where 'fields' key
  *   contains the list of required bank fields, or FALSE on error.
  */
-function commerce_hipay_ws_api_bank_account_get_info_fields($country, $reset = FALSE) {
+function commerce_hipay_ws_api_bank_account_get_info_fields($country, $context = array(), $reset = FALSE) {
   $parameters = array('country' => $country);
-  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_FIELDS, $reset, $parameters);
+  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_FIELDS, $context, $reset, $parameters);
 }
 
 /**
@@ -170,11 +173,17 @@ function commerce_hipay_ws_api_bank_account_get_info_fields($country, $reset = F
  *
  * @param array $parameters
  *   An array of parameters to pass to the API call.
+ * @param array $context
+ *   An associative array containing additional information about the request.
  *
  * @return array
  *   An array of Hipay Wallet API response parameters.
  */
 function commerce_hipay_ws_api_bank_account_get_info_status($parameters = array(), $context = array()) {
+  $hipay_user_account_id = commerce_hipay_ws_api_bank_account_get_request_user_account_id($parameters);
+  $hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($hipay_user_account_id);
+  $context['currency_code'] = commerce_hipay_ws_user_account_get_currency($hipay_user_account);
+
   // Fetch the bank account info status from Hipay Wallet API.
   $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS, $parameters, $context);
 
@@ -203,14 +212,40 @@ function commerce_hipay_ws_api_bank_account_get_info_status($parameters = array(
  * @param array $parameters
  *   An array of parameters to pass to the API call.
  * @param array $context
- *   An array of request context.
+ *   An associative array containing additional information about the request.
  *
  * @return array
  *   An array of Hipay Wallet API response parameters.
  */
 function commerce_hipay_ws_api_bank_account_infos_check($parameters = array(), $context = array()) {
+  $hipay_user_account_id = commerce_hipay_ws_api_bank_account_get_request_user_account_id($parameters);
+  $hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($hipay_user_account_id);
+  $context['currency_code'] = commerce_hipay_ws_user_account_get_currency($hipay_user_account);
+
   // Fetch the bank account info status from Hipay Wallet API.
   $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_CHECK, $parameters, $context);
 
   return $response;
+}
+
+/**
+ * Returns Hipay user account ID of the request, or ID of the default one.
+ *
+ * @param array $parameters
+ *   An array of Hipay Wallet API request parameters.
+ *
+ * @return int
+ *   A Hipay user account ID.
+ */
+function commerce_hipay_ws_api_bank_account_get_request_user_account_id($parameters) {
+  // If 'wsSubAccountId' parameter was provided in the request, just return it.
+  if (!empty($parameters['wsSubAccountId'])) {
+    return $parameters['wsSubAccountId'];
+  }
+  // Otherwise return ID of the main technical account in the default currency.
+  else {
+    $payment_method_instance = commerce_hipay_ws_payment_method_instance();
+    $default_currency = commerce_default_currency();
+    return $payment_method_instance['settings']['accounts'][$default_currency]['account_id'];
+  }
 }

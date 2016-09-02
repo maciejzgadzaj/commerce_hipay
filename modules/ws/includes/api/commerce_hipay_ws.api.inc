@@ -15,7 +15,9 @@
  *   A country code for provided country label.
  */
 function commerce_hipay_ws_get_code_from_country($country_label) {
-  $countries = array_flip(commerce_hipay_ws_get_countries('fr_FR'));
+  $context = array();
+  $context['payment_method_instance']['settings']['locale'] = 'fr_FR';
+  $countries = array_flip(commerce_hipay_ws_get_countries($context));
   return (isset($countries[$country_label])) ? $countries[$country_label] : FALSE;
 }
 
@@ -24,14 +26,18 @@ function commerce_hipay_ws_get_code_from_country($country_label) {
  *
  * @param string $resource
  *   A Hipay Wallet API resource to call if cached value was not found.
+ * @param array $context
+ *   An associative array containing additional information about the request.
  * @param bool $reset
  *   A boolean indicating whether a cached value should be reset or not.
+ * @param array $parameters
+ *   An associative array containing request parameters.
  *
  * @return mixed|false
  *   Returns a cached value of Hipay Wallet API response, or false if cached
  *   value was not found and there was an error calling Hipay Wallet API.
  */
-function commerce_hipay_ws_api_get_cached_response($resource, $reset = FALSE) {
+function commerce_hipay_ws_api_get_cached_response($resource, $context = array(), $reset = FALSE, $parameters = array()) {
   $cached_response = &drupal_static(__FUNCTION__);
 
   // Build cache key from provided function arguments.
@@ -51,12 +57,9 @@ function commerce_hipay_ws_api_get_cached_response($resource, $reset = FALSE) {
     }
     // Otherwise we need to fetch the response from the Hipay Wallet API.
     else {
-      array_shift($args);
-      array_shift($args);
-      array_unshift($args, $resource);
       // Call the function to make a Hipay Wallet API request,
       // passing all parameters we have received here.
-      $response = call_user_func_array('commerce_hipay_ws_api_request', $args);
+      $response = commerce_hipay_ws_api_request($resource, $parameters, $context);
 
       if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
         // Store the response in static cache for this page execution.
@@ -84,6 +87,8 @@ function commerce_hipay_ws_api_get_cached_response($resource, $reset = FALSE) {
 /**
  * Returns the list of countries supported by Hipay Wallet.
  *
+ * @param array $context
+ *   An associative array containing additional information about the request.
  * @param bool $reset
  *   A boolean indicating whether a cached value should be reset or not.
  *
@@ -91,13 +96,15 @@ function commerce_hipay_ws_api_get_cached_response($resource, $reset = FALSE) {
  *   An array of Hipay Wallet API response parameters, where 'countries' key
  *   contains the list of countries supported by Hipay Wallet, or FALSE on error.
  */
-function commerce_hipay_ws_api_get_countries($reset = FALSE) {
-  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_COUNTRIES, $reset);
+function commerce_hipay_ws_api_get_countries($context = array(), $reset = FALSE) {
+  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_COUNTRIES, $context, $reset);
 }
 
 /**
  * Returns the list of locales supported by Hipay Wallet.
  *
+ * @param array $context
+ *   An associative array containing additional information about the request.
  * @param bool $reset
  *   A boolean indicating whether a cached value should be reset or not.
  *
@@ -105,13 +112,15 @@ function commerce_hipay_ws_api_get_countries($reset = FALSE) {
  *   An array of Hipay Wallet API response parameters, where 'locales' key
  *   contains the list of locales supported by Hipay Wallet, or FALSE on error.
  */
-function commerce_hipay_ws_api_get_locales($reset = FALSE) {
-  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_CODES, $reset);
+function commerce_hipay_ws_api_get_locales($context = array(), $reset = FALSE) {
+  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_CODES, $context, $reset);
 }
 
 /**
  * Returns the list of timezones supported by Hipay Wallet.
  *
+ * @param array $context
+ *   An associative array containing additional information about the request.
  * @param bool $reset
  *   A boolean indicating whether a cached value should be reset or not.
  *
@@ -119,13 +128,15 @@ function commerce_hipay_ws_api_get_locales($reset = FALSE) {
  *   An array of Hipay Wallet API response parameters, where 'timezones' key
  *   contains the list of timezones supported by Hipay Wallet, or FALSE on error.
  */
-function commerce_hipay_ws_api_get_timezones($reset = FALSE) {
-  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_TIMEZONES, $reset);
+function commerce_hipay_ws_api_get_timezones($context = array(), $reset = FALSE) {
+  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_TIMEZONES, $context, $reset);
 }
 
 /**
  * Returns the list of available business lines.
  *
+ * @param array $context
+ *   An associative array containing additional information about the request.
  * @param bool $reset
  *   A boolean indicating whether a cached value should be reset or not.
  *
@@ -133,8 +144,8 @@ function commerce_hipay_ws_api_get_timezones($reset = FALSE) {
  *   An array of Hipay Wallet API response parameters, where 'businessLines' key
  *   contains the list of available business lines, or FALSE on error.
  */
-function commerce_hipay_ws_api_get_website_business_lines($reset = FALSE) {
-  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BUSINESS_LINES, $reset);
+function commerce_hipay_ws_api_get_website_business_lines($context = array(), $reset = FALSE) {
+  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BUSINESS_LINES, $context, $reset);
 }
 
 /**
@@ -142,6 +153,8 @@ function commerce_hipay_ws_api_get_website_business_lines($reset = FALSE) {
  *
  * @param int $business_line_id
  *   A business line ID to return the list of website topics for.
+ * @param array $context
+ *   An associative array containing additional information about the request.
  * @param bool $reset
  *   A boolean indicating whether a cached value should be reset or not.
  *
@@ -149,23 +162,27 @@ function commerce_hipay_ws_api_get_website_business_lines($reset = FALSE) {
  *   An array of Hipay Wallet API response parameters, where 'websiteTopics' key
  *   contains the list of available website topics, or FALSE on error.
  */
-function commerce_hipay_ws_api_get_website_topics($business_line_id, $reset = FALSE) {
+function commerce_hipay_ws_api_get_website_topics($business_line_id, $context = array(), $reset = FALSE) {
   $parameters = array('businessLineId' => $business_line_id);
-  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_WEBSITE_TOPICS, $reset, $parameters);
+  return commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_WEBSITE_TOPICS, $context, $reset, $parameters);
 }
 
 /**
  * Returns an array of Hipay Wallet supported countries in a selected language.
  *
+ * @param array $context
+ *   An associative array containing additional information about the request.
+ * @param bool $reset
+ *   A boolean indicating whether a cached value should be reset or not.
+ *
  * @return array
  *   An array of countries supported by Hipay Wallet formatted in a selected
  *   language.
  */
-function commerce_hipay_ws_get_countries($locale = 'en_GB') {
+function commerce_hipay_ws_get_countries($context = array(), $reset = FALSE) {
   $return = array();
 
-  $parameters = (!empty($locale)) ? array('locale' => $locale) : array();
-  $response = commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_COUNTRIES, TRUE, $parameters);
+  $response = commerce_hipay_ws_api_get_cached_response(COMMERCE_HIPAY_WS_RESOURCE_SOAP_LOCALE_COUNTRIES, $context);
   if (!empty($response['countries']['item'])) {
     foreach ($response['countries']['item'] as $item) {
       $return[$item['code']] = t($item['label']);

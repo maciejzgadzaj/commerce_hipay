@@ -45,7 +45,8 @@ function commerce_hipay_ws_api_upload($account, $kyc_document, $payment_method_i
   $account->data['payload'][$payload_key] = $parameters;
 
   $context = array(
-    'hipay_user_account' => $account,
+    'commerce_hipay_ws_user_account' => $account,
+    'currency_code' => commerce_hipay_ws_user_account_get_currency($account),
     'kyc_document' => $kyc_document,
   );
 

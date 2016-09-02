@@ -13,13 +13,8 @@
 function commerce_hipay_ws_settings_default() {
   $defaults = array(
     'endpoint' => COMMERCE_HIPAY_WS_TEST,
-    'account_id' => '',
-    'email' => '',
     'entity' => '',
-    'api_username' => '',
-    'api_password' => '',
     'locale' => 'en_GB',
-    'fees' => array(),
     'api' => array(
       'create_account_immediately' => TRUE,
       'test_mode' => FALSE,
@@ -42,23 +37,31 @@ function commerce_hipay_ws_settings_default() {
       'url' => $GLOBALS['base_url'],
       'merchant_password' => '',
     ),
-    'bank_account' => array(
-      'bankName' => '',
-      'bankAddress' => '',
-      'bankZipCode' => '',
-      'bankCity' => '',
-      'bankCountry' => '',
-      'iban' => '',
-      'swift' => '',
-      'acct_num' => '',
-      'aba_num' => '',
-      'transit_num' => '',
-    ),
   );
 
   foreach (array_keys(commerce_currencies(TRUE)) as $currency_code) {
-    $defaults['fees'][$currency_code]['account_id'] = '';
-    $defaults['fees'][$currency_code]['bank_account'] = $defaults['bank_account'];
+    $defaults['accounts'][$currency_code] = array(
+      'account_id' => '',
+      'email' => '',
+      'api_username' => '',
+      'api_password' => '',
+      'bank_account' => array(
+        'bankName' => '',
+        'bankAddress' => '',
+        'bankZipCode' => '',
+        'bankCity' => '',
+        'bankCountry' => '',
+        'iban' => '',
+        'swift' => '',
+        'acct_num' => '',
+        'aba_num' => '',
+        'transit_num' => '',
+      ),
+    );
+    $defaults['fee_accounts'][$currency_code] = array(
+      'account_id' => '',
+      'bank_account' => $defaults['accounts'][$currency_code]['bank_account'],
+    );
   }
 
   return $defaults;
@@ -76,6 +79,9 @@ function commerce_hipay_ws_settings_form($settings = array()) {
     return array();
   }
 
+  $default_currency = commerce_default_currency();
+  $enabled_currencies = commerce_currencies(TRUE);
+
   // Merge default settings into the stored settings array.
   // Settings are stored in multi-level array, so we need recursive merge. And
   // actually replace instead of merge, to make sure the default settings are
@@ -87,8 +93,8 @@ function commerce_hipay_ws_settings_form($settings = array()) {
   // of the settings form is displayed - as for the remaining part we need to
   // have API credentials provided first, to be able to make few API requests
   // to get data required for form element options etc.
-  if (empty($settings['api_password'])) {
-    drupal_set_message(t('Please note that this is only a part of the Hipay Wallet payment method settings form. After providing the Hipay Wallet API credentials below, the form will be refreshed to show all remaining options.'), 'warning');
+  if (empty($settings['accounts'][$default_currency]['api_password'])) {
+    drupal_set_message(t('Please note that this is only a part of the Hipay Wallet payment method settings form. After submitting the Hipay Wallet API credentials below, the form will be reloaded to show all remaining options.'), 'warning');
   }
 
   $form = array();
@@ -104,43 +110,11 @@ function commerce_hipay_ws_settings_form($settings = array()) {
     '#required' => TRUE,
   );
 
-  $form['account_id'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Account ID'),
-    '#description' => t('Hipay Wallet account ID.'),
-    '#default_value' => $settings['account_id'],
-    '#required' => TRUE,
-  );
-
-  $form['email'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Account email'),
-    '#description' => t('Hipay Wallet account email address.'),
-    '#default_value' => $settings['email'],
-    '#required' => TRUE,
-  );
-
   $form['entity'] = array(
     '#type' => 'textfield',
     '#title' => t('Entity'),
     '#description' => t('Entity of the accounts involved in API operations (provided by Hipay after Hipay Wallet account setup).'),
     '#default_value' => $settings['entity'],
-    '#required' => TRUE,
-  );
-
-  $form['api_username'] = array(
-    '#type' => 'textfield',
-    '#title' => t('API username'),
-    '#description' => t('The name of the user for accessing Hipay Wallet webservice. This, as well as API password, can be found in your Hipay Wallet Account under <em>Hipay wallet integration / Merchant Tool Kit / API</em>.'),
-    '#default_value' => $settings['api_username'],
-    '#required' => TRUE,
-  );
-
-  $form['api_password'] = array(
-    '#type' => 'textfield',
-    '#title' => t('API password'),
-    '#description' => t('The password for the user specified in the above field.'),
-    '#default_value' => $settings['api_password'],
     '#required' => TRUE,
   );
 
@@ -152,6 +126,95 @@ function commerce_hipay_ws_settings_form($settings = array()) {
     '#default_value' => $settings['locale'],
     '#required' => TRUE,
   );
+
+  // This will be used for all bank fieldset form elements of all settlement
+  // accounts as well as fees accounts.
+  $bank_account_description = '<p>' . t('Note that once the bank details are saved, and the bank account gets created in your Hipay Wallet account, they cannot be changed anymore. The only way to change or delete them is to contact Hipay support.') . '</p>'
+    . '<p>' . t('To avoid creating the bank account in your Hipay Wallet account after submitting this form you can leave the <em>Bank country</em> field empty - then the Hipay Wallet API will not be called when you submit the form, and the bank account will not be created (even if all other bank-related fields are filled).') . '</p>'
+    . '<p>' . t('Note that the required fields are different for different countries. To see which fields are required for your country, please select relevant <em>Bank country</em> value (leaving all other bank fields empty) and submit the form.') . '</p>';
+
+  foreach ($enabled_currencies as $currency_code => $currency) {
+
+    $form['accounts'][$currency_code] = array(
+      '#type' => 'fieldset',
+      '#title' => t('@currency_code account', array('@currency_code' => $currency_code)),
+      '#collapsible' => TRUE,
+      '#group' => 'accounts',
+    );
+
+    $form['accounts'][$currency_code]['account_id'] = array(
+      '#type' => 'textfield',
+      '#title' => t('@currency_code settlement account ID', array('@currency_code' => $currency_code)),
+      '#description' => t('Hipay Wallet settlement aka deposit aka Escrow account ID in @currency_code.', array('@currency_code' => $currency_code)),
+      '#default_value' => $settings['accounts'][$currency_code]['account_id'],
+      '#required' => $currency_code == commerce_default_currency(),
+    );
+
+    $form['accounts'][$currency_code]['email'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Account email'),
+      '#description' => t('Hipay Wallet account email address.'),
+      '#default_value' => $settings['accounts'][$currency_code]['email'],
+      '#required' => $currency_code == commerce_default_currency(),
+    );
+
+    $form['accounts'][$currency_code]['api_username'] = array(
+      '#type' => 'textfield',
+      '#title' => t('API username'),
+      '#description' => t('The name of the user for accessing Hipay Wallet webservice. This, as well as API password, can be found in your Hipay Wallet Account under <em>Hipay wallet integration / Merchant Tool Kit / API</em>.'),
+      '#default_value' => $settings['accounts'][$currency_code]['api_username'],
+      '#required' => $currency_code == commerce_default_currency(),
+    );
+
+    $form['accounts'][$currency_code]['api_password'] = array(
+      '#type' => 'textfield',
+      '#title' => t('API password'),
+      '#description' => t('The password for the user specified in the above field.'),
+      '#default_value' => $settings['accounts'][$currency_code]['api_password'],
+      '#required' => $currency_code == commerce_default_currency(),
+    );
+
+
+    // Bank account details.
+    $form['accounts'][$currency_code]['bank_account'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('@currency_code bank account', array('@currency_code' => $currency_code)),
+      '#description' => $bank_account_description,
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+
+    $form['accounts'][$currency_code]['bank_account'] += commerce_hipay_ws_settings_form_bank($settings['accounts'][$currency_code]['account_id'], $settings['accounts'][$currency_code]['bank_account']);
+  }
+
+  // Fees accounts.
+  foreach (commerce_currencies(TRUE) as $currency_code => $currency) {
+
+    $form['fee_accounts'][$currency_code] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Fee @currency_code account', array('@currency_code' => $currency_code)),
+      '#collapsible' => TRUE,
+      '#group' => 'accounts',
+    );
+
+    $form['fee_accounts'][$currency_code]['account_id'] = array(
+      '#type' => 'textfield',
+      '#title' => t('@currency_code fee account ID', array('@currency_code' => $currency_code)),
+      '#default_value' => $settings['fee_accounts'][$currency_code]['account_id'],
+      '#currency_code' => $currency_code,
+    );
+
+    // For each fees account add a bank account details form.
+    $form['fee_accounts'][$currency_code]['bank_account'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('@currency_code fee bank account', array('@currency_code' => $currency_code)),
+      '#description' => $bank_account_description,
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    $form['fee_accounts'][$currency_code]['bank_account'] += commerce_hipay_ws_settings_form_bank($settings['fee_accounts'][$currency_code]['account_id'], $settings['fee_accounts'][$currency_code]['bank_account']);
+  }
+
 
   // API settings.
   $form['api'] = array(
@@ -243,7 +306,7 @@ function commerce_hipay_ws_settings_form($settings = array()) {
     ),
   );
 
-  if (!empty($settings['api_password'])) {
+  if (!empty($settings['accounts'][$default_currency]['api_password'])) {
 
     // Website configuration.
     $form['website'] = array(
@@ -316,76 +379,6 @@ function commerce_hipay_ws_settings_form($settings = array()) {
       '#default_value' => $settings['website']['merchant_password'],
       '#required' => TRUE,
     );
-
-    // Vendor account details.
-    $form['vendor_account'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('Vendor account details'),
-      '#collapsible' => TRUE,
-    );
-
-    $rows = array();
-
-    // Balance.
-    $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_BALANCE);
-    if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-      $rows[] = array(
-        t('Account ID'),
-        $response['balances']['item']['userAccountId'],
-      );
-      $rows[] = array(
-        t('Balance'),
-        commerce_currency_format(commerce_currency_decimal_to_amount($response['balances']['item']['balance'], $response['balances']['item']['currency']), $response['balances']['item']['currency']),
-      );
-      $rows[] = array(
-        t('Money available for withdrawal'),
-        commerce_currency_format(commerce_currency_decimal_to_amount($response['balances']['item']['moneyAvailableForWithdrawal'], $response['balances']['item']['currency']), $response['balances']['item']['currency']),
-      );
-    }
-
-    $form['vendor_account']['info'] = array(
-      '#type' => 'markup',
-      '#markup' => theme('table', array('rows' => $rows)),
-    );
-
-    // Bank account details.
-    $bank_account_description = '<p>' . t('Note that once the bank details are saved, and the bank account gets created in your Hipay Wallet account, they cannot be changed anymore. The only way to change or delete them is to contact Hipay support.') . '</p>'
-    . '<p>' . t('To avoid creating the bank account in your Hipay Wallet account after submitting this form you can leave the <em>Bank country</em> field empty - then the Hipay Wallet API will not be called when you submit the form, and the bank account will not be created (even if all other bank-related fields are filled).') . '</p>'
-    . '<p>' . t('Note that the required fields are different for different countries. To see which fields are required for your country, please select relevant <em>Bank country</em> value (leaving all other bank fields empty) and submit the form.') . '</p>';
-
-    $form['bank_account'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('Bank account details'),
-      '#description' => $bank_account_description,
-      '#collapsible' => TRUE,
-    );
-
-    $form['bank_account'] += commerce_hipay_ws_settings_form_bank($settings['account_id'], $settings['bank_account']);
-
-    // Fees accounts.
-    $form['fees'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('Fee accounts'),
-      '#collapsible' => TRUE,
-    );
-    foreach (commerce_currencies(TRUE) as $currency_code => $currency) {
-      $form['fees'][$currency_code]['account_id'] = array(
-        '#type' => 'textfield',
-        '#title' => t('@currency_code fee account ID', array('@currency_code' => $currency_code)),
-        '#default_value' => $settings['fees'][$currency_code]['account_id'],
-        '#currency_code' => $currency_code,
-      );
-
-      // For each fees account add a bank account details form.
-      $form['fees'][$currency_code]['bank_account'] = array(
-        '#type' => 'fieldset',
-        '#title' => t('@currency_code fee bank account', array('@currency_code' => $currency_code)),
-        '#description' => $bank_account_description,
-        '#collapsible' => TRUE,
-        '#collapsed' => TRUE,
-      );
-      $form['fees'][$currency_code]['bank_account'] += commerce_hipay_ws_settings_form_bank($settings['fees'][$currency_code]['account_id'], $settings['fees'][$currency_code]['bank_account']);
-    }
 
   }
 
@@ -561,12 +554,10 @@ function commerce_hipay_ws_form_rules_ui_edit_element_alter(&$form, &$form_state
 
     // Add validation and submit callbacks to create new Hipay bank entities
     // for provided vendor bank details, and for the fees accounts.
-    if (!empty($form['parameter']['payment_method']['settings']['payment_method']['settings']['bank_account'])) {
-      $form['#validate'][] = 'commerce_hipay_ws_settings_form_validate_vendor_bank_account';
-      $form['#validate'][] = 'commerce_hipay_ws_settings_form_validate_fees_bank_accounts';
-      $form['#submit'][] = 'commerce_hipay_ws_settings_form_submit_create_vendor_bank_account';
-      $form['#submit'][] = 'commerce_hipay_ws_settings_form_submit_create_fees_bank_accounts';
-    }
+    $form['#validate'][] = 'commerce_hipay_ws_settings_form_validate_vendor_bank_account';
+    $form['#validate'][] = 'commerce_hipay_ws_settings_form_validate_fees_bank_accounts';
+    $form['#submit'][] = 'commerce_hipay_ws_settings_form_submit_create_vendor_bank_account';
+    $form['#submit'][] = 'commerce_hipay_ws_settings_form_submit_create_fees_bank_accounts';
   }
 }
 
@@ -587,10 +578,14 @@ function commerce_hipay_ws_settings_form_ajax_callback($form, $form_state) {
  */
 function commerce_hipay_ws_settings_form_validate_vendor_user_account(&$form, &$form_state) {
   $submitted_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
-  // This will be used in case we need to set the form error on an element.
-  $form_element_parents = 'parameter][payment_method][settings][payment_method][settings][';
-  // Validate the user account details.
-  commerce_hipay_ws_settings_form_validate_user_account($submitted_settings['account_id'], $form_element_parents);
+  foreach (commerce_currencies(TRUE) as $currency_code => $currency) {
+    if (!empty($submitted_settings['accounts'][$currency_code]['account_id'])) {
+      // This will be used in case we need to set the form error on an element.
+      $form_element_parents = 'parameter][payment_method][settings][payment_method][settings][accounts][' . $currency_code . '][';
+      // Validate the user account details.
+      commerce_hipay_ws_settings_form_validate_user_account($submitted_settings['accounts'][$currency_code]['account_id'], $currency_code, $form_element_parents, $submitted_settings);
+    }
+  }
 }
 
 /**
@@ -601,13 +596,13 @@ function commerce_hipay_ws_settings_form_validate_vendor_user_account(&$form, &$
  */
 function commerce_hipay_ws_settings_form_validate_fees_user_accounts(&$form, &$form_state) {
   $submitted_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
-  if (!empty($submitted_settings['fees'])) {
-    foreach ($submitted_settings['fees'] as $currency_code => $fees_account) {
+  if (!empty($submitted_settings['fee_accounts'])) {
+    foreach ($submitted_settings['fee_accounts'] as $currency_code => $fees_account) {
       if (!empty($fees_account['account_id'])) {
         // This will be used in case we need to set the form error on an element.
-        $form_element_parents = 'parameter][payment_method][settings][payment_method][settings][fees][' . $currency_code . '][';
+        $form_element_parents = 'parameter][payment_method][settings][payment_method][settings][fee_accounts][' . $currency_code . '][';
         // Validate the user account details.
-        commerce_hipay_ws_settings_form_validate_user_account($fees_account['account_id'], $form_element_parents);
+        commerce_hipay_ws_settings_form_validate_user_account($fees_account['account_id'], $currency_code, $form_element_parents, $submitted_settings);
       }
     }
   }
@@ -625,20 +620,35 @@ function commerce_hipay_ws_settings_form_validate_fees_user_accounts(&$form, &$f
  * @param string $form_element_parents
  *   Parents of the user account details form fields.
  */
-function commerce_hipay_ws_settings_form_validate_user_account($hipay_account_id, $form_element_parents = '') {
+function commerce_hipay_ws_settings_form_validate_user_account($hipay_account_id, $currency_code, $form_element_parents = '', $submitted_settings = array()) {
+  $context = array(
+    'payment_method_instance' => array(
+      'settings' => $submitted_settings,
+    ),
+    'currency_code' => $currency_code,
+  );
+  $response = commerce_hipay_ws_api_user_account_get_infos($hipay_account_id, $context);
+
   // Try to fetch the user account information from Hipay Wallet API.
-  if (!($response = commerce_hipay_ws_api_user_account_get_infos($hipay_account_id)) || !isset($response['code']) || !isset($response['identified'])) {
-    form_set_error($form_element_parents . 'account_id', t('Error calling Hipay Wallet API to fetch account information.'));
+  if (!$response || !isset($response['code']) || !isset($response['identified'])) {
+    form_set_error($form_element_parents . 'account_id', t('Error calling Hipay Wallet API to fetch account @account_id information.', array(
+      '@account_id' => $hipay_account_id,
+    )));
   }
 
   // Make sure we received the user account details from Hipay Wallet.
   if ($response['code'] != COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
-    form_set_error($form_element_parents . 'account_id', t('Error fetching user account details from Hipay Wallet API: @description.', array('@description' => $response['description'])));
+    form_set_error($form_element_parents . 'account_id', t('Error fetching user account @account_id details from Hipay Wallet API: @description.', array(
+      '@account_id' => $hipay_account_id,
+      '@description' => $response['description'],
+    )));
   }
 
   // Make sure the user account is already validated (identified).
   if ($response['identified'] != COMMERCE_HIPAY_WS_ACCOUNT_IDENTIFIED) {
-    form_set_error($form_element_parents . 'account_id', t('The provided user account is not identified in Hipay Wallet.'));
+    form_set_error($form_element_parents . 'account_id', t('The provided user account @account_id is not identified in Hipay Wallet.', array(
+      '@account_id' => $hipay_account_id,
+    )));
   }
 }
 
@@ -650,10 +660,16 @@ function commerce_hipay_ws_settings_form_validate_user_account($hipay_account_id
  */
 function commerce_hipay_ws_settings_form_validate_vendor_bank_account(&$form, &$form_state) {
   $submitted_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
-  // This will be used in case we need to set the form error on an element.
-  $form_element_parents = 'parameter][payment_method][settings][payment_method][settings][bank_account][';
-  // Validate the bank account details.
-  commerce_hipay_ws_settings_form_validate_bank_account($submitted_settings['bank_account'], $form_element_parents);
+  if (!empty($submitted_settings['accounts'])) {
+    foreach ($submitted_settings['accounts'] as $currency_code => $account) {
+      if (!empty($account['account_id'])) {
+        // This will be used in case we need to set the form error on an element.
+        $form_element_parents = 'parameter][payment_method][settings][payment_method][settings][accounts][' . $currency_code . '][bank_account][';
+        // Validate the bank account details.
+        commerce_hipay_ws_settings_form_validate_bank_account($account['bank_account'], $form_element_parents);
+      }
+    }
+  }
 }
 
 /**
@@ -664,11 +680,11 @@ function commerce_hipay_ws_settings_form_validate_vendor_bank_account(&$form, &$
  */
 function commerce_hipay_ws_settings_form_validate_fees_bank_accounts(&$form, &$form_state) {
   $submitted_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
-  if (!empty($submitted_settings['fees'])) {
-    foreach ($submitted_settings['fees'] as $currency_code => $fees_account) {
+  if (!empty($submitted_settings['fee_accounts'])) {
+    foreach ($submitted_settings['fee_accounts'] as $currency_code => $fees_account) {
       if (!empty($fees_account['account_id'])) {
         // This will be used in case we need to set the form error on an element.
-        $form_element_parents = 'parameter][payment_method][settings][payment_method][settings][fees][' . $currency_code . '][bank_account][';
+        $form_element_parents = 'parameter][payment_method][settings][payment_method][settings][fee_accounts][' . $currency_code . '][bank_account][';
         // Validate the bank account details.
         commerce_hipay_ws_settings_form_validate_bank_account($fees_account['bank_account'], $form_element_parents);
       }
@@ -717,7 +733,8 @@ function commerce_hipay_ws_settings_form_submit(&$form, &$form_state) {
   // If this is the first time that the payment method settings form was
   // submitted, display the message telling the user that there are more
   // settings to be provided.
-  if (empty($form['parameter']['payment_method']['settings']['payment_method']['settings']['api_password'])) {
+  $default_currency_code = commerce_default_currency();
+  if (empty($form['parameter']['payment_method']['settings']['payment_method']['settings']['accounts'][$default_currency_code]['api_password'])) {
     drupal_set_message(t("But wait! There's more!"), 'warning');
     $form_state['redirect'] = current_path();
   }
@@ -731,7 +748,12 @@ function commerce_hipay_ws_settings_form_submit(&$form, &$form_state) {
  */
 function commerce_hipay_ws_settings_form_submit_create_vendor_user_account(&$form, &$form_state) {
   $submitted_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
-  commerce_hipay_ws_settings_form_submit_create_user_account($submitted_settings['account_id'], commerce_default_currency(), $submitted_settings);
+
+  foreach (commerce_currencies(TRUE) as $currency_code => $currency) {
+    if (!empty($submitted_settings['accounts'][$currency_code]['account_id'])) {
+      commerce_hipay_ws_settings_form_submit_create_user_account($submitted_settings['accounts'][$currency_code]['account_id'], $currency_code, $submitted_settings);
+    }
+  }
 }
 
 /**
@@ -742,8 +764,8 @@ function commerce_hipay_ws_settings_form_submit_create_vendor_user_account(&$for
  */
 function commerce_hipay_ws_settings_form_submit_create_fees_user_accounts(&$form, &$form_state) {
   $submitted_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
-  if (!empty($submitted_settings['fees'])) {
-    foreach ($submitted_settings['fees'] as $currency_code => $fees_account) {
+  if (!empty($submitted_settings['fee_accounts'])) {
+    foreach ($submitted_settings['fee_accounts'] as $currency_code => $fees_account) {
       if (!empty($fees_account['account_id'])) {
         commerce_hipay_ws_settings_form_submit_create_user_account($fees_account['account_id'], $currency_code, $submitted_settings);
       }
@@ -767,6 +789,12 @@ function commerce_hipay_ws_settings_form_submit_create_fees_user_accounts(&$form
 function commerce_hipay_ws_settings_form_submit_create_user_account($account_id, $currency_code, $settings) {
   global $user;
 
+  // Do not continue if the payment method instance is not enabled
+  // or not configured.
+  if (!($instance = commerce_hipay_ws_payment_method_instance()) || empty($instance['settings'])) {
+    return;
+  }
+
   // Try to load the existing Hipay user account entity from provided account_id
   // value, and if it doesn't exist yet, create a new one.
   if (!$user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($account_id)) {
@@ -779,8 +807,8 @@ function commerce_hipay_ws_settings_form_submit_create_user_account($account_id,
   $user_account->hipay_account_id = $account_id;
   $user_account->hipay_space_id = '';
   $user_account->hipay_identified = COMMERCE_HIPAY_WS_ACCOUNT_IDENTIFIED;
-  $user_account->hipay_ws_login = $settings['api_username'];
-  $user_account->hipay_ws_password = $settings['api_password'];
+  $user_account->hipay_ws_login = $settings['accounts'][$currency_code]['api_username'];
+  $user_account->hipay_ws_password = $settings['accounts'][$currency_code]['api_password'];
 
   // Replace field values.
   $user_account_wrapper = entity_metadata_wrapper('commerce_hipay_ws_user_account', $user_account);
@@ -804,21 +832,37 @@ function commerce_hipay_ws_settings_form_submit_create_user_account($account_id,
  */
 function commerce_hipay_ws_settings_form_submit_create_vendor_bank_account(&$form, &$form_state) {
   $submitted_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
-  $bank_account = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings']['bank_account'];
-  commerce_hipay_ws_settings_form_submit_create_bank_account($submitted_settings['account_id'], $bank_account);
+  if (!empty($submitted_settings['accounts'])) {
+    foreach ($submitted_settings['accounts'] as $currency_code => $account) {
+      if (!empty($account['account_id']) && !empty($account['bank_account'])) {
+        commerce_hipay_ws_settings_form_submit_create_bank_account($account['account_id'], $account['bank_account']);
+      }
+    }
+  }
 }
 
 function commerce_hipay_ws_settings_form_submit_create_fees_bank_accounts(&$form, &$form_state) {
   $submitted_settings = $form_state['values']['parameter']['payment_method']['settings']['payment_method']['settings'];
-  if (!empty($submitted_settings['fees'])) {
-    foreach ($submitted_settings['fees'] as $currency_code => $fees_account) {
-      if (!empty($fees_account['account_id'])) {
+  if (!empty($submitted_settings['fee_accounts'])) {
+    foreach ($submitted_settings['fee_accounts'] as $currency_code => $fees_account) {
+      if (!empty($fees_account['account_id']) && !empty($fees_account['bank_account'])) {
         commerce_hipay_ws_settings_form_submit_create_bank_account($fees_account['account_id'], $fees_account['bank_account']);
       }
     }
   }
 }
 
+/**
+ * Creates a bank account in Hipay Wallet.
+ *
+ * @param int $account_id
+ *   A Hipay user account ID to create the bank account for.
+ * @param array $bank_account
+ *   An array of bank account details.
+ *
+ * @return array
+ *   An array of Hipay Wallet API response parameters.
+ */
 function commerce_hipay_ws_settings_form_submit_create_bank_account($account_id, $bank_account) {
   global $user;
 

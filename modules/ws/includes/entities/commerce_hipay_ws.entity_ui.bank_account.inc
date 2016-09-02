@@ -199,9 +199,14 @@ function commerce_hipay_ws_bank_account_view_hipay_info($entity, $view_mode = 'f
       }
 
       // Fetch: bankInfosCheck.
-      $parameters = array('wsSubAccountId' => $hipay_user_account->hipay_account_id);
-      $context = array('commerce_hipay_ws_bank_account' => $entity);
-      $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_CHECK, $parameters, NULL, $context);
+      $parameters = array(
+        'wsSubAccountId' => $hipay_user_account->hipay_account_id,
+      );
+      $context = array(
+        'commerce_hipay_ws_bank_account' => $entity,
+        'currency_code' => commerce_hipay_ws_user_account_get_currency($hipay_user_account),
+      );
+      $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_CHECK, $parameters, $context);
 
       // Display: bankInfosCheck.
       if (isset($response['code'])) {
