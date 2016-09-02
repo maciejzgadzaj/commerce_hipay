@@ -24,6 +24,7 @@ function commerce_hipay_ws_api_transfer_execute(&$transfer) {
 
   // Prepare Hipay API request.
   $parameters = array(
+    'wsSubAccountId' => $transfer->sender_account_id,
     'amount' => number_format(commerce_currency_amount_to_decimal($transfer->amount, $transfer->currency_code), 2),
     'recipientUserId' => $recipient_account->hipay_account_id,
     'publicLabel' => substr($transfer->public_label, 0, 255),
