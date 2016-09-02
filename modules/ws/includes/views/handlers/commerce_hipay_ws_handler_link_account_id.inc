@@ -29,8 +29,7 @@ class commerce_hipay_ws_handler_link_account_id extends views_handler_field {
   function render($values) {
     $value = $this->sanitize_value($this->get_value($values));
 
-    if (!empty($this->options['link_to_entity'])) {
-      $hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($value);
+    if (!empty($this->options['link_to_entity']) && ($hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($value))) {
       return l($value, 'admin/commerce/hipay-wallet/user-accounts/' . $hipay_user_account->user_account_id);
     }
     else {
