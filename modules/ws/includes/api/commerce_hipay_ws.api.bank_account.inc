@@ -181,7 +181,11 @@ function commerce_hipay_ws_api_bank_account_get_info_fields($country, $context =
  */
 function commerce_hipay_ws_api_bank_account_get_info_status($parameters = array(), $context = array()) {
   $hipay_user_account_id = commerce_hipay_ws_api_bank_account_get_request_user_account_id($parameters);
-  $hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($hipay_user_account_id);
+  // Right after the module is enabled, the system Hipay account entities might
+  // not be created yet, so we won't be able to get relevant currency code.
+  if (!$hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($hipay_user_account_id)) {
+    return;
+  }
   $context['currency_code'] = commerce_hipay_ws_user_account_get_currency($hipay_user_account);
 
   // Fetch the bank account info status from Hipay Wallet API.
