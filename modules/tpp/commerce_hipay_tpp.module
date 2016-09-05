@@ -550,7 +550,7 @@ function commerce_hipay_tpp_get_request_data($order, $payment_method) {
       '@store' => variable_get('site_name', url('<front>', array('absolute' => TRUE))),
     )), 0, 255),
     'currency' => $charge['currency_code'],
-    'amount' => number_format(commerce_currency_amount_to_decimal($charge['amount'], $charge['currency_code']), 2),
+    'amount' => number_format(commerce_currency_amount_to_decimal($charge['amount'], $charge['currency_code']), 2, '.', ''),
     'cid' => $order->uid,
     'ipaddr' => $_SERVER['REMOTE_ADDR'],
     'accept_url' => $return_url,
