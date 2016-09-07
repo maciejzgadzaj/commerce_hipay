@@ -48,17 +48,23 @@ function commerce_hipay_ws_api_withdrawal_execute($withdrawal) {
 
   // Update the withdrawal entity with values received in Hipay response,
   // creating new revision.
-  $withdrawal->remote_status = $response['code'];
-  $withdrawal->description = $response['description'];
-  $withdrawal->transaction_id = $response['transactionPublicId'];
   $withdrawal->revision = TRUE;
 
   // If withdrawal was executed successfully, update its status to 'executed'.
   if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+    $withdrawal->transaction_id = $response['transactionPublicId'];
+    $withdrawal->remote_status = $response['code'];
+    $withdrawal->description = $response['description'];
     $withdrawal->status = COMMERCE_HIPAY_WS_WITHDRAWAL_STATUS_EXECUTED;
     $withdrawal->log = 'Withdrawal executed successfully.';
   }
   else {
+    if (isset($response['code'])) {
+      $withdrawal->remote_status = $response['code'];
+    }
+    if (isset($response['description'])) {
+      $withdrawal->description = $response['description'];
+    }
     $withdrawal->log = 'Withdrawal execution failed.';
   }
 

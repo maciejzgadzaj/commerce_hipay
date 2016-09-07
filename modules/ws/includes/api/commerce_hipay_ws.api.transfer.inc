@@ -55,20 +55,26 @@ function commerce_hipay_ws_api_transfer_execute(&$transfer) {
   // Update the transfer entity with values received in Hipay response,
   // creating new revision.
   $transfer->revision = TRUE;
-  $transfer->transaction_id = $response['transactionId'];
-  $transfer->remote_status = $response['code'];
-  $transfer->description = $response['description'];
-  $transfer->amount = commerce_currency_decimal_to_amount($response['amount'], $response['currency']);
-  $transfer->currency_code = $response['currency'];
-  $transfer->public_label = $response['publicLabel'];
-  $transfer->private_label = $response['privateLabel'];
 
   // If transfer was executed successfully, update its status to 'executed'.
   if (isset($response['code']) && $response['code'] === COMMERCE_HIPAY_WS_STATUS_SUCCESS) {
+    $transfer->transaction_id = $response['transactionId'];
+    $transfer->remote_status = $response['code'];
+    $transfer->description = $response['description'];
+    $transfer->amount = commerce_currency_decimal_to_amount($response['amount'], $response['currency']);
+    $transfer->currency_code = $response['currency'];
+    $transfer->public_label = $response['publicLabel'];
+    $transfer->private_label = $response['privateLabel'];
     $transfer->status = COMMERCE_HIPAY_WS_TRANSFER_STATUS_EXECUTED;
     $transfer->log = 'Transfer executed successfully.';
   }
   else {
+    if (isset($response['code'])) {
+      $transfer->remote_status = $response['code'];
+    }
+    if (isset($response['description'])) {
+      $transfer->description = $response['description'];
+    }
     $transfer->log = 'Transfer execution failed.';
   }
 
