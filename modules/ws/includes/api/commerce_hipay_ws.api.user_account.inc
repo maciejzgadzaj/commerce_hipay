@@ -223,8 +223,9 @@ function commerce_hipay_ws_api_user_account_validate_notification($feedback) {
 function commerce_hipay_ws_api_user_account_get_infos($user_account_id, $context = array()) {
   $parameters = array('accountId' => $user_account_id);
 
-  $hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($user_account_id);
-  $context['currency_code'] = commerce_hipay_ws_user_account_get_currency($hipay_user_account);
+  if ($hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($user_account_id)) {
+    $context['currency_code'] = commerce_hipay_ws_user_account_get_currency($hipay_user_account);
+  }
 
   $response = commerce_hipay_ws_api_request(COMMERCE_HIPAY_WS_RESOURCE_SOAP_GET_ACCOUNT_INFOS, $parameters, $context);
 
