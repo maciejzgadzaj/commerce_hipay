@@ -768,7 +768,7 @@ function commerce_hipay_ws_user_account_field_bases() {
     'locked' => 0,
     'module' => 'text',
     'settings' => array(
-      'max_length' => 32,
+      'max_length' => 50,
     ),
     'translatable' => 0,
     'type' => 'text',
