@@ -43,6 +43,10 @@ function commerce_hipay_ws_api_upload($account, $kyc_document, $payment_method_i
   // Add request parameters array to the user account entity payload.
   $payload_key = COMMERCE_HIPAY_WS_RESOURCE_REST_UPLOAD . '-request-' . time();
   $account->data['payload'][$payload_key] = $parameters;
+  // Saving CURLFile in serialized payload would cause an Exception:
+  // Unserialization of CURLFile instances is not allowed in CURLFile->__wakeup()
+  // therefore let's replace it with just the file uri.
+  $account->data['payload'][$payload_key]['file'] = $kyc_document['uri'];
 
   $context = array(
     'commerce_hipay_ws_user_account' => $account,
