@@ -415,7 +415,12 @@ function commerce_hipay_ws_api_request_soap($url, $resource, $parameters, $conte
 function commerce_hipay_ws_api_request_rest($url, $resource, $parameters, $context) {
   $ch = curl_init($url);
 
-  curl_setopt($ch, CURLOPT_USERPWD, $context['payment_method_instance']['settings']['api_username'] . ':' . $context['payment_method_instance']['settings']['api_password']);
+  $default_currency_code = commerce_default_currency();
+  $currency_code = !empty($context['currency_code']) ? $context['currency_code'] : $default_currency_code;
+  $api_username = !empty($context['payment_method_instance']['settings']['accounts'][$currency_code]['api_username']) ? $context['payment_method_instance']['settings']['accounts'][$currency_code]['api_username'] : $context['payment_method_instance']['settings']['accounts'][$default_currency_code]['api_username'];
+  $api_password = !empty($context['payment_method_instance']['settings']['accounts'][$currency_code]['api_password']) ? $context['payment_method_instance']['settings']['accounts'][$currency_code]['api_password'] : $context['payment_method_instance']['settings']['accounts'][$default_currency_code]['api_password'];
+
+  curl_setopt($ch, CURLOPT_USERPWD, $api_username . ':' . $api_password);
   curl_setopt($ch, CURLOPT_HTTPHEADER, array(
     'Accept: application/json',
   ));
