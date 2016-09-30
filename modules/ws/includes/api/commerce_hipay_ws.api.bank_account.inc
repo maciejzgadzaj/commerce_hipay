@@ -200,7 +200,7 @@ function commerce_hipay_ws_api_bank_account_get_info_status($parameters = array(
       && $context['commerce_hipay_ws_bank_account']->hipay_status != $response['status']
     ) {
       $hipay_bank_account = $context['commerce_hipay_ws_bank_account'];
-      $hipay_bank_account->hipay_status = $response['status'];
+      $hipay_bank_account->hipay_status = trim($response['status']);
       $hipay_bank_account->revision = TRUE;
       $hipay_bank_account->log = t('Updated bank account status from %resource API call response.', array('%resource' => COMMERCE_HIPAY_WS_RESOURCE_SOAP_BANK_INFOS_STATUS));
       commerce_hipay_ws_bank_account_save($hipay_bank_account);
