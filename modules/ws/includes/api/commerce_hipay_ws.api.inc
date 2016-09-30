@@ -15,9 +15,7 @@
  *   A country code for provided country label.
  */
 function commerce_hipay_ws_get_code_from_country($country_label) {
-  $context = array();
-  $context['payment_method_instance']['settings']['locale'] = 'fr_FR';
-  $countries = array_flip(commerce_hipay_ws_get_countries($context));
+  $countries = array_flip(commerce_hipay_ws_get_countries());
   return (isset($countries[$country_label])) ? $countries[$country_label] : FALSE;
 }
 
