@@ -27,6 +27,7 @@ class CommerceHipayWSWithdrawalEntityController extends EntityAPIController {
       'notification' => '',
       'created' => '',
       'changed' => '',
+      'executed' => '',
     );
 
     return parent::create($values);

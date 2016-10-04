@@ -56,6 +56,7 @@ function commerce_hipay_ws_api_withdrawal_execute($withdrawal) {
     $withdrawal->remote_status = $response['code'];
     $withdrawal->description = $response['description'];
     $withdrawal->status = COMMERCE_HIPAY_WS_WITHDRAWAL_STATUS_EXECUTED;
+    $withdrawal->executed = time();
     $withdrawal->log = 'Withdrawal executed successfully.';
   }
   else {

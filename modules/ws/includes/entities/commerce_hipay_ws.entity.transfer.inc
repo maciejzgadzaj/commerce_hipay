@@ -120,6 +120,12 @@ function commerce_hipay_ws_transfer_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'executed' => array(
+        'description' => 'The Unix timestamp when this transfer was successfully executed.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
       'data' => array(
         'description' => 'A serialized array of additional data.',
         'type' => 'blob',
@@ -458,6 +464,14 @@ function commerce_hipay_ws_transfer_entity_property_info() {
     'query callback' => 'entity_metadata_table_query',
     'setter permission' => 'administer commerce_hipay_ws_transfer entities',
     'schema field' => 'changed',
+  );
+  $properties['executed'] = array(
+    'label' => t('Date executed'),
+    'description' => t('The date the transfer was successfully executed.'),
+    'type' => 'date',
+    'setter callback' => 'entity_property_verbatim_set',
+    'setter permission' => 'administer commerce_hipay_ws_transfer entities',
+    'schema field' => 'executed',
   );
 
   return $info;

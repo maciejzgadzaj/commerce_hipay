@@ -66,6 +66,7 @@ function commerce_hipay_ws_api_transfer_execute(&$transfer) {
     $transfer->public_label = $response['publicLabel'];
     $transfer->private_label = $response['privateLabel'];
     $transfer->status = COMMERCE_HIPAY_WS_TRANSFER_STATUS_EXECUTED;
+    $transfer->executed = time();
     $transfer->log = 'Transfer executed successfully.';
   }
   else {

@@ -28,6 +28,7 @@ class CommerceHipayWSTransferEntityController extends EntityAPIController {
       'transaction_id' => '',
       'created' => '',
       'changed' => '',
+      'executed' => '',
     );
 
     return parent::create($values);
