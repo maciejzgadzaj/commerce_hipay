@@ -102,6 +102,8 @@ define('COMMERCE_HIPAY_WS_LEGAL_STATUS_BUSINESS', 1);
 define('COMMERCE_HIPAY_WS_TITLE_MR', 1);
 define('COMMERCE_HIPAY_WS_TITLE_MRS', 2);
 define('COMMERCE_HIPAY_WS_TITLE_MISS', 3);
+define('COMMERCE_HIPAY_WS_IDENT_TYPE_RG', 'rg');
+define('COMMERCE_HIPAY_WS_IDENT_TYPE_RNE', 'rne');
 
 // Hipay Wallet server-to-server notification statuses.
 define('COMMERCE_HIPAY_WS_NOTIFICATION_STATUS_OK', 'ok');

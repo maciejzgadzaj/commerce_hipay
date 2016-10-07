@@ -60,10 +60,9 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
       'structure' => $wrapper->hipay_ws_user_structure->value(),
       'companyName' => $wrapper->hipay_ws_user_company_name->value(),
       'directorRole' => $wrapper->hipay_ws_user_director_role->value(),
-      // @TODO: We do not handle Brazilian account data yet.
-//      'cpf' => '',
-//      'identificationNumberType' => '',
-//      'identificationNumber' => '',
+      'cpf' => $wrapper->hipay_ws_user_cpf->value(),
+      'identificationNumberType' => $wrapper->hipay_ws_user_ident_type->value(),
+      'identificationNumber' => $wrapper->hipay_ws_user_ident_number->value(),
       // @TODO: No idea yet what this is for.
 //      'state' => '',
       'birthDate' => date('d/m/Y', $wrapper->hipay_ws_user_birth_date->value()),

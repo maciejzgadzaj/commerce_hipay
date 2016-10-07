@@ -712,6 +712,26 @@ function commerce_hipay_ws_user_account_field_bases() {
     'type' => 'text',
   );
 
+  $field_bases['hipay_ws_user_cpf'] = array(
+    'active' => 1,
+    'cardinality' => 1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'hipay_ws_user_cpf',
+    'indexes' => array(
+      'format' => array(
+        0 => 'format',
+      ),
+    ),
+    'locked' => 0,
+    'module' => 'text',
+    'settings' => array(
+      'max_length' => 32,
+    ),
+    'translatable' => 0,
+    'type' => 'text',
+  );
+
   $field_bases['hipay_ws_user_currencies'] = array(
     'active' => 1,
     'cardinality' => -1,
@@ -832,6 +852,47 @@ function commerce_hipay_ws_user_account_field_bases() {
     ),
     'translatable' => 0,
     'type' => 'text',
+  );
+
+  $field_bases['hipay_ws_user_ident_number'] = array(
+    'active' => 1,
+    'cardinality' => 1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'hipay_ws_user_ident_number',
+    'indexes' => array(
+      'format' => array(
+        0 => 'format',
+      ),
+    ),
+    'locked' => 0,
+    'module' => 'text',
+    'settings' => array(
+      'max_length' => 255,
+    ),
+    'translatable' => 0,
+    'type' => 'text',
+  );
+
+  $field_bases['hipay_ws_user_ident_type'] = array(
+    'active' => 1,
+    'cardinality' => 1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'hipay_ws_user_ident_type',
+    'indexes' => array(
+      'value' => array(
+        0 => 'value',
+      ),
+    ),
+    'locked' => 0,
+    'module' => 'list',
+    'settings' => array(
+      'allowed_values' => array(),
+      'allowed_values_function' => 'commerce_hipay_ws_allowed_values_user_ident_type',
+    ),
+    'translatable' => 0,
+    'type' => 'list_text',
   );
 
   $field_bases['hipay_ws_user_kyc_documents'] = array(
@@ -1138,7 +1199,7 @@ function commerce_hipay_ws_user_account_field_instances() {
           'use_widget_handlers' => 1,
         ),
         'type' => 'addressfield_default',
-        'weight' => 12,
+        'weight' => 15,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1164,7 +1225,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         ),
       ),
       'type' => 'addressfield_standard',
-      'weight' => 12,
+      'weight' => 15,
     ),
   );
 
@@ -1185,7 +1246,7 @@ function commerce_hipay_ws_user_account_field_instances() {
           'show_remaining_days' => FALSE,
         ),
         'type' => 'date_default',
-        'weight' => 14,
+        'weight' => 17,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1211,7 +1272,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'year_range' => '-100:+0',
       ),
       'type' => 'date_popup',
-      'weight' => 14,
+      'weight' => 17,
     ),
   );
 
@@ -1226,7 +1287,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'text',
         'settings' => array(),
         'type' => 'text_default',
-        'weight' => 20,
+        'weight' => 23,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1243,7 +1304,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'size' => 60,
       ),
       'type' => 'text_textfield',
-      'weight' => 20,
+      'weight' => 23,
     ),
   );
 
@@ -1258,7 +1319,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'list',
         'settings' => array(),
         'type' => 'list_default',
-        'weight' => 21,
+        'weight' => 24,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1271,7 +1332,7 @@ function commerce_hipay_ws_user_account_field_instances() {
       'module' => 'options',
       'settings' => array(),
       'type' => 'options_select',
-      'weight' => 21,
+      'weight' => 24,
     ),
   );
 
@@ -1318,7 +1379,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'text',
         'settings' => array(),
         'type' => 'text_default',
-        'weight' => 15,
+        'weight' => 18,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1335,7 +1396,39 @@ function commerce_hipay_ws_user_account_field_instances() {
         'size' => 60,
       ),
       'type' => 'text_textfield',
-      'weight' => 15,
+      'weight' => 18,
+    ),
+  );
+
+  $field_instances['hipay_ws_user_cpf'] = array(
+    'bundle' => 'hipay_user_account',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => 'For Brazilian accounts only. Just the number, without any special characters.',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'text',
+        'settings' => array(),
+        'type' => 'text_default',
+        'weight' => 12,
+      ),
+    ),
+    'entity_type' => 'commerce_hipay_ws_user_account',
+    'field_name' => 'hipay_ws_user_cpf',
+    'label' => 'Cadastro de Pessoas Físicas (CPF)',
+    'required' => 0,
+    'settings' => array(
+      'text_processing' => 0,
+    ),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'text',
+      'settings' => array(
+        'size' => 60,
+      ),
+      'type' => 'text_textfield',
+      'weight' => 12,
     ),
   );
 
@@ -1498,7 +1591,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'text',
         'settings' => array(),
         'type' => 'text_default',
-        'weight' => 18,
+        'weight' => 21,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1515,7 +1608,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'size' => 60,
       ),
       'type' => 'text_textfield',
-      'weight' => 18,
+      'weight' => 21,
     ),
   );
 
@@ -1551,6 +1644,66 @@ function commerce_hipay_ws_user_account_field_instances() {
     ),
   );
 
+  $field_instances['hipay_ws_user_ident_number'] = array(
+    'bundle' => 'hipay_user_account',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => 'For Brazilian accounts only.',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'text',
+        'settings' => array(),
+        'type' => 'text_default',
+        'weight' => 14,
+      ),
+    ),
+    'entity_type' => 'commerce_hipay_ws_user_account',
+    'field_name' => 'hipay_ws_user_ident_number',
+    'label' => 'Identification number',
+    'required' => 0,
+    'settings' => array(
+      'text_processing' => 0,
+    ),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'text',
+      'settings' => array(
+        'size' => 60,
+      ),
+      'type' => 'text_textfield',
+      'weight' => 14,
+    ),
+  );
+
+  $field_instances['hipay_ws_user_ident_type'] = array(
+    'bundle' => 'hipay_user_account',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => 'For Brazilian accounts only.',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'list',
+        'settings' => array(),
+        'type' => 'list_default',
+        'weight' => 13,
+      ),
+    ),
+    'entity_type' => 'commerce_hipay_ws_user_account',
+    'field_name' => 'hipay_ws_user_ident_type',
+    'label' => 'Identification number type',
+    'required' => 0,
+    'settings' => array(),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'options',
+      'settings' => array(),
+      'type' => 'options_select',
+      'weight' => 13,
+    ),
+  );
+
   $field_instances['hipay_ws_user_kyc_documents'] = array(
     'bundle' => 'hipay_user_account',
     'deleted' => 0,
@@ -1561,7 +1714,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'file',
         'settings' => array(),
         'type' => 'file_default',
-        'weight' => 22,
+        'weight' => 25,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1582,7 +1735,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'progress_indicator' => 'throbber',
       ),
       'type' => 'file_generic',
-      'weight' => 22,
+      'weight' => 25,
     ),
   );
 
@@ -1685,7 +1838,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'text',
         'settings' => array(),
         'type' => 'text_default',
-        'weight' => 17,
+        'weight' => 20,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1702,7 +1855,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'size' => 60,
       ),
       'type' => 'text_textfield',
-      'weight' => 17,
+      'weight' => 20,
     ),
   );
 
@@ -1717,7 +1870,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'text',
         'settings' => array(),
         'type' => 'text_default',
-        'weight' => 16,
+        'weight' => 19,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1734,7 +1887,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'size' => 60,
       ),
       'type' => 'text_textfield',
-      'weight' => 16,
+      'weight' => 19,
     ),
   );
 
@@ -1843,7 +1996,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'list',
         'settings' => array(),
         'type' => 'list_default',
-        'weight' => 13,
+        'weight' => 16,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1856,7 +2009,7 @@ function commerce_hipay_ws_user_account_field_instances() {
       'module' => 'options',
       'settings' => array(),
       'type' => 'options_select',
-      'weight' => 13,
+      'weight' => 16,
     ),
   );
 
@@ -1929,7 +2082,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'text',
         'settings' => array(),
         'type' => 'text_default',
-        'weight' => 19,
+        'weight' => 22,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1946,7 +2099,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'size' => 60,
       ),
       'type' => 'text_textfield',
-      'weight' => 19,
+      'weight' => 22,
     ),
   );
 
@@ -1980,6 +2133,19 @@ function commerce_hipay_ws_allowed_values_user_business_line_id() {
  */
 function commerce_hipay_ws_allowed_values_user_currency() {
   return drupal_map_assoc(array_keys(commerce_hipay_get_supported_currencies()));
+}
+
+/**
+ * Returns allowed values for 'hipay_ws_user_ident_type' select field.
+ *
+ * @see commerce_hipay_ws_user_account_field_bases()
+ * @see list_allowed_values()
+ */
+function commerce_hipay_ws_allowed_values_user_ident_type() {
+  return array(
+    COMMERCE_HIPAY_WS_IDENT_TYPE_RG => t('Registro Geral (RG)'),
+    COMMERCE_HIPAY_WS_IDENT_TYPE_RNE => t('Registro Nacional de Estrangeiros (RNE)'),
+  );
 }
 
 /**
