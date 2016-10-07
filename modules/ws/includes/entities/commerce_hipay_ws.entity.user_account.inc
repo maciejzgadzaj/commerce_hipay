@@ -603,6 +603,26 @@ function commerce_hipay_ws_user_account_field_bases() {
     'type' => 'addressfield',
   );
 
+  $field_bases['hipay_ws_user_antiphishing_key'] = array(
+    'active' => 1,
+    'cardinality' => 1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'hipay_ws_user_antiphishing_key',
+    'indexes' => array(
+      'format' => array(
+        0 => 'format',
+      ),
+    ),
+    'locked' => 0,
+    'module' => 'text',
+    'settings' => array(
+      'max_length' => 255,
+    ),
+    'translatable' => 0,
+    'type' => 'text',
+  );
+
   $field_bases['hipay_ws_user_birth_date'] = array(
     'active' => 1,
     'cardinality' => 1,
@@ -1019,6 +1039,54 @@ function commerce_hipay_ws_user_account_field_bases() {
     'type' => 'text',
   );
 
+  $field_bases['hipay_ws_user_receive_com_info'] = array(
+    'active' => 1,
+    'cardinality' => 1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'hipay_ws_user_receive_com_info',
+    'indexes' => array(
+      'value' => array(
+        0 => 'value',
+      ),
+    ),
+    'locked' => 0,
+    'module' => 'list',
+    'settings' => array(
+      'allowed_values' => array(
+        0 => '',
+        1 => '',
+      ),
+      'allowed_values_function' => '',
+    ),
+    'translatable' => 0,
+    'type' => 'list_boolean',
+  );
+
+  $field_bases['hipay_ws_user_receive_hipay_info'] = array(
+    'active' => 1,
+    'cardinality' => 1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'hipay_ws_user_receive_hipay_info',
+    'indexes' => array(
+      'value' => array(
+        0 => 'value',
+      ),
+    ),
+    'locked' => 0,
+    'module' => 'list',
+    'settings' => array(
+      'allowed_values' => array(
+        0 => '',
+        1 => '',
+      ),
+      'allowed_values_function' => '',
+    ),
+    'translatable' => 0,
+    'type' => 'list_boolean',
+  );
+
   $field_bases['hipay_ws_user_store'] = array(
     'active' => 1,
     'cardinality' => 1,
@@ -1226,6 +1294,38 @@ function commerce_hipay_ws_user_account_field_instances() {
       ),
       'type' => 'addressfield_standard',
       'weight' => 15,
+    ),
+  );
+
+  $field_instances['hipay_ws_user_antiphishing_key'] = array(
+    'bundle' => 'hipay_user_account',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => 'Used to add security for email communication with merchants.',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'text',
+        'settings' => array(),
+        'type' => 'text_default',
+        'weight' => 25,
+      ),
+    ),
+    'entity_type' => 'commerce_hipay_ws_user_account',
+    'field_name' => 'hipay_ws_user_antiphishing_key',
+    'label' => 'Antiphishing key',
+    'required' => 0,
+    'settings' => array(
+      'text_processing' => 0,
+    ),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'text',
+      'settings' => array(
+        'size' => 60,
+      ),
+      'type' => 'text_textfield',
+      'weight' => 25,
     ),
   );
 
@@ -1714,7 +1814,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'module' => 'file',
         'settings' => array(),
         'type' => 'file_default',
-        'weight' => 25,
+        'weight' => 28,
       ),
     ),
     'entity_type' => 'commerce_hipay_ws_user_account',
@@ -1735,7 +1835,7 @@ function commerce_hipay_ws_user_account_field_instances() {
         'progress_indicator' => 'throbber',
       ),
       'type' => 'file_generic',
-      'weight' => 25,
+      'weight' => 28,
     ),
   );
 
@@ -1888,6 +1988,74 @@ function commerce_hipay_ws_user_account_field_instances() {
       ),
       'type' => 'text_textfield',
       'weight' => 19,
+    ),
+  );
+
+  $field_instances['hipay_ws_user_receive_com_info'] = array(
+    'bundle' => 'hipay_user_account',
+    'default_value' => array(
+      0 => array(
+        'value' => 0,
+      ),
+    ),
+    'deleted' => 0,
+    'description' => '',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'list',
+        'settings' => array(),
+        'type' => 'list_default',
+        'weight' => 27,
+      ),
+    ),
+    'entity_type' => 'commerce_hipay_ws_user_account',
+    'field_name' => 'hipay_ws_user_receive_com_info',
+    'label' => 'Receive commercial information',
+    'required' => 0,
+    'settings' => array(),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'options',
+      'settings' => array(
+        'display_label' => 1,
+      ),
+      'type' => 'options_onoff',
+      'weight' => 27,
+    ),
+  );
+
+  $field_instances['hipay_ws_user_receive_hipay_info'] = array(
+    'bundle' => 'hipay_user_account',
+    'default_value' => array(
+      0 => array(
+        'value' => 0,
+      ),
+    ),
+    'deleted' => 0,
+    'description' => '',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'list',
+        'settings' => array(),
+        'type' => 'list_default',
+        'weight' => 26,
+      ),
+    ),
+    'entity_type' => 'commerce_hipay_ws_user_account',
+    'field_name' => 'hipay_ws_user_receive_hipay_info',
+    'label' => 'Receive Hipay information',
+    'required' => 0,
+    'settings' => array(),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'options',
+      'settings' => array(
+        'display_label' => 1,
+      ),
+      'type' => 'options_onoff',
+      'weight' => 26,
     ),
   );
 

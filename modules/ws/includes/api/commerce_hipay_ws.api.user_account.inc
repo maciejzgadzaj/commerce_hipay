@@ -71,10 +71,9 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
       'europeanVATNumber' => $wrapper->hipay_ws_user_vat_number->value(),
       'businessId' => $wrapper->hipay_ws_user_business_id->value(),
       'businessLineId' => $wrapper->hipay_ws_user_business_line_id->value(),
-      // @TODO: We do not handle these yet either.
-//      'antiPhishingKey' => '',
-//      'receiveHipayInformation' => 0,
-//      'receiveCommercialInformation' => 0,
+      'antiPhishingKey' => $wrapper->hipay_ws_user_antiphishing_key->value(),
+      'receiveHipayInformation' => $wrapper->hipay_ws_user_receive_hipay_info->value() ? 1 : 0,
+      'receiveCommercialInformation' => $wrapper->hipay_ws_user_receive_com_info->value() ? 1 : 0,
     ),
   );
 
