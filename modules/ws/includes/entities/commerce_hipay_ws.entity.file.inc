@@ -320,7 +320,7 @@ function commerce_hipay_ws_file_kyc_document_update($entity_type, $entity) {
  * @see commerce_hipay_ws_file_kyc_document_update()
  */
 function commerce_hipay_ws_valid_timestamp($timestamp) {
-  return ((string) (int) $timestamp === $timestamp)
+  return ((string) (int) $timestamp === (string) $timestamp)
     && ($timestamp <= PHP_INT_MAX)
     && ($timestamp >= ~PHP_INT_MAX);
 }
