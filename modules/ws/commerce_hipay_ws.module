@@ -508,7 +508,10 @@ function commerce_hipay_ws_commerce_hipay_ws_api_request_alter(&$parameters, $re
 function commerce_hipay_ws_callback_notification_process_feedback_xml($xml_string) {
   $result = FALSE;
 
-  if ($xml = simplexml_load_string($xml_string)) {
+  if (
+    ($xml = simplexml_load_string($xml_string))
+    && commerce_hipay_ws_callback_notification_validate_checksum($xml)
+  ) {
     $feedback_xml = json_decode(json_encode($xml->result), TRUE);
 
     if (!empty($feedback_xml['operation'])) {
@@ -543,6 +546,37 @@ function commerce_hipay_ws_callback_notification_process_feedback_xml($xml_strin
   if ($result === FALSE) {
     drupal_add_http_header('status', '503 Error processing notification. Please retry.');
   }
+}
+
+/**
+ * Validates the notification 'md5content' checksum value.
+ *
+ * @param SimpleXMLElement $xml
+ *   A SimpleXMLElement object created from received notification.
+ *
+ * @return bool
+ *   A boolean indicating whether the notification 'md5content' checksum value
+ *   matches the value calculated from notification 'result' element.
+ *
+ * @see commerce_hipay_ws_callback_notification_process_feedback_xml()
+ */
+function commerce_hipay_ws_callback_notification_validate_checksum(SimpleXMLElement $xml) {
+  $payment_method_instance = commerce_hipay_ws_payment_method_instance();
+
+  // The 'md5content' checksum is calculated from a concatenation
+  // of '<result>...</result' sub-element and the salt string.
+  $result_string = $xml->result->asXml() . $payment_method_instance['settings']['notification_checksum_salt'];
+  $md5content = $xml->md5content->__toString();
+
+  $valid = md5($result_string) == $md5content;
+
+  if (!$valid) {
+    watchdog('commerce_hipay_ws', 'Invalid md5content checksum for notification: !notification', array(
+      '!notification' => '<pre>' . check_plain(var_export($xml->asXml(), TRUE)) . '</pre>',
+    ), WATCHDOG_ERROR);
+  }
+
+  return $valid;
 }
 
 /**

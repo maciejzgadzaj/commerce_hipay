@@ -15,6 +15,7 @@ function commerce_hipay_ws_settings_default() {
     'endpoint' => COMMERCE_HIPAY_WS_TEST,
     'entity' => '',
     'locale' => 'en_GB',
+    'notification_checksum_salt' => '',
     'api' => array(
       'create_account_immediately' => TRUE,
       'test_mode' => FALSE,
@@ -125,6 +126,13 @@ function commerce_hipay_ws_settings_form($settings = array()) {
     '#options' => commerce_hipay_ws_get_supported_languages(),
     '#default_value' => $settings['locale'],
     '#required' => TRUE,
+  );
+
+  $form['notification_checksum_salt'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Notification checksum salt'),
+    '#description' => t('Salt value to use when validating notification <em>md5content</em> value. It should be provided to Hipay Support to be used by Hipay Wallet when sending asynchronous server-to-server notifications.'),
+    '#default_value' => $settings['notification_checksum_salt'],
   );
 
   // This will be used for all bank fieldset form elements of all settlement
