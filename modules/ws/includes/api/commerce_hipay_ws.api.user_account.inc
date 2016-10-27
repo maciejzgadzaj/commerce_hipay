@@ -305,25 +305,35 @@ function commerce_hipay_ws_api_user_account_check_identified($user_account_id, $
  *
  * @param int $hipay_account_id
  *   A Hipay user account to return the list of transactions for.
+ * @param int $start_date
+ *   A timestamp which to start fetching transaction at.
+ * @param int $end_date
+ *   A timestamp which to end fetching transaction at.
  * @param array $context
  *   An associative array containing additional information about the request.
  *
  * @return array
  *   An array of transactions for a Hipay user account.
  */
-function commerce_hipay_ws_api_user_account_get_transactions($hipay_account_id, $context = array()) {
+function commerce_hipay_ws_api_user_account_get_transactions($hipay_account_id, $start_date = NULL, $end_date = NULL, $context = array()) {
   $transactions = array();
 
   $hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($hipay_account_id);
 
+  if (!empty($start_date)) {
+    $start_timestamp = commerce_hipay_ws_valid_timestamp($start_date) ? $start_date : strtotime($start_date);
+  }
+  // Hipay allows to get transactions for max period of 3 months.
+  else {
+    $three_months_ago = strtotime('-3 months');
+    $start_timestamp = ($hipay_user_account->created > $three_months_ago) ? $hipay_user_account->created : $three_months_ago;
+  }
+  $end_timestamp = !empty($end_date) ? (commerce_hipay_ws_valid_timestamp($end_date) ? $end_date : strtotime($end_date)) : REQUEST_TIME;
+
   // Hipay servers run on UTC time, so we need to convert our time
   // to match theirs.
-  $end_date = format_date(REQUEST_TIME, 'custom', 'Y-m-d H:i:s', 'UTC');
-
-  // Hipay allows to get transactions for max period of 3 months.
-  $three_months_ago = strtotime('-3 months');
-  $start_timestamp = ($hipay_user_account->created > $three_months_ago) ? $hipay_user_account->created : $three_months_ago;
   $start_date = format_date($start_timestamp, 'custom', 'Y-m-d H:i:s', 'UTC');
+  $end_date = format_date($end_timestamp, 'custom', 'Y-m-d H:i:s', 'UTC');
 
   $parameters = array(
     'wsSubAccountId' => $hipay_account_id,
