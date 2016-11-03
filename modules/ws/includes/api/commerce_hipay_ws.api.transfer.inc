@@ -173,3 +173,102 @@ function commerce_hipay_ws_api_transfer_execute_all_pending() {
     }
   }
 }
+
+/**
+ * Processes Hipay Wallet transfer validation notification.
+ *
+ * @param array $feedback
+ *   An array of XML parameters received in the notification.
+ *
+ * @return bool
+ *   An boolean indicating whether the notification was processed successfully.
+ *
+ * @see commerce_hipay_ws_callback_notification_process_feedback_xml()
+ */
+function commerce_hipay_ws_api_transfer_validate_notification($feedback) {
+  // Make sure we have received all required parameters.
+  $required_parameters = array('account_id', 'transid', 'status');
+  foreach ($required_parameters as $required_parameter) {
+    if (empty($feedback[$required_parameter])) {
+      watchdog('commerce_hipay_ws', 'Notification: transfer @operation: !param_name parameter missing or empty.', array(
+        '@operation' => $feedback['operation'],
+        '!param_name' => $required_parameter,
+      ), WATCHDOG_ERROR);
+      return FALSE;
+    }
+  }
+
+  // Try to load the Hipay transfer entity from the received parameter.
+  if (!$transfer = commerce_hipay_ws_transfer_load_by_transaction_id($feedback['transid'])) {
+    watchdog('commerce_hipay_ws', 'Notification: transfer @operation: unable to load a Hipay transfer entity from transid parameter: @transid.', array(
+      '@operation' => $feedback['operation'],
+      '@transid' => $feedback['transid'],
+    ), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  // Make sure the notification account_id matches the transfer account_id.
+  if ($feedback['account_id'] != $transfer->sender_account_id) {
+    watchdog('commerce_hipay_ws', 'Notification: transfer @operation: notification account_id @account_id does not match transfer sender_account_id @sender_account_id for transaction @transid.', array(
+      '@operation' => $feedback['operation'],
+      '@account_id' => $feedback['account_id'],
+      '@sender_account_id' => $transfer->sender_account_id,
+      '@transid' => $feedback['transid'],
+    ), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  // Store the full notification in entity data.
+  $payload_key = 'notification-' . $feedback['operation'] . '-' . REQUEST_TIME;
+  $transfer->data['payload'][$payload_key] = $feedback;
+
+  // Update the Hipay transfer entity with the new status.
+  if ($feedback['status'] == COMMERCE_HIPAY_WS_NOTIFICATION_STATUS_OK) {
+    if ($feedback['operation'] == 'capture') {
+      $transfer->status = COMMERCE_HIPAY_WS_TRANSFER_STATUS_CAPTURED;
+    } elseif ($transfer->status != COMMERCE_HIPAY_WS_TRANSFER_STATUS_CAPTURED) {
+      $transfer->status = COMMERCE_HIPAY_WS_TRANSFER_STATUS_AUTHORIZED;
+    }
+  }
+  else {
+    $transfer->status = COMMERCE_HIPAY_WS_TRANSFER_STATUS_FAILED;
+  }
+  $transfer->revision = TRUE;
+  $transfer->log = 'Updated status from Hipay Wallet notificaton.';
+  commerce_hipay_ws_transfer_save($transfer);
+
+  // Add watchdog entry.
+  watchdog('commerce_hipay_ws', 'Notification: transfer @operation: Updated Hipay transfer @transfer_id status to @status.', array(
+    '@operation' => $feedback['operation'],
+    '@transfer_id' => $transfer->transfer_id,
+    '@status' => $transfer->status,
+  ), WATCHDOG_NOTICE);
+
+  // Create new revisions of all related orders, if order auto-revisioning
+  // is enabled.
+  if (variable_get('commerce_order_auto_revision', TRUE)) {
+    $transfer_wrapper = entity_metadata_wrapper('commerce_hipay_ws_transfer', $transfer);
+    foreach ($transfer_wrapper->hipay_ws_transfer_order as $order_wrapper) {
+      $order = $order_wrapper->value();
+      $order->revision = TRUE;
+      $order->log = ($feedback['status'] == COMMERCE_HIPAY_WS_NOTIFICATION_STATUS_OK) ? t('Transfer @transfer_id @operation has been successful.', array(
+        '@transfer_id' => $transfer->transfer_id,
+        '@operation' => $feedback['operation'],
+      )) : t('Transfer @transfer_id @operation failed.', array(
+        '@transfer_id' => $transfer->transfer_id,
+        '@operation' => $feedback['operation'],
+      ));
+      commerce_order_save($order);
+    }
+  }
+
+  // Invoke the rules event to allow other modules to react to the notification.
+  $update_result = TRUE;
+  foreach (rules_invoke_all('commerce_hipay_ws_transfer_validation', $transfer, $feedback) as $result) {
+    // If any of the hook implementations returns FALSE, alter the function
+    // update result respectively.
+    $update_result = $update_result && $result;
+  }
+
+  return $update_result;
+}

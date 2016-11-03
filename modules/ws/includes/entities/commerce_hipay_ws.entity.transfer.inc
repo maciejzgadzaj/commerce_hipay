@@ -3,6 +3,8 @@
 define('COMMERCE_HIPAY_WS_TRANSFER_STATUS_CREATED', 'created');
 define('COMMERCE_HIPAY_WS_TRANSFER_STATUS_PENDING', 'pending');
 define('COMMERCE_HIPAY_WS_TRANSFER_STATUS_EXECUTED', 'executed');
+define('COMMERCE_HIPAY_WS_TRANSFER_STATUS_AUTHORIZED', 'authorized');
+define('COMMERCE_HIPAY_WS_TRANSFER_STATUS_CAPTURED', 'captured');
 define('COMMERCE_HIPAY_WS_TRANSFER_STATUS_WITHDRAWAL_EXECUTED', 'withdrawal_executed');
 define('COMMERCE_HIPAY_WS_TRANSFER_STATUS_WITHDRAWAL_VALIDATED', 'withdrawal_validated');
 define('COMMERCE_HIPAY_WS_TRANSFER_STATUS_WITHDRAWAL_FAILED', 'withdrawal_failed');
@@ -544,6 +546,28 @@ function commerce_hipay_ws_transfer_load_multiple($ids = FALSE, $conditions = ar
 }
 
 /**
+ * Loads Hipay transfer entity for provided Hipay transaction ID.
+ *
+ * @param int $transaction_id
+ *   A Hipay transaction ID to load the Hipay transfer entity for.
+ *
+ * @return array|false
+ *   A Hipay transfer entity, or FALSE if not found.
+ */
+function commerce_hipay_ws_transfer_load_by_transaction_id($transaction_id) {
+  $query = new EntityFieldQuery();
+  $result = $query->entityCondition('entity_type', 'commerce_hipay_ws_transfer')
+    ->propertyCondition('transaction_id', $transaction_id, '=')
+    ->execute();
+  if (!empty($result['commerce_hipay_ws_transfer'])) {
+    $transfers = entity_load('commerce_hipay_ws_transfer', array_keys($result['commerce_hipay_ws_transfer']));
+    return reset($transfers);
+  }
+
+  return FALSE;
+}
+
+/**
  * Loads Hipay transfer entities for provided order ID.
  *
  * @param int $order_id
@@ -613,6 +637,8 @@ function commerce_hipay_ws_transfer_statuses() {
     COMMERCE_HIPAY_WS_TRANSFER_STATUS_CREATED => t('Created'),
     COMMERCE_HIPAY_WS_TRANSFER_STATUS_PENDING => t('Pending'),
     COMMERCE_HIPAY_WS_TRANSFER_STATUS_EXECUTED => t('Executed'),
+    COMMERCE_HIPAY_WS_TRANSFER_STATUS_AUTHORIZED => t('Authorized'),
+    COMMERCE_HIPAY_WS_TRANSFER_STATUS_CAPTURED => t('Captured'),
     COMMERCE_HIPAY_WS_TRANSFER_STATUS_WITHDRAWAL_EXECUTED => t('Withdrawal executed'),
     COMMERCE_HIPAY_WS_TRANSFER_STATUS_WITHDRAWAL_VALIDATED => t('Withdrawal validated'),
     COMMERCE_HIPAY_WS_TRANSFER_STATUS_WITHDRAWAL_FAILED => t('Withdrawal failed'),

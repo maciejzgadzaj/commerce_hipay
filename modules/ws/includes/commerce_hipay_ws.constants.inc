@@ -93,9 +93,6 @@ define('COMMERCE_HIPAY_WS_ACCOUNT_IDENTIFIED', 'yes');
 define('COMMERCE_HIPAY_WS_TRANSFER_TYPE_TRANSFER', 'Envoi');
 define('COMMERCE_HIPAY_WS_TRANSFER_TYPE_OTHER', ' Autre');
 
-// Hipay Wallet transfer statuses.
-define('COMMERCE_HIPAY_WS_TRANSFER_STATUS_CAPTURED', 'CAPTURED');
-
 // Hipay Wallet 'createFullUseraccount' API values.
 define('COMMERCE_HIPAY_WS_LEGAL_STATUS_PERSONAL', 0);
 define('COMMERCE_HIPAY_WS_LEGAL_STATUS_BUSINESS', 1);

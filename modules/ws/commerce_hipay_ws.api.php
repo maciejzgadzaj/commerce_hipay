@@ -133,6 +133,30 @@ function hook_commerce_hipay_ws_bank_account_validation($hipay_bank_account, $fe
 }
 
 /**
+ * Allows other modules to respond to Hipay transfer validation notification.
+ *
+ * This hook implementations are called only if the initial processing done in
+ * commerce_hipay_ws_api_transfer_validate_notification() function is
+ * successful.
+ *
+ * @param object $transfer
+ *   A Hipay transfer entity that has just been validated.
+ * @param array $feedback
+ *   An array of XML feedback values received in Hipay Wallet notification.
+ *
+ * @return false|mixed
+ *   Hook implementations should return FALSE if notification processing should
+ *   be considered as failed (and the HTTP error code 503 should be returned in
+ *   the response to Hipay Wallet), or anything else (including nothing) if it
+ *   was successful.
+ *
+ * @see commerce_hipay_ws_api_transfer_validate_notification()
+ */
+function hook_commerce_hipay_ws_transfer_validation($transfer, $feedback) {
+  // No example.
+}
+
+/**
  * Allows other modules to respond to Hipay withdrawal validation notification.
  *
  * This hook implementations are called only if the initial processing done in
