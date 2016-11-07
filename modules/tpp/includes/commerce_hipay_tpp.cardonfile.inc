@@ -148,7 +148,7 @@ function commerce_hipay_tpp_cardonfile_charge($payment_method, $card_data, $orde
     $charge_converted = commerce_hipay_tpp_get_charge_data($order, $payment_method, $charge);
 
     // Update request data with converted charge details.
-    $request_data['amount'] = number_format(commerce_currency_amount_to_decimal($charge_converted['amount'], $charge_converted['currency_code']), 2);
+    $request_data['amount'] = number_format(commerce_currency_amount_to_decimal($charge_converted['amount'], $charge_converted['currency_code']), 2, '.', '');
     $request_data['currency'] = $charge_converted['currency_code'];
 
     // If we were provided with custom charge amount, most probably the 'tax'

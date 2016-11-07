@@ -599,11 +599,11 @@ function commerce_hipay_tpp_get_request_data($order, $payment_method) {
   $subamounts = commerce_hipay_tpp_get_order_amounts_by_type($order);
   if (!empty($subamounts['shipping'])) {
     $shipping_amount = commerce_currency_convert($subamounts['shipping'], $order_currency_code, $charge['currency_code']);
-    $request_data['shipping'] = number_format(commerce_currency_amount_to_decimal($shipping_amount, $charge['currency_code']), 2);
+    $request_data['shipping'] = number_format(commerce_currency_amount_to_decimal($shipping_amount, $charge['currency_code']), 2, '.', '');
   }
   if (!empty($subamounts['tax'])) {
     $tax_amount = commerce_currency_convert($subamounts['tax'], $order_currency_code, $charge['currency_code']);
-    $request_data['tax'] = number_format(commerce_currency_amount_to_decimal($tax_amount, $charge['currency_code']), 2);
+    $request_data['tax'] = number_format(commerce_currency_amount_to_decimal($tax_amount, $charge['currency_code']), 2, '.', '');
   }
 
   if (!empty($payment_method['settings']['css'])) {
