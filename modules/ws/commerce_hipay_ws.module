@@ -346,6 +346,7 @@ function commerce_hipay_ws_api_request_soap($url, $resource, $parameters, $conte
     'soap_version' => SOAP_1_1,
     'encoding' => 'UTF-8',
     'cache_wsdl' => WSDL_CACHE_DISK,
+    'trace' => 1,
   );
 
   // Perform the call to Hipay Wallet SOAP API.
@@ -355,13 +356,22 @@ function commerce_hipay_ws_api_request_soap($url, $resource, $parameters, $conte
   }
   // If there was any kind of error calling the API...
   catch (SoapFault $fault) {
-    watchdog('commerce_hipay_ws', '@api_type @resource: SOAPFault: @faultstring<br />Request URL: @request_url<br />Request parameters: !parameters', array(
+    $message = '@api_type @resource: SOAPFault: @faultstring<br />Request URL: @request_url<br />Request parameters: !parameters';
+    $message_variables = array(
       '@api_type' => COMMERCE_HIPAY_WS_API_TYPE_SOAP,
       '@resource' => $resource,
       '@faultstring' => $fault->faultstring,
       '@request_url' => $url,
       '!parameters' => '<pre>' . var_export($parameters, TRUE) . '</pre>',
-    ), WATCHDOG_ERROR);
+    );
+    if ($client instanceof SoapClient) {
+      $message .= '<br />SOAP request headers: !soap_request_headers<br />SOAP request: !soap_request<br />SOAP response headers: !soap_response_headers<br />SOAP response: !soap_response';
+      $message_variables['!soap_request_headers'] = '<pre>' . var_export($client->__getLastRequestHeaders(), TRUE) . '</pre>';
+      $message_variables['!soap_request'] = '<pre>' . var_export($client->__getLastRequest(), TRUE) . '</pre>';
+      $message_variables['!soap_response_headers'] = '<pre>' . var_export($client->__getLastResponseHeaders(), TRUE) . '</pre>';
+      $message_variables['!soap_response'] = '<pre>' . var_export($client->__getLastResponse(), TRUE) . '</pre>';
+    }
+    watchdog('commerce_hipay_ws', $message, $message_variables, WATCHDOG_ERROR);
 
     // Create response object in the same format as decoded Hipay API response.
     return array(
