@@ -344,7 +344,8 @@ function commerce_hipay_ws_api_request_soap($url, $resource, $parameters, $conte
     'compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP,
     'cache_wsdl' => WSDL_CACHE_NONE,
     'soap_version' => SOAP_1_1,
-    'encoding' => 'UTF-8'
+    'encoding' => 'UTF-8',
+    'cache_wsdl' => WSDL_CACHE_DISK,
   );
 
   // Perform the call to Hipay Wallet SOAP API.
