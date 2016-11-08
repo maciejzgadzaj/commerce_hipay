@@ -539,8 +539,8 @@ function commerce_hipay_ws_callback_notification_process_feedback_xml($xml_strin
         // Hipay transfer has been validated.
         case 'authorization':
         case 'capture':
-        $result = commerce_hipay_ws_api_transfer_validate_notification($feedback_xml);
-        break;
+          $result = commerce_hipay_ws_api_transfer_validate_notification($feedback_xml);
+          break;
 
         // Hipay withdrawal has been validated.
         case 'withdraw_validation':
