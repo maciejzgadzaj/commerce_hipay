@@ -63,7 +63,7 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
       'cpf' => $wrapper->hipay_ws_user_cpf->value(),
       'identificationNumberType' => $wrapper->hipay_ws_user_ident_type->value(),
       'identificationNumber' => $wrapper->hipay_ws_user_ident_number->value(),
-      'state' => $address['administrative_area'],
+      'state' => !empty($address['administrative_area']) ? $address['administrative_area'] : '',
       'birthDate' => date('d/m/Y', $wrapper->hipay_ws_user_birth_date->value()),
       'mobilePhoneNumber' => $wrapper->hipay_ws_user_mobile_number->value(),
       'faxNumber' => $wrapper->hipay_ws_user_fax_number->value(),
