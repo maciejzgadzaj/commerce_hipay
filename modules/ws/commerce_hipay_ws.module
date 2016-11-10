@@ -367,9 +367,9 @@ function commerce_hipay_ws_api_request_soap($url, $resource, $parameters, $conte
     if ($client instanceof SoapClient) {
       $message .= '<br />SOAP request headers: !soap_request_headers<br />SOAP request: !soap_request<br />SOAP response headers: !soap_response_headers<br />SOAP response: !soap_response';
       $message_variables['!soap_request_headers'] = '<pre>' . var_export($client->__getLastRequestHeaders(), TRUE) . '</pre>';
-      $message_variables['!soap_request'] = '<pre>' . var_export($client->__getLastRequest(), TRUE) . '</pre>';
+      $message_variables['!soap_request'] = '<pre>' . htmlentities($client->__getLastRequest(), ENT_NOQUOTES) . '</pre>';
       $message_variables['!soap_response_headers'] = '<pre>' . var_export($client->__getLastResponseHeaders(), TRUE) . '</pre>';
-      $message_variables['!soap_response'] = '<pre>' . var_export($client->__getLastResponse(), TRUE) . '</pre>';
+      $message_variables['!soap_response'] = '<pre>' . htmlentities($client->__getLastResponse(), ENT_NOQUOTES) . '</pre>';
     }
     watchdog('commerce_hipay_ws', $message, $message_variables, WATCHDOG_ERROR);
 
@@ -385,7 +385,7 @@ function commerce_hipay_ws_api_request_soap($url, $resource, $parameters, $conte
     watchdog('commerce_hipay_ws', '@api_type @resource: response: !response', array(
       '@api_type' => COMMERCE_HIPAY_WS_API_TYPE_SOAP,
       '@resource' => $resource,
-      '!response' => '<pre>' . var_export($result, TRUE) . '</pre>',
+      '!response' => '<pre>' . htmlentities($client->__getLastResponse(), ENT_NOQUOTES) . '</pre>',
     ), WATCHDOG_DEBUG);
   }
 
