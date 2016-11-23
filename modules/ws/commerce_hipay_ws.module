@@ -563,7 +563,7 @@ function commerce_hipay_ws_callback_notification_process_feedback_xml($xml_strin
   }
 
   if ($result === FALSE) {
-    drupal_add_http_header('status', '503 Error processing notification. Please retry.');
+    drupal_add_http_header('status', '400 Error processing notification. Please retry.');
   }
 }
 
