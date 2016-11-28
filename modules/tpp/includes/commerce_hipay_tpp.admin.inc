@@ -25,7 +25,11 @@ function commerce_hipay_tpp_refresh($order, $transaction) {
 
   // Perform the call to Hipay TPP API.
   $url = commerce_hipay_tpp_get_server_url($payment_method) . COMMERCE_HIPAY_TPP_RESOURCE_TRANSACTION . $transaction->remote_id;
-  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, 'Refresh');
+  $context = array(
+    'call_type' => 'Refresh',
+    'currency_code' => $transaction->currency_code,
+  );
+  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $context);
 
   $callback_type = 'refresh';
   $feedback = $response['transaction'];

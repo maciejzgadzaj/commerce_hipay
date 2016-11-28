@@ -332,9 +332,6 @@ function commerce_hipay_tpp_access_delete($order, $transaction) {
 function commerce_hipay_tpp_settings_default() {
   $default_settings = array(
     'endpoint' => COMMERCE_HIPAY_TPP_TEST,
-    'api_username' => '',
-    'api_password' => '',
-    'secret_passphrase' => '',
     'operation' => COMMERCE_HIPAY_TPP_OPERATION_SALE,
     'supported_currencies' => drupal_map_assoc(array_keys(commerce_hipay_get_enabled_currencies())),
     'currency_code' => commerce_default_currency(),
@@ -348,6 +345,13 @@ function commerce_hipay_tpp_settings_default() {
       'response' => FALSE,
     ),
   );
+  foreach (array_keys(commerce_currencies(TRUE)) as $currency_code) {
+    $default_settings['accounts'][$currency_code] = array(
+      'api_username' => '',
+      'api_password' => '',
+      'secret_passphrase' => '',
+    );
+  }
   return $default_settings;
 }
 
@@ -364,6 +368,9 @@ function commerce_hipay_tpp_settings_form($settings = array()) {
   // just add new array elements instead of overriding existing ones).
   $settings = array_replace_recursive(commerce_hipay_tpp_settings_default(), $settings);
 
+  $default_currency = commerce_default_currency();
+  $enabled_currencies = commerce_currencies(TRUE);
+
   $form = array();
 
   $form['endpoint'] = array(
@@ -377,29 +384,39 @@ function commerce_hipay_tpp_settings_form($settings = array()) {
     '#required' => TRUE,
   );
 
-  $form['api_username'] = array(
-    '#type' => 'textfield',
-    '#title' => t('API username'),
-    '#description' => t('The name of the user for accessing Hipay TPP webservice. This, as well as API password, can be found in your Hipay Fullservice Account under <em>Integration / Security Settings</em>.'),
-    '#default_value' => $settings['api_username'],
-    '#required' => TRUE,
-  );
+  foreach ($enabled_currencies as $currency_code => $currency) {
+    $form['accounts'][$currency_code] = array(
+      '#type' => 'fieldset',
+      '#title' => t('@currency_code account', array('@currency_code' => $currency_code)),
+      '#collapsible' => TRUE,
+      '#collapsed' => !($currency_code == commerce_default_currency()) && empty($settings['accounts'][$currency_code]['api_username']) && empty($settings['accounts'][$currency_code]['api_password']),
+      '#group' => 'accounts',
+    );
 
-  $form['api_password'] = array(
-    '#type' => 'textfield',
-    '#title' => t('API password'),
-    '#description' => t('The password for the user specified in the above field.'),
-    '#default_value' => $settings['api_password'],
-    '#required' => TRUE,
-  );
+    $form['accounts'][$currency_code]['api_username'] = array(
+      '#type' => 'textfield',
+      '#title' => t('API username'),
+      '#description' => t('The name of the user for accessing Hipay TPP webservice. This, as well as API password, can be found in your Hipay Fullservice Account under <em>Integration / Security Settings</em>.'),
+      '#default_value' => $settings['accounts'][$currency_code]['api_username'],
+      '#required' => $currency_code == commerce_default_currency(),
+    );
 
-  $form['secret_passphrase'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Secret Passphrase'),
-    '#description' => t('This secret passphrase is used to generate a unique character string (signature) hashed with SHA algorithm. It should be the same as the value provided in <em>Secret Passphrase</em> field in your Hipay Fullservice Account configuration in <em>Integration » Security Settings</em>.'),
-    '#default_value' => $settings['secret_passphrase'],
-    '#required' => TRUE,
-  );
+    $form['accounts'][$currency_code]['api_password'] = array(
+      '#type' => 'textfield',
+      '#title' => t('API password'),
+      '#description' => t('The password for the user specified in the above field.'),
+      '#default_value' => $settings['accounts'][$currency_code]['api_password'],
+      '#required' => $currency_code == commerce_default_currency(),
+    );
+
+    $form['accounts'][$currency_code]['secret_passphrase'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Secret Passphrase'),
+      '#description' => t('This secret passphrase is used to generate a unique character string (signature) hashed with SHA algorithm. It should be the same as the value provided in <em>Secret Passphrase</em> field in your Hipay Fullservice Account configuration in <em>Integration » Security Settings</em>.'),
+      '#default_value' => $settings['accounts'][$currency_code]['secret_passphrase'],
+      '#required' => $currency_code == commerce_default_currency(),
+    );
+  }
 
   $form['operation'] = array(
     '#type' => 'radios',
@@ -719,7 +736,11 @@ function commerce_hipay_tpp_api_initialize($order, $payment_method) {
 
   // Perform the call to Hipay TPP API.
   $url = commerce_hipay_tpp_get_server_url($payment_method) . COMMERCE_HIPAY_TPP_RESOURCE_INITIALIZATION;
-  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, 'Initialization');
+  $context = array(
+    'call_type' => 'Initialization',
+    'currency_code' => $request_data['currency'],
+  );
+  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $context);
 
   // Update payment transaction with response details.
   $transaction->payload['init-response-' . time()] = $response;
@@ -779,11 +800,16 @@ function commerce_hipay_tpp_api_order_request($order, $payment_method) {
  *   A string of parameters to be sent to Hipay TPP API.
  * @param array $payment_method
  *   The payment method being used.
+ * @param array $context
+ *   An associative array containing additional information about the request.
  *
  * @return object
  *   An array of Hipay TPP API response parameters.
  */
-function commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $call_type = 'API call') {
+function commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $context = array()) {
+  // Call type description for logging purposes.
+  $call_type = !empty($context['call_type']) ? $context['call_type'] : 'API call';
+
   // Log the request data if request logging is enabled.
   if (!empty($payment_method['settings']['api_logging']['request'])) {
     watchdog('commerce_hipay_tpp', '@call_type: request: !request_data', array(
@@ -794,7 +820,8 @@ function commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $c
 
   $ch = curl_init($url);
 
-  curl_setopt($ch, CURLOPT_USERPWD, $payment_method['settings']['api_username'] . ':' . $payment_method['settings']['api_password']);
+  $api_credentials = commerce_hipay_tpp_get_api_credentials($payment_method, $context);
+  curl_setopt($ch, CURLOPT_USERPWD, $api_credentials['api_username'] . ':' . $api_credentials['api_password']);
   curl_setopt($ch, CURLOPT_HTTPHEADER, array(
     'Accept: application/json',
   ));
@@ -852,6 +879,25 @@ function commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $c
 }
 
 /**
+ * Returns API credentials for Hipay TPP account for the context currency.
+ *
+ * @param array $payment_method
+ *   An array of payment method details.
+ * @param array $context
+ *   An array of context information, including 'currency_code' value.
+ *
+ * @return array
+ *   An array of API credentials for Hipay TPP account for the context currency
+ *   code, or default currency code if none provided in context.
+ */
+function commerce_hipay_tpp_get_api_credentials($payment_method, $context) {
+  $default_currency_code = commerce_default_currency();
+  $currency_code = !empty($context['currency_code']) ? $context['currency_code'] : $default_currency_code;
+
+  return !empty($payment_method['settings']['accounts'][$currency_code]['api_username']) && !empty($payment_method['settings']['accounts'][$currency_code]['api_password']) ? $payment_method['settings']['accounts'][$currency_code] : $payment_method['settings']['accounts'][$default_currency_code];
+}
+
+/**
  * Implements hook_form_alter().
  */
 function commerce_hipay_tpp_form_alter(&$form, &$form_state, $form_id) {
@@ -891,8 +937,12 @@ function commerce_hipay_tpp_submit_form_submit($payment_method, $pane_form, $pan
  * @see commerce_hipay_tpp_redirect_form_submit()
  */
 function commerce_hipay_tpp_redirect_form($form, &$form_state, $order, $payment_method) {
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+  $order_total = $order_wrapper->commerce_order_total->value();
+  $api_credentials = commerce_hipay_tpp_get_api_credentials($payment_method, array('currency_code' => $order_total['currency_code']));
+
   // Return an error if the payment method has not been configured yet.
-  if (empty($payment_method['settings']['api_username']) || empty($payment_method['settings']['api_password'])) {
+  if (empty($api_credentials['api_username']) || empty($api_credentials['api_password'])) {
     drupal_set_message(t('Selected payment method has not yet been configured for use.'), 'error');
     // Redirect user to previous checkout page.
     commerce_payment_redirect_pane_previous_page($order);
@@ -1493,7 +1543,11 @@ function commerce_hipay_tpp_api_capture($transaction, $amount) {
 
   // Perform the call to Hipay TPP API.
   $url = commerce_hipay_tpp_get_server_url($payment_method) . COMMERCE_HIPAY_TPP_RESOURCE_MAINTAINANCE . $transaction->remote_id;
-  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method);
+  $context = array(
+    'call_type' => 'Capture',
+    'currency_code' => $transaction->currency_code,
+  );
+  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $context);
 
   // Update payment transaction with response details.
   $capture_transaction->payload['response-' . time()] = $response;
@@ -1549,7 +1603,11 @@ function commerce_hipay_tpp_api_refund($capture_transaction, $amount) {
 
   // Perform the call to Hipay TPP API.
   $url = commerce_hipay_tpp_get_server_url($payment_method) . COMMERCE_HIPAY_TPP_RESOURCE_MAINTAINANCE . $capture_transaction->remote_id;
-  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method);
+  $context = array(
+    'call_type' => 'Refund',
+    'currency_code' => $capture_transaction->currency_code,
+  );
+  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $context);
 
   // Update refund transaction with response details.
   $refund_transaction->payload['response-' . time()] = $response;
@@ -1584,7 +1642,11 @@ function commerce_hipay_tpp_api_cancel($transaction) {
 
   // Perform the call to Hipay TPP API.
   $url = commerce_hipay_tpp_get_server_url($payment_method) . COMMERCE_HIPAY_TPP_RESOURCE_MAINTAINANCE . $transaction->remote_id;
-  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method);
+  $context = array(
+    'call_type' => 'Cancel',
+    'currency_code' => $transaction->currency_code,
+  );
+  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $context);
 
   // Update payment transaction with response details.
   $transaction->payload['cancel-response-' . time()] = $response;

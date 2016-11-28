@@ -186,7 +186,11 @@ function commerce_hipay_tpp_cardonfile_charge($payment_method, $card_data, $orde
 
   // Perform the call to Hipay TPP API.
   $url = commerce_hipay_tpp_get_server_url($payment_method) . COMMERCE_HIPAY_TPP_RESOURCE_ORDER;
-  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, 'Order request');
+  $context = array(
+    'call_type' => 'Order request',
+    'currency_code' => $transaction->currency_code,
+  );
+  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $context);
 
   // Update payment transaction with response details.
   $transaction->payload['order-response-' . time()] = $response;
@@ -241,7 +245,11 @@ function commerce_hipay_tpp_cardonfile_update($form, &$form_state, $payment_meth
 
   // Perform the call to Hipay TPP API.
   $url = commerce_hipay_tpp_get_secure_vault_url($payment_method) . COMMERCE_HIPAY_TPP_RESOURCE_TOKEN_UPDATE;
-  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, 'Token update');
+  $context = array(
+    'call_type' => 'Token update',
+    // @TODO: currency_code somehow.
+  );
+  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $context);
 
   // If we received the 'code' parameter in the response it means that something
   // went wrong, and we need to return FALSE. Otherwise the card was updated
