@@ -86,10 +86,13 @@ expiry date.
 
 | Card plan                   | Card number       |
 |-----------------------------|-------------------|
-| Visa                        | 4111111111111111  |
+| Visa without 3-D Secure     | 4111111111111111  |
+| Visa with 3-D Secure        | 4000000000000002  |
+| Visa always refused         | 4111113333333333  |
 | MasterCard                  | 5399999999999999  |
-| Visa 3-D Secure             | 4000000000000002  |
-| MasterCard / Visa "refused" | 4111113333333333  |
+| Bancontact/Mistercash       | 67030000000000003 |
+| CB                          | 4484120000000029  |
+| Maestro GBP                 | 6759411100000008  |
 
 
 
