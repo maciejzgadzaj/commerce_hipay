@@ -800,6 +800,7 @@ function commerce_hipay_ws_settings_form_submit_create_user_account($account_id,
   // Do not continue if the payment method instance is not enabled
   // or not configured.
   if (!($instance = commerce_hipay_ws_payment_method_instance()) || empty($instance['settings'])) {
+    watchdog('commerce_hipay_ws', 'Unable to create Hipay user account: payment method instance is not enabled or not configured.', array(), WATCHDOG_ERROR);
     return;
   }
 
@@ -876,6 +877,7 @@ function commerce_hipay_ws_settings_form_submit_create_bank_account($account_id,
 
   // If bank country was not selected, do not try to create the bank account.
   if (empty($bank_account['bankCountry'])) {
+    watchdog('commerce_hipay_ws', 'Unable to create Hipay bank account: bank address country value is required.', array(), WATCHDOG_ERROR);
     return;
   }
 
