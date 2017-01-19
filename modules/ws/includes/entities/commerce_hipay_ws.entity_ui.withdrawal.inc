@@ -260,6 +260,7 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['exposed_form']['type'] = 'basic';
+  $handler->display->display_options['exposed_form']['options']['reset_button'] = TRUE;
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = '50';
   $handler->display->display_options['style_plugin'] = 'table';
@@ -340,12 +341,13 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
   $handler->display->display_options['fields']['withdrawal_id']['id'] = 'withdrawal_id';
   $handler->display->display_options['fields']['withdrawal_id']['table'] = 'commerce_hipay_ws_withdrawal';
   $handler->display->display_options['fields']['withdrawal_id']['field'] = 'withdrawal_id';
+  $handler->display->display_options['fields']['withdrawal_id']['label'] = 'ID';
   $handler->display->display_options['fields']['withdrawal_id']['link_to_entity'] = TRUE;
   /* Field: Hipay Wallet withdrawal: Hipay user account ID */
   $handler->display->display_options['fields']['sender_account_id']['id'] = 'sender_account_id';
   $handler->display->display_options['fields']['sender_account_id']['table'] = 'commerce_hipay_ws_withdrawal';
   $handler->display->display_options['fields']['sender_account_id']['field'] = 'user_account_id';
-  $handler->display->display_options['fields']['sender_account_id']['label'] = 'Account ID';
+  $handler->display->display_options['fields']['sender_account_id']['label'] = 'Hipay account ID';
   $handler->display->display_options['fields']['sender_account_id']['link_to_entity'] = TRUE;
   /* Field: Hipay Wallet withdrawal: Transfer */
   $handler->display->display_options['fields']['hipay_ws_withdrawal_transfer']['id'] = 'hipay_ws_withdrawal_transfer';
@@ -380,6 +382,47 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
   $handler->display->display_options['fields']['operations']['field'] = 'operations';
   $handler->display->display_options['fields']['operations']['label'] = '';
   $handler->display->display_options['fields']['operations']['element_label_colon'] = FALSE;
+  /* Filter criterion: Hipay Wallet withdrawal: Hipay user account ID */
+  $handler->display->display_options['filters']['user_account_id']['id'] = 'user_account_id';
+  $handler->display->display_options['filters']['user_account_id']['table'] = 'commerce_hipay_ws_withdrawal';
+  $handler->display->display_options['filters']['user_account_id']['field'] = 'user_account_id';
+  $handler->display->display_options['filters']['user_account_id']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['user_account_id']['expose']['operator_id'] = 'user_account_id_op';
+  $handler->display->display_options['filters']['user_account_id']['expose']['label'] = 'Hipay account ID';
+  $handler->display->display_options['filters']['user_account_id']['expose']['operator'] = 'user_account_id_op';
+  $handler->display->display_options['filters']['user_account_id']['expose']['identifier'] = 'user_account_id';
+  $handler->display->display_options['filters']['user_account_id']['expose']['remember_roles'] = array();
+  /* Filter criterion: Hipay Wallet withdrawal: Transfer (hipay_ws_withdrawal_transfer) */
+  $handler->display->display_options['filters']['hipay_ws_withdrawal_transfer_target_id']['id'] = 'hipay_ws_withdrawal_transfer_target_id';
+  $handler->display->display_options['filters']['hipay_ws_withdrawal_transfer_target_id']['table'] = 'field_data_hipay_ws_withdrawal_transfer';
+  $handler->display->display_options['filters']['hipay_ws_withdrawal_transfer_target_id']['field'] = 'hipay_ws_withdrawal_transfer_target_id';
+  $handler->display->display_options['filters']['hipay_ws_withdrawal_transfer_target_id']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['hipay_ws_withdrawal_transfer_target_id']['expose']['operator_id'] = 'hipay_ws_withdrawal_transfer_target_id_op';
+  $handler->display->display_options['filters']['hipay_ws_withdrawal_transfer_target_id']['expose']['label'] = 'Transfer ID';
+  $handler->display->display_options['filters']['hipay_ws_withdrawal_transfer_target_id']['expose']['operator'] = 'hipay_ws_withdrawal_transfer_target_id_op';
+  $handler->display->display_options['filters']['hipay_ws_withdrawal_transfer_target_id']['expose']['identifier'] = 'hipay_ws_withdrawal_transfer_target_id';
+  $handler->display->display_options['filters']['hipay_ws_withdrawal_transfer_target_id']['expose']['remember_roles'] = array();
+  /* Filter criterion: Hipay Wallet withdrawal: Status */
+  $handler->display->display_options['filters']['status']['id'] = 'status';
+  $handler->display->display_options['filters']['status']['table'] = 'commerce_hipay_ws_withdrawal';
+  $handler->display->display_options['filters']['status']['field'] = 'status';
+  $handler->display->display_options['filters']['status']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['status']['expose']['operator_id'] = 'status_op';
+  $handler->display->display_options['filters']['status']['expose']['label'] = 'Status';
+  $handler->display->display_options['filters']['status']['expose']['operator'] = 'status_op';
+  $handler->display->display_options['filters']['status']['expose']['identifier'] = 'status';
+  $handler->display->display_options['filters']['status']['expose']['remember_roles'] = array();
+  /* Filter criterion: Hipay Wallet withdrawal: Hipay transaction ID */
+  $handler->display->display_options['filters']['transaction_id']['id'] = 'transaction_id';
+  $handler->display->display_options['filters']['transaction_id']['table'] = 'commerce_hipay_ws_withdrawal';
+  $handler->display->display_options['filters']['transaction_id']['field'] = 'transaction_id';
+  $handler->display->display_options['filters']['transaction_id']['operator'] = 'contains';
+  $handler->display->display_options['filters']['transaction_id']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['transaction_id']['expose']['operator_id'] = 'transaction_id_op';
+  $handler->display->display_options['filters']['transaction_id']['expose']['label'] = 'Hipay transaction ID';
+  $handler->display->display_options['filters']['transaction_id']['expose']['operator'] = 'transaction_id_op';
+  $handler->display->display_options['filters']['transaction_id']['expose']['identifier'] = 'transaction_id';
+  $handler->display->display_options['filters']['transaction_id']['expose']['remember_roles'] = array();
 
   /* Display: Page */
   $handler = $view->new_display('page', 'Page', 'page');
@@ -411,8 +454,8 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
     t('‹ previous'),
     t('next ›'),
     t('last »'),
-    t('Withdrawal ID'),
-    t('Account ID'),
+    t('ID'),
+    t('Hipay account ID'),
     t('Transfer ID'),
     t('Amount'),
     t('Status'),
