@@ -739,6 +739,7 @@ function commerce_hipay_ws_bank_account_views_default_views() {
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['exposed_form']['type'] = 'basic';
+  $handler->display->display_options['exposed_form']['options']['reset_button'] = TRUE;
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = '50';
   $handler->display->display_options['style_plugin'] = 'table';
@@ -850,6 +851,75 @@ function commerce_hipay_ws_bank_account_views_default_views() {
   $handler->display->display_options['fields']['operations']['field'] = 'operations';
   $handler->display->display_options['fields']['operations']['label'] = '';
   $handler->display->display_options['fields']['operations']['element_label_colon'] = FALSE;
+  /* Filter criterion: Hipay Wallet user account: Hipay user account ID */
+  $handler->display->display_options['filters']['hipay_account_id']['id'] = 'hipay_account_id';
+  $handler->display->display_options['filters']['hipay_account_id']['table'] = 'commerce_hipay_ws_user_account';
+  $handler->display->display_options['filters']['hipay_account_id']['field'] = 'hipay_account_id';
+  $handler->display->display_options['filters']['hipay_account_id']['relationship'] = 'hipay_ws_bank_user_account_target_id';
+  $handler->display->display_options['filters']['hipay_account_id']['operator'] = 'contains';
+  $handler->display->display_options['filters']['hipay_account_id']['group'] = 1;
+  $handler->display->display_options['filters']['hipay_account_id']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['hipay_account_id']['expose']['operator_id'] = 'hipay_account_id_op';
+  $handler->display->display_options['filters']['hipay_account_id']['expose']['label'] = 'Hipay account ID';
+  $handler->display->display_options['filters']['hipay_account_id']['expose']['operator'] = 'hipay_account_id_op';
+  $handler->display->display_options['filters']['hipay_account_id']['expose']['identifier'] = 'hipay_account_id';
+  $handler->display->display_options['filters']['hipay_account_id']['expose']['remember_roles'] = array();
+  /* Filter criterion: Hipay Wallet user account: Email (hipay_ws_user_email) */
+  $handler->display->display_options['filters']['hipay_ws_user_email_value']['id'] = 'hipay_ws_user_email_value';
+  $handler->display->display_options['filters']['hipay_ws_user_email_value']['table'] = 'field_data_hipay_ws_user_email';
+  $handler->display->display_options['filters']['hipay_ws_user_email_value']['field'] = 'hipay_ws_user_email_value';
+  $handler->display->display_options['filters']['hipay_ws_user_email_value']['relationship'] = 'hipay_ws_bank_user_account_target_id';
+  $handler->display->display_options['filters']['hipay_ws_user_email_value']['operator'] = 'contains';
+  $handler->display->display_options['filters']['hipay_ws_user_email_value']['group'] = 1;
+  $handler->display->display_options['filters']['hipay_ws_user_email_value']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['hipay_ws_user_email_value']['expose']['operator_id'] = 'hipay_ws_user_email_value_op';
+  $handler->display->display_options['filters']['hipay_ws_user_email_value']['expose']['label'] = 'Hipay user account';
+  $handler->display->display_options['filters']['hipay_ws_user_email_value']['expose']['operator'] = 'hipay_ws_user_email_value_op';
+  $handler->display->display_options['filters']['hipay_ws_user_email_value']['expose']['identifier'] = 'hipay_ws_user_email_value';
+  $handler->display->display_options['filters']['hipay_ws_user_email_value']['expose']['remember_roles'] = array();
+  /* Filter criterion: Hipay Wallet bank account: Bank name (hipay_ws_bank_name) */
+  $handler->display->display_options['filters']['hipay_ws_bank_name_value']['id'] = 'hipay_ws_bank_name_value';
+  $handler->display->display_options['filters']['hipay_ws_bank_name_value']['table'] = 'field_data_hipay_ws_bank_name';
+  $handler->display->display_options['filters']['hipay_ws_bank_name_value']['field'] = 'hipay_ws_bank_name_value';
+  $handler->display->display_options['filters']['hipay_ws_bank_name_value']['operator'] = 'contains';
+  $handler->display->display_options['filters']['hipay_ws_bank_name_value']['group'] = 1;
+  $handler->display->display_options['filters']['hipay_ws_bank_name_value']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['hipay_ws_bank_name_value']['expose']['operator_id'] = 'hipay_ws_bank_name_value_op';
+  $handler->display->display_options['filters']['hipay_ws_bank_name_value']['expose']['label'] = 'Bank';
+  $handler->display->display_options['filters']['hipay_ws_bank_name_value']['expose']['operator'] = 'hipay_ws_bank_name_value_op';
+  $handler->display->display_options['filters']['hipay_ws_bank_name_value']['expose']['identifier'] = 'hipay_ws_bank_name_value';
+  $handler->display->display_options['filters']['hipay_ws_bank_name_value']['expose']['remember_roles'] = array();
+  /* Filter criterion: Hipay Wallet user account: Currency (hipay_ws_user_currency) */
+  $handler->display->display_options['filters']['hipay_ws_user_currency_value']['id'] = 'hipay_ws_user_currency_value';
+  $handler->display->display_options['filters']['hipay_ws_user_currency_value']['table'] = 'field_data_hipay_ws_user_currency';
+  $handler->display->display_options['filters']['hipay_ws_user_currency_value']['field'] = 'hipay_ws_user_currency_value';
+  $handler->display->display_options['filters']['hipay_ws_user_currency_value']['relationship'] = 'hipay_ws_bank_user_account_target_id';
+  $handler->display->display_options['filters']['hipay_ws_user_currency_value']['group'] = 1;
+  $handler->display->display_options['filters']['hipay_ws_user_currency_value']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['hipay_ws_user_currency_value']['expose']['operator_id'] = 'hipay_ws_user_currency_value_op';
+  $handler->display->display_options['filters']['hipay_ws_user_currency_value']['expose']['label'] = 'Currency';
+  $handler->display->display_options['filters']['hipay_ws_user_currency_value']['expose']['operator'] = 'hipay_ws_user_currency_value_op';
+  $handler->display->display_options['filters']['hipay_ws_user_currency_value']['expose']['identifier'] = 'hipay_ws_user_currency_value';
+  $handler->display->display_options['filters']['hipay_ws_user_currency_value']['expose']['remember_roles'] = array();
+  /* Filter criterion: Hipay Wallet bank account: Hipay account status */
+  $handler->display->display_options['filters']['hipay_status']['id'] = 'hipay_status';
+  $handler->display->display_options['filters']['hipay_status']['table'] = 'commerce_hipay_ws_bank_account';
+  $handler->display->display_options['filters']['hipay_status']['field'] = 'hipay_status';
+  $handler->display->display_options['filters']['hipay_status']['group'] = 1;
+  $handler->display->display_options['filters']['hipay_status']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['hipay_status']['expose']['operator_id'] = 'hipay_status_op';
+  $handler->display->display_options['filters']['hipay_status']['expose']['label'] = 'Status';
+  $handler->display->display_options['filters']['hipay_status']['expose']['operator'] = 'hipay_status_op';
+  $handler->display->display_options['filters']['hipay_status']['expose']['identifier'] = 'hipay_status';
+  $handler->display->display_options['filters']['hipay_status']['expose']['remember_roles'] = array();
+  $handler->display->display_options['filters']['hipay_status']['group_info']['label'] = 'Hipay account status';
+  $handler->display->display_options['filters']['hipay_status']['group_info']['identifier'] = 'hipay_status';
+  $handler->display->display_options['filters']['hipay_status']['group_info']['remember'] = FALSE;
+  $handler->display->display_options['filters']['hipay_status']['group_info']['group_items'] = array(
+    1 => array(),
+    2 => array(),
+    3 => array(),
+  );
 
   /* Display: Page: Admin */
   $handler = $view->new_display('page', 'Page: Admin', 'page_bank_accounts_admin');
@@ -877,16 +947,8 @@ function commerce_hipay_ws_bank_account_views_default_views() {
   $handler->display->display_options['empty']['area']['content'] = 'The Hipay Wallet bank account has not yet been created for this store.';
   $handler->display->display_options['empty']['area']['format'] = 'filtered_html';
   $handler->display->display_options['defaults']['arguments'] = FALSE;
-  /* Contextual filter: Hipay Wallet user account: Store (hipay_ws_user_store) */
-  $handler->display->display_options['arguments']['hipay_ws_user_store_target_id']['id'] = 'hipay_ws_user_store_target_id';
-  $handler->display->display_options['arguments']['hipay_ws_user_store_target_id']['table'] = 'field_data_hipay_ws_user_store';
-  $handler->display->display_options['arguments']['hipay_ws_user_store_target_id']['field'] = 'hipay_ws_user_store_target_id';
-  $handler->display->display_options['arguments']['hipay_ws_user_store_target_id']['relationship'] = 'hipay_ws_bank_user_account_target_id';
-  $handler->display->display_options['arguments']['hipay_ws_user_store_target_id']['default_action'] = 'empty';
-  $handler->display->display_options['arguments']['hipay_ws_user_store_target_id']['default_argument_type'] = 'fixed';
-  $handler->display->display_options['arguments']['hipay_ws_user_store_target_id']['summary']['number_of_records'] = '0';
-  $handler->display->display_options['arguments']['hipay_ws_user_store_target_id']['summary']['format'] = 'default_summary';
-  $handler->display->display_options['arguments']['hipay_ws_user_store_target_id']['summary_options']['items_per_page'] = '25';
+  $handler->display->display_options['defaults']['filter_groups'] = FALSE;
+  $handler->display->display_options['defaults']['filters'] = FALSE;
   $handler->display->display_options['path'] = 'store/%/hipay-wallet/bank-accounts';
   $handler->display->display_options['menu']['type'] = 'tab';
   $handler->display->display_options['menu']['title'] = 'Bank accounts';
@@ -919,10 +981,10 @@ function commerce_hipay_ws_bank_account_views_default_views() {
     t('Bank'),
     t('Currency'),
     t('Status'),
+    t('Hipay account status'),
     t('Page: Admin'),
     t('Page: Store'),
     t('The Hipay Wallet bank account has not yet been created for this store.'),
-    t('All'),
   );
   $export[$view->name] = $view;
 
