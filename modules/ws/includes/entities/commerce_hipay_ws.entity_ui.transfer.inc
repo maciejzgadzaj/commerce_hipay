@@ -126,6 +126,34 @@ function commerce_hipay_ws_transfer_view_payload_info($entity, $view_mode = 'ful
  */
 function commerce_hipay_ws_transfer_views_data_alter(&$data) {
   // Transfers.
+  $data['commerce_hipay_ws_transfer']['uid'] = array(
+    'title' => t('Uid'),
+    'help' => t("The owner's user ID."),
+    'field' => array(
+      'handler' => 'views_handler_field_user',
+      'click sortable' => TRUE,
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_user_uid',
+      'name field' => 'name', // display this field in the summary
+    ),
+    'filter' => array(
+      'title' => t('Name'),
+      'handler' => 'views_handler_filter_user_name',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'relationship' => array(
+      'title' => t('Owner'),
+      'help' => t("Relate this transfer to its owner's user account"),
+      'handler' => 'views_handler_relationship',
+      'base' => 'users',
+      'base field' => 'uid',
+      'field' => 'uid',
+      'label' => t('Transfer owner'),
+    ),
+  );
   $data['commerce_hipay_ws_transfer']['amount']['field']['handler'] = 'commerce_payment_handler_field_amount';
   $data['commerce_hipay_ws_transfer']['link'] = array(
     'field' => array(

@@ -577,6 +577,34 @@ function commerce_hipay_ws_bank_account_get_field_mapping() {
  */
 function commerce_hipay_ws_bank_account_views_data_alter(&$data) {
   // Bank accounts.
+  $data['commerce_hipay_ws_bank_account']['uid'] = array(
+    'title' => t('Uid'),
+    'help' => t("The owner's user ID."),
+    'field' => array(
+      'handler' => 'views_handler_field_user',
+      'click sortable' => TRUE,
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_user_uid',
+      'name field' => 'name', // display this field in the summary
+    ),
+    'filter' => array(
+      'title' => t('Name'),
+      'handler' => 'views_handler_filter_user_name',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'relationship' => array(
+      'title' => t('Owner'),
+      'help' => t("Relate this Hipay bank account to its owner's user account"),
+      'handler' => 'views_handler_relationship',
+      'base' => 'users',
+      'base field' => 'uid',
+      'field' => 'uid',
+      'label' => t('Hipay bank account owner'),
+    ),
+  );
   $data['commerce_hipay_ws_bank_account']['link'] = array(
     'field' => array(
       'title' => t('Link'),

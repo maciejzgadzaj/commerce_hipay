@@ -126,6 +126,34 @@ function commerce_hipay_ws_withdrawal_view_payload_info($entity, $view_mode = 'f
  */
 function commerce_hipay_ws_withdrawal_views_data_alter(&$data) {
   // Withdrawals.
+  $data['commerce_hipay_ws_withdrawal']['uid'] = array(
+    'title' => t('Uid'),
+    'help' => t("The owner's user ID."),
+    'field' => array(
+      'handler' => 'views_handler_field_user',
+      'click sortable' => TRUE,
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_user_uid',
+      'name field' => 'name', // display this field in the summary
+    ),
+    'filter' => array(
+      'title' => t('Name'),
+      'handler' => 'views_handler_filter_user_name',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'relationship' => array(
+      'title' => t('Owner'),
+      'help' => t("Relate this withdrawal to its owner's user account"),
+      'handler' => 'views_handler_relationship',
+      'base' => 'users',
+      'base field' => 'uid',
+      'field' => 'uid',
+      'label' => t('Withdrawal owner'),
+    ),
+  );
   $data['commerce_hipay_ws_withdrawal']['amount']['field']['handler'] = 'commerce_payment_handler_field_amount';
   $data['commerce_hipay_ws_withdrawal']['link'] = array(
     'field' => array(

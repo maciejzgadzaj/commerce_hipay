@@ -778,6 +778,34 @@ function commerce_hipay_ws_user_account_delete_form_submit($form, &$form_state) 
  */
 function commerce_hipay_ws_user_account_views_data_alter(&$data) {
   // User accounts.
+  $data['commerce_hipay_ws_user_account']['uid'] = array(
+    'title' => t('Uid'),
+    'help' => t("The owner's user ID."),
+    'field' => array(
+      'handler' => 'views_handler_field_user',
+      'click sortable' => TRUE,
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_user_uid',
+      'name field' => 'name', // display this field in the summary
+    ),
+    'filter' => array(
+      'title' => t('Name'),
+      'handler' => 'views_handler_filter_user_name',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'relationship' => array(
+      'title' => t('Owner'),
+      'help' => t("Relate this Hipay user account to its owner's user account"),
+      'handler' => 'views_handler_relationship',
+      'base' => 'users',
+      'base field' => 'uid',
+      'field' => 'uid',
+      'label' => t('Hipay user account owner'),
+    ),
+  );
   $data['commerce_hipay_ws_user_account']['link'] = array(
     'field' => array(
       'title' => t('Link'),
