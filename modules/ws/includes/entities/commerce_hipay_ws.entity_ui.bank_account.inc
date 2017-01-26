@@ -605,6 +605,24 @@ function commerce_hipay_ws_bank_account_views_data_alter(&$data) {
       'label' => t('Hipay bank account owner'),
     ),
   );
+  // Expose validation status.
+  $data['commerce_hipay_ws_bank_account']['hipay_status'] = array(
+    'title' => t('Validated'),
+    'help' => t('Hipay bank account validation status.'),
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'commerce_hipay_ws_bank_account_handler_validated_filter',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
+  );
   $data['commerce_hipay_ws_bank_account']['link'] = array(
     'field' => array(
       'title' => t('Link'),

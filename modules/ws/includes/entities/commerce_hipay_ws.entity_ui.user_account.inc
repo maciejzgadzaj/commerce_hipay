@@ -806,6 +806,24 @@ function commerce_hipay_ws_user_account_views_data_alter(&$data) {
       'label' => t('Hipay user account owner'),
     ),
   );
+  // Expose identification status.
+  $data['commerce_hipay_ws_user_account']['hipay_identified'] = array(
+    'title' => t('Identified'),
+    'help' => t('Hipay user account identification status.'),
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'commerce_hipay_ws_user_account_handler_identified_filter',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
+  );
   $data['commerce_hipay_ws_user_account']['link'] = array(
     'field' => array(
       'title' => t('Link'),
