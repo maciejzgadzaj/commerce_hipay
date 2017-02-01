@@ -776,7 +776,7 @@ function commerce_hipay_ws_transfer_field_instances() {
         'label' => 'above',
         'module' => 'entityreference',
         'settings' => array(
-          'link' => FALSE,
+          'link' => 1,
         ),
         'type' => 'entityreference_label',
         'weight' => 0,
@@ -825,4 +825,19 @@ function commerce_hipay_ws_transfer_delete_fields() {
   foreach (commerce_hipay_ws_transfer_field_bases() as $field_base) {
     field_delete_field($field_base['field_name']);
   }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_view_alter() for commerce_hipay_ws_transfer.
+ */
+function commerce_hipay_ws_commerce_hipay_ws_transfer_view_alter(&$build, $entity_type) {
+  $sender_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($build['#entity']->sender_account_id);
+  $build['sender_account_id']['#content'] = l($build['#entity']->sender_account_id, 'admin/commerce/hipay-wallet/user-accounts/' . $sender_user_account->user_account_id);
+  $recipient_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($build['#entity']->recipient_account_id);
+  $build['recipient_account_id']['#content'] = l($build['#entity']->recipient_account_id, 'admin/commerce/hipay-wallet/user-accounts/' . $recipient_user_account->user_account_id);
+  $build['amount']['#content'] = commerce_currency_format($build['#entity']->amount, $build['#entity']->currency_code);
+  $build['uid']['#content'] = l($build['#entity']->uid, 'user/' . $build['#entity']->uid);
+  $build['created']['#content'] = format_date($build['#entity']->created, 'short');
+  $build['changed']['#content'] = format_date($build['#entity']->changed, 'short');
+  $build['executed']['#content'] = format_date($build['#entity']->executed, 'short');
 }
