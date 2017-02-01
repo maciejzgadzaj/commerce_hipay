@@ -1002,6 +1002,9 @@ function commerce_hipay_ws_user_account_views_default_views() {
   $handler->display->display_options['fields']['user_account_id']['table'] = 'commerce_hipay_ws_user_account';
   $handler->display->display_options['fields']['user_account_id']['field'] = 'user_account_id';
   $handler->display->display_options['fields']['user_account_id']['label'] = 'ID';
+  $handler->display->display_options['fields']['user_account_id']['alter']['alter_text'] = TRUE;
+  $handler->display->display_options['fields']['user_account_id']['alter']['make_link'] = TRUE;
+  $handler->display->display_options['fields']['user_account_id']['alter']['path'] = 'admin/commerce/hipay-wallet/user-accounts/[user_account_id]/view';
   /* Field: Hipay Wallet user account: Hipay user account ID */
   $handler->display->display_options['fields']['hipay_account_id']['id'] = 'hipay_account_id';
   $handler->display->display_options['fields']['hipay_account_id']['table'] = 'commerce_hipay_ws_user_account';
