@@ -271,6 +271,7 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
     'amount' => 'amount',
     'currency_code' => 'currency_code',
     'status' => 'status',
+    'executed' => 'executed',
     'remote_status' => 'remote_status',
     'transaction_id' => 'transaction_id',
     'operations' => 'operations',
@@ -313,6 +314,13 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
     'status' => array(
       'sortable' => 1,
       'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'executed' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'desc',
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -368,6 +376,13 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
   $handler->display->display_options['fields']['status']['id'] = 'status';
   $handler->display->display_options['fields']['status']['table'] = 'commerce_hipay_ws_withdrawal';
   $handler->display->display_options['fields']['status']['field'] = 'status';
+  /* Field: Hipay Wallet withdrawal: Date executed */
+  $handler->display->display_options['fields']['executed']['id'] = 'executed';
+  $handler->display->display_options['fields']['executed']['table'] = 'commerce_hipay_ws_withdrawal';
+  $handler->display->display_options['fields']['executed']['field'] = 'executed';
+  $handler->display->display_options['fields']['executed']['label'] = 'Executed';
+  $handler->display->display_options['fields']['executed']['date_format'] = 'short';
+  $handler->display->display_options['fields']['executed']['second_date_format'] = 'long';
   /* Field: Hipay Wallet withdrawal: Hipay status */
   $handler->display->display_options['fields']['remote_status']['id'] = 'remote_status';
   $handler->display->display_options['fields']['remote_status']['table'] = 'commerce_hipay_ws_withdrawal';
