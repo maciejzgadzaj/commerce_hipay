@@ -832,8 +832,12 @@ function commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $c
   curl_setopt($ch, CURLOPT_POST, TRUE);
   curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($request_data));
 
+  $start = microtime(TRUE);
+
   // Execute the request.
   $result = curl_exec($ch);
+
+  $request_time = microtime(TRUE) - $start;
 
   // Log the cURL response if response logging is enabled.
   if (!empty($payment_method['settings']['api_logging']['response'])) {
@@ -866,9 +870,10 @@ function commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $c
 
     // Log the response if response logging is enabled.
     if (!empty($payment_method['settings']['api_logging']['response'])) {
-      watchdog('commerce_hipay_tpp', '@call_type: response: !response', array(
+      watchdog('commerce_hipay_tpp', '@call_type: response: !response Request time: @request_time', array(
         '@call_type' => $call_type,
         '!response' => '<pre>' . var_export($response, TRUE) . '</pre>',
+        '@request_time' => $request_time,
       ), WATCHDOG_DEBUG);
     }
   }
