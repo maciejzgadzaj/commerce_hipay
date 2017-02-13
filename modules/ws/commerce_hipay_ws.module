@@ -350,6 +350,8 @@ function commerce_hipay_ws_api_request_soap($url, $resource, $parameters, $conte
     'connection_timeout' => 10,
   );
 
+  $start = microtime(TRUE);
+
   // Perform the call to Hipay Wallet SOAP API.
   try {
     $client = new SoapClient($url . '?wsdl', $options);
@@ -381,12 +383,15 @@ function commerce_hipay_ws_api_request_soap($url, $resource, $parameters, $conte
     );
   }
 
+  $request_time = microtime(TRUE) - $start;
+
   // Log the request data if request logging is enabled.
   if (!empty($context['payment_method_instance']['settings']['api']['logging']['response'])) {
-    watchdog('commerce_hipay_ws', '@api_type @resource: response: !response', array(
+    watchdog('commerce_hipay_ws', '@api_type @resource: response: !response Request time: @request_time', array(
       '@api_type' => COMMERCE_HIPAY_WS_API_TYPE_SOAP,
       '@resource' => $resource,
       '!response' => '<pre>' . htmlentities($client->__getLastResponse(), ENT_NOQUOTES) . '</pre>',
+      '@request_time' => $request_time,
     ), WATCHDOG_DEBUG);
   }
 
@@ -443,8 +448,12 @@ function commerce_hipay_ws_api_request_rest($url, $resource, $parameters, $conte
   curl_setopt($ch, CURLOPT_POST, TRUE);
   curl_setopt($ch, CURLOPT_POSTFIELDS, $parameters);
 
+  $start = microtime(TRUE);
+
   // Execute the request.
   $result = curl_exec($ch);
+
+  $request_time = microtime(TRUE) - $start;
 
   // Log the cURL response if response logging is enabled.
   if (!empty($context['payment_method_instance']['settings']['api']['logging']['response'])) {
@@ -479,10 +488,11 @@ function commerce_hipay_ws_api_request_rest($url, $resource, $parameters, $conte
 
     // Log the response if response logging is enabled.
     if (!empty($context['payment_method_instance']['settings']['api']['logging']['response'])) {
-      watchdog('commerce_hipay_ws', '@api_type @resource: response: !response', array(
+      watchdog('commerce_hipay_ws', '@api_type @resource: response: !response Request time: @request_time', array(
         '@api_type' => COMMERCE_HIPAY_WS_API_TYPE_REST,
         '@resource' => $resource,
         '!response' => '<pre>' . var_export($response, TRUE) . '</pre>',
+        '@request_time' => $request_time,
       ), WATCHDOG_DEBUG);
     }
   }
