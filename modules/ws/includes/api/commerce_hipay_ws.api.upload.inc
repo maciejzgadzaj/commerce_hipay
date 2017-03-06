@@ -128,7 +128,7 @@ function commerce_hipay_ws_api_upload_validate_notification($feedback) {
       if ($kyc_document['kyc_type'] == $feedback['document_type']) {
 
         // Update custom KYC document file field properties.
-        $kyc_document['kyc_status'] = $feedback['status'];
+        $kyc_document['kyc_status'] = ($feedback['status'] == COMMERCE_HIPAY_WS_KYC_STATUS_NOK) ? COMMERCE_HIPAY_WS_KYC_STATUS_NOK : COMMERCE_HIPAY_WS_KYC_STATUS_VALIDATED;
         $kyc_document['kyc_message'] = !empty($feedback['notification_message']) ? $feedback['notification_message'] : '';
 
         // Save new custom KYC document file field properties.
