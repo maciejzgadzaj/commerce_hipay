@@ -798,6 +798,7 @@ function commerce_hipay_ws_bank_account_views_default_views() {
       'empty_column' => 0,
     ),
   );
+  $handler->display->display_options['style_options']['sticky'] = TRUE;
   /* Relationship: Entity Reference: Referenced Entity */
   $handler->display->display_options['relationships']['hipay_ws_bank_user_account_target_id']['id'] = 'hipay_ws_bank_user_account_target_id';
   $handler->display->display_options['relationships']['hipay_ws_bank_user_account_target_id']['table'] = 'field_data_hipay_ws_bank_user_account';

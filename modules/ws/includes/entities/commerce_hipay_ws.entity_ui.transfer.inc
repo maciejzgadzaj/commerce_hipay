@@ -355,6 +355,7 @@ function commerce_hipay_ws_transfer_views_default_views() {
       'empty_column' => 0,
     ),
   );
+  $handler->display->display_options['style_options']['sticky'] = TRUE;
   /* Field: Hipay Wallet transfer: Transfer ID */
   $handler->display->display_options['fields']['transfer_id']['id'] = 'transfer_id';
   $handler->display->display_options['fields']['transfer_id']['table'] = 'commerce_hipay_ws_transfer';

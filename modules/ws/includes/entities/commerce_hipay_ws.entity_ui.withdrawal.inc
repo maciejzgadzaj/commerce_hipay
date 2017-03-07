@@ -345,6 +345,7 @@ function commerce_hipay_ws_withdrawal_views_default_views() {
       'empty_column' => 0,
     ),
   );
+  $handler->display->display_options['style_options']['sticky'] = TRUE;
   /* Field: Hipay Wallet withdrawal: Withdrawal ID */
   $handler->display->display_options['fields']['withdrawal_id']['id'] = 'withdrawal_id';
   $handler->display->display_options['fields']['withdrawal_id']['table'] = 'commerce_hipay_ws_withdrawal';
