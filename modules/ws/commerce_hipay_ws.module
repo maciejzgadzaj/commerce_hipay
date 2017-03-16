@@ -845,3 +845,18 @@ function commerce_hipay_ws_get_supported_languages() {
     'pt_BR' => t('português (Brasil)'),
   );
 }
+
+/**
+ * Returns a lock name for provided entity type and entity ID.
+ *
+ * @param string $entity_type
+ *   An entity type to return the lock name for.
+ * @param int $entity_id
+ *   An entity ID to return the lock name for.
+ *
+ * @return string
+ *   The lock name for provided entity type and entity ID.
+ */
+function commerce_hipay_ws_get_lock_name($entity_type, $entity_id) {
+  return implode('_', array('lock', $entity_type, $entity_id));
+}

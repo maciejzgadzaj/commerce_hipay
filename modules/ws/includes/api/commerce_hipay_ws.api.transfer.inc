@@ -198,6 +198,17 @@ function commerce_hipay_ws_api_transfer_validate_notification($feedback) {
     }
   }
 
+  // It might happen that we receive multiple notifications for the same Hipay
+  // transfer at (almost) the same moment (for example "authorization" and
+  // "capture" notification), let's then acquire a lock for each update,
+  // so they are processed one by one, to avoid later update overwriting
+  // previous notification's update.
+  $lock_name = commerce_hipay_ws_get_lock_name('commerce_hipay_ws_transfer', $feedback['transid']);
+  if (!lock_acquire($lock_name)) {
+    lock_wait($lock_name);
+    return commerce_hipay_ws_api_transfer_validate_notification($feedback);
+  }
+
   // Try to load the Hipay transfer entity from the received parameter.
   if (!$transfer = commerce_hipay_ws_transfer_load_by_transaction_id($feedback['transid'])) {
     watchdog('commerce_hipay_ws', 'Notification: transfer @operation: unable to load a Hipay transfer entity from transid parameter: @transid.', array(
@@ -269,6 +280,9 @@ function commerce_hipay_ws_api_transfer_validate_notification($feedback) {
     // update result respectively.
     $update_result = $update_result && $result;
   }
+
+  // We are done updating, we can release the lock now.
+  lock_release($lock_name);
 
   return $update_result;
 }

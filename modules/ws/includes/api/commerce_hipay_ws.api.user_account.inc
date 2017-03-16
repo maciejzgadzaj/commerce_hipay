@@ -161,6 +161,17 @@ function commerce_hipay_ws_api_user_account_validate_notification($feedback) {
     }
   }
 
+  // It might happen that we receive multiple notifications for the same Hipay
+  // user account at (almost) the same moment (for example several of
+  // "document_validation" notifications and "identification" notification),
+  // let's then acquire a lock for each update, so they are processed one by
+  // one, to avoid later update overwriting previous notification's update.
+  $lock_name = commerce_hipay_ws_get_lock_name('commerce_hipay_ws_user_account', $feedback['account_id']);
+  if (!lock_acquire($lock_name)) {
+    lock_wait($lock_name);
+    return commerce_hipay_ws_api_user_account_validate_notification($feedback);
+  }
+
   // Try to load the Hipay user account from the received parameter.
   if (!$user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($feedback['account_id'])) {
     watchdog('commerce_hipay_ws', 'Notification: identification: unable to load a Hipay user account entity from account_id parameter: @account_id.', array('@account_id' => $feedback['account_id']), WATCHDOG_ERROR);
@@ -204,6 +215,9 @@ function commerce_hipay_ws_api_user_account_validate_notification($feedback) {
     // update result respectively.
     $update_result = $update_result && $result;
   }
+
+  // We are done updating, we can release the lock now.
+  lock_release($lock_name);
 
   return $update_result;
 }
