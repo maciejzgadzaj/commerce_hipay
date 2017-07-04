@@ -80,6 +80,13 @@ function commerce_hipay_tpp_commerce_payment_transaction_status_info() {
     'total' => TRUE,
   );
 
+  $statuses[COMMERCE_HIPAY_TPP_PAYMENT_STATUS_PARTIALLY_REFUNDED] = array(
+    'status' => COMMERCE_HIPAY_TPP_PAYMENT_STATUS_PARTIALLY_REFUNDED,
+    'title' => t('Partially refunded'),
+    'icon' => drupal_get_path('module', 'commerce_payment') . '/theme/icon-success.png',
+    'total' => TRUE,
+  );
+
   $statuses[COMMERCE_HIPAY_TPP_PAYMENT_STATUS_REFUNDED] = array(
     'status' => COMMERCE_HIPAY_TPP_PAYMENT_STATUS_REFUNDED,
     'title' => t('Refunded'),
@@ -1354,6 +1361,10 @@ function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
         $operation_transaction->status = COMMERCE_PAYMENT_STATUS_FAILURE;
         break;
 
+      case COMMERCE_HIPAY_TPP_REMOTE_STATUS_PARTIALLY_REFUNDED:
+        $operation_transaction->status = COMMERCE_HIPAY_TPP_PAYMENT_STATUS_PARTIALLY_REFUNDED;
+        break;
+
       case COMMERCE_HIPAY_TPP_REMOTE_STATUS_REFUNDED:
         $operation_transaction->status = COMMERCE_HIPAY_TPP_PAYMENT_STATUS_REFUNDED;
         break;
@@ -1964,6 +1975,7 @@ function commerce_hipay_tpp_get_order_operation_totals($order, $conditions = NUL
         COMMERCE_PAYMENT_STATUS_SUCCESS,
         COMMERCE_HIPAY_TPP_PAYMENT_STATUS_AUTHORIZED,
         COMMERCE_HIPAY_TPP_PAYMENT_STATUS_CAPTURED,
+        COMMERCE_HIPAY_TPP_PAYMENT_STATUS_PARTIALLY_REFUNDED,
         COMMERCE_HIPAY_TPP_PAYMENT_STATUS_REFUNDED,
       ),
     );

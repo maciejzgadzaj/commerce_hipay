@@ -62,6 +62,7 @@ define('COMMERCE_HIPAY_TPP_API_STATUS_ERROR', 'error');
 // (see commerce_payment_commerce_payment_transaction_insert()).
 define('COMMERCE_HIPAY_TPP_PAYMENT_STATUS_AUTHORIZED', 'hipay_authorized');
 define('COMMERCE_HIPAY_TPP_PAYMENT_STATUS_CAPTURED', 'hipay_captured');
+define('COMMERCE_HIPAY_TPP_PAYMENT_STATUS_PARTIALLY_REFUNDED', 'hipay_partially_refunded');
 define('COMMERCE_HIPAY_TPP_PAYMENT_STATUS_REFUNDED', 'hipay_refunded');
 define('COMMERCE_HIPAY_TPP_PAYMENT_STATUS_CANCELLED', 'hipay_cancelled');
 define('COMMERCE_HIPAY_TPP_PAYMENT_STATUS_PENDING', 'hipay_pending');
