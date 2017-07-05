@@ -356,6 +356,19 @@ function commerce_hipay_ws_api_request_soap($url, $resource, $parameters, $conte
   try {
     $client = new SoapClient($url . '?wsdl', $options);
     $result = $client->$resource(array('parameters' => $parameters));
+
+    if ($client instanceof SoapClient) {
+      // Log SOAP verbose information to a file.
+      if (!empty($context['payment_method_instance']['settings']['api']['logging']['request']) || !empty($context['payment_method_instance']['settings']['api']['logging']['response'])) {
+        $soap_debug_file = file_directory_temp() . '/soap.log';
+        $fh = fopen($soap_debug_file, "a+");
+        fputs($fh, $client->__getLastRequestHeaders());
+        fputs($fh, $client->__getLastRequest() . PHP_EOL);
+        fputs($fh, $client->__getLastResponseHeaders());
+        fputs($fh, $client->__getLastResponse() . PHP_EOL);
+        fclose($fh);
+      }
+    }
   }
   // If there was any kind of error calling the API...
   catch (SoapFault $fault) {
@@ -432,6 +445,14 @@ function commerce_hipay_ws_api_request_soap($url, $resource, $parameters, $conte
 function commerce_hipay_ws_api_request_rest($url, $resource, $parameters, $context) {
   $ch = curl_init($url);
 
+  // Log cURL verbose information to a file.
+  if (!empty($context['payment_method_instance']['settings']['api']['logging']['request']) || !empty($context['payment_method_instance']['settings']['api']['logging']['response'])) {
+    $curl_debug_file = file_directory_temp() . '/curl.log';
+    $fh = fopen($curl_debug_file, "a+");
+    curl_setopt($ch, CURLOPT_STDERR, $fh);
+    curl_setopt($ch, CURLOPT_VERBOSE, TRUE);
+  }
+
   $default_currency_code = commerce_default_currency();
   $currency_code = !empty($context['currency_code']) ? $context['currency_code'] : $default_currency_code;
   $api_username = !empty($context['payment_method_instance']['settings']['accounts'][$currency_code]['api_username']) ? $context['payment_method_instance']['settings']['accounts'][$currency_code]['api_username'] : $context['payment_method_instance']['settings']['accounts'][$default_currency_code]['api_username'];
@@ -498,6 +519,7 @@ function commerce_hipay_ws_api_request_rest($url, $resource, $parameters, $conte
   }
 
   curl_close($ch);
+  fclose($fh);
 
   return $response;
 }

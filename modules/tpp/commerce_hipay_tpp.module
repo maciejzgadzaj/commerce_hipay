@@ -513,7 +513,7 @@ function commerce_hipay_tpp_settings_form($settings = array()) {
   $form['api_logging'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Log the following messages for debugging'),
-    '#description' => t('Basic transaction-related request and response data will be saved in transaction <em>payload</em> property regardless of this setting. Enabling this option will save additional information on each transaction request and response in the dblog.'),
+    '#description' => t('Basic transaction-related request and response data will be saved in transaction <em>payload</em> property regardless of this setting. Enabling this option will save additional information on each transaction request and response in the dblog, and save cURL verbose information to @curllog.', array('@curllog' => file_directory_temp() . '/curl.log')),
     '#options' => array(
       'request' => t('API request messages'),
       'response' => t('API response messages'),
@@ -827,6 +827,14 @@ function commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $c
 
   $ch = curl_init($url);
 
+  // Log cURL verbose information to a file.
+  if (!empty($payment_method['settings']['api_logging']['request']) || !empty($payment_method['settings']['api_logging']['response'])) {
+    $curl_debug_file = file_directory_temp() . '/curl.log';
+    $fh = fopen($curl_debug_file, "a+");
+    curl_setopt($ch, CURLOPT_STDERR, $fh);
+    curl_setopt($ch, CURLOPT_VERBOSE, TRUE);
+  }
+
   $api_credentials = commerce_hipay_tpp_get_api_credentials($payment_method, $context);
   curl_setopt($ch, CURLOPT_USERPWD, $api_credentials['api_username'] . ':' . $api_credentials['api_password']);
   curl_setopt($ch, CURLOPT_HTTPHEADER, array(
@@ -886,6 +894,7 @@ function commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $c
   }
 
   curl_close($ch);
+  fclose($fh);
 
   return $response;
 }

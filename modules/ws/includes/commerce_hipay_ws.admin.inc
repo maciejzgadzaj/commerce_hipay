@@ -248,7 +248,7 @@ function commerce_hipay_ws_settings_form($settings = array()) {
   $form['api']['logging'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Log the following messages for debugging'),
-    '#description' => t('Enabling this option will save full information on each API request and/or response in the dblog.'),
+    '#description' => t('Enabling this option will save full information on each API request and/or response in the dblog, and save cURL verbose information to @curllog and SOAP verbose information to @soaplog.', array('@curllog' => file_directory_temp() . '/curl.log', '@soaplog' => file_directory_temp() . '/soap.log')),
     '#options' => array(
       'request' => t('API request messages'),
       'response' => t('API response messages'),
