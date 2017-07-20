@@ -894,7 +894,9 @@ function commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $c
   }
 
   curl_close($ch);
-  fclose($fh);
+  if ((!empty($payment_method['settings']['api_logging']['request']) || !empty($payment_method['settings']['api_logging']['response'])) && is_resource($fh)) {
+    fclose($fh);
+  }
 
   return $response;
 }

@@ -519,7 +519,9 @@ function commerce_hipay_ws_api_request_rest($url, $resource, $parameters, $conte
   }
 
   curl_close($ch);
-  fclose($fh);
+  if ((!empty($context['payment_method_instance']['settings']['api']['logging']['request']) || !empty($context['payment_method_instance']['settings']['api']['logging']['response'])) && is_resource($fh)) {
+    fclose($fh);
+  }
 
   return $response;
 }
