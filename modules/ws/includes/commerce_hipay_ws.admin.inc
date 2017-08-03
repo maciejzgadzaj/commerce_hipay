@@ -57,6 +57,8 @@ function commerce_hipay_ws_settings_default() {
         'acct_num' => '',
         'aba_num' => '',
         'transit_num' => '',
+        'bank_num' => '',
+        'bsb_num' => '',
       ),
     );
     $defaults['fee_accounts'][$currency_code] = array(
@@ -528,6 +530,20 @@ function commerce_hipay_ws_settings_form_bank($account_id, $settings = array()) 
     '#disabled' => !empty($disable_bank_form_elements),
   );
 
+  $form['bank_num'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Bank number'),
+    '#default_value' => $settings['bank_num'],
+    '#disabled' => !empty($disable_bank_form_elements),
+  );
+
+  $form['bsb_num'] = array(
+    '#type' => 'textfield',
+    '#title' => t('BSB number'),
+    '#default_value' => $settings['bsb_num'],
+    '#disabled' => !empty($disable_bank_form_elements),
+  );
+
   return $form;
 }
 
@@ -904,6 +920,8 @@ function commerce_hipay_ws_settings_form_submit_create_bank_account($account_id,
   $hipay_bank_account_wrapper->hipay_ws_bank_account_number = $bank_account['acct_num'];
   $hipay_bank_account_wrapper->hipay_ws_bank_aba_number = $bank_account['aba_num'];
   $hipay_bank_account_wrapper->hipay_ws_bank_transit_number = $bank_account['transit_num'];
+  $hipay_bank_account_wrapper->hipay_ws_bank_bank_number = $bank_account['bank_num'];
+  $hipay_bank_account_wrapper->hipay_ws_bank_bsb_number = $bank_account['bsb_num'];
 
   // Make sure the bank account is assigned to the Hipay user account.
   $hipay_user_account = commerce_hipay_ws_user_account_load_by_hipay_account_id($account_id);

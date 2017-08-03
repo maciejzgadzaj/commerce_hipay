@@ -100,3 +100,16 @@ function commerce_hipay_ws_uninstall() {
   module_load_include('inc', 'commerce_hipay_ws', 'includes/entities/commerce_hipay_ws.entity.withdrawal');
   commerce_hipay_ws_withdrawal_delete_fields();
 }
+
+/**
+ * Create "Bank number" and "BSB number" fields and instances.
+ */
+function commerce_hipay_ws_update_7101() {
+  $field_bases = commerce_hipay_ws_bank_account_field_bases();
+  field_create_field($field_bases['hipay_ws_bank_bank_number']);
+  field_create_field($field_bases['hipay_ws_bank_bsb_number']);
+
+  $field_instances = commerce_hipay_ws_bank_account_field_instances();
+  field_create_instance($field_instances['hipay_ws_bank_bank_number']);
+  field_create_instance($field_instances['hipay_ws_bank_bsb_number']);
+}

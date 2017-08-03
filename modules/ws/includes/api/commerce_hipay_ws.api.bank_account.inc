@@ -18,7 +18,7 @@ function commerce_hipay_ws_api_bank_account_create($account, $payment_method_ins
   // If hipay_account_id value is already set, it means that Hipay User Account
   // was already created, and we cannot create another one.
   if (empty($hipay_user_account->hipay_account_id)) {
-    // @TODO: watchdog?
+    watchdog('commerce_hipay_ws', 'A user account has not yet been created in Hipay Wallet for Hipay user account entity @user_account_id.', array('@user_account_id' => $hipay_user_account->user_account_id), WATCHDOG_ERROR);
     return FALSE;
   }
 
@@ -32,7 +32,7 @@ function commerce_hipay_ws_api_bank_account_create($account, $payment_method_ins
   }
   // If still no payment method instance is available, we cannot continue.
   if (empty($payment_method_instance)) {
-    // @TODO: watchdog.
+    watchdog('commerce_hipay_ws', 'Unable to load @method_id payment method instance.', array('@method_id' => 'commerce_hipay_ws'), WATCHDOG_ERROR);
     return FALSE;
   }
 
@@ -50,6 +50,8 @@ function commerce_hipay_ws_api_bank_account_create($account, $payment_method_ins
     'acct_num' => $wrapper->hipay_ws_bank_account_number->value(),
     'aba_num' => $wrapper->hipay_ws_bank_aba_number->value(),
     'transit_num' => $wrapper->hipay_ws_bank_transit_number->value(),
+    'bank_num' => $wrapper->hipay_ws_bank_bank_number->value(),
+    'bsb_num' => $wrapper->hipay_ws_bank_bsb_number->value(),
   );
 
   // Do not send empty parameters to the API.

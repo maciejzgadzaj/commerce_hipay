@@ -15,7 +15,7 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
   // If hipay_account_id value is already set, it means that Hipay User Account
   // was already created, and we cannot create another one.
   if (!empty($account->hipay_account_id)) {
-    // @TODO: watchdog?
+    watchdog('commerce_hipay_ws', 'A user account has already been created in Hipay Wallet for this Hipay user account entity @user_account_id.', array('@user_account_id' => $account->user_account_id), WATCHDOG_ERROR);
     return FALSE;
   }
 
@@ -32,7 +32,7 @@ function commerce_hipay_ws_api_user_account_create($account, $payment_method_ins
   }
   // If still no payment method instance is available, we cannot continue.
   if (empty($payment_method_instance)) {
-    // @TODO: watchdog.
+    watchdog('commerce_hipay_ws', 'Unable to load @method_id payment method instance.', array('@method_id' => 'commerce_hipay_ws'), WATCHDOG_ERROR);
     return FALSE;
   }
 

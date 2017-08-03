@@ -485,6 +485,46 @@ function commerce_hipay_ws_bank_account_field_bases() {
     'type' => 'addressfield',
   );
 
+  $field_bases['hipay_ws_bank_bank_number'] = array(
+    'active' => 1,
+    'cardinality' => 1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'hipay_ws_bank_bank_number',
+    'indexes' => array(
+      'format' => array(
+        0 => 'format',
+      ),
+    ),
+    'locked' => 0,
+    'module' => 'text',
+    'settings' => array(
+      'max_length' => 32,
+    ),
+    'translatable' => 0,
+    'type' => 'text',
+  );
+
+  $field_bases['hipay_ws_bank_bsb_number'] = array(
+    'active' => 1,
+    'cardinality' => 1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'hipay_ws_bank_bsb_number',
+    'indexes' => array(
+      'format' => array(
+        0 => 'format',
+      ),
+    ),
+    'locked' => 0,
+    'module' => 'text',
+    'settings' => array(
+      'max_length' => 32,
+    ),
+    'translatable' => 0,
+    'type' => 'text',
+  );
+
   $field_bases['hipay_ws_bank_iban'] = array(
     'active' => 1,
     'cardinality' => 1,
@@ -716,6 +756,70 @@ function commerce_hipay_ws_bank_account_field_instances() {
       ),
       'type' => 'addressfield_standard',
       'weight' => 2,
+    ),
+  );
+
+  $field_instances['hipay_ws_bank_bank_number'] = array(
+    'bundle' => 'hipay_bank_account',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => '',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'text',
+        'settings' => array(),
+        'type' => 'text_default',
+        'weight' => 7,
+      ),
+    ),
+    'entity_type' => 'commerce_hipay_ws_bank_account',
+    'field_name' => 'hipay_ws_bank_bank_number',
+    'label' => 'Bank number',
+    'required' => 0,
+    'settings' => array(
+      'text_processing' => 0,
+    ),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'text',
+      'settings' => array(
+        'size' => 60,
+      ),
+      'type' => 'text_textfield',
+      'weight' => 8,
+    ),
+  );
+
+  $field_instances['hipay_ws_bank_bsb_number'] = array(
+    'bundle' => 'hipay_bank_account',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => '',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'text',
+        'settings' => array(),
+        'type' => 'text_default',
+        'weight' => 7,
+      ),
+    ),
+    'entity_type' => 'commerce_hipay_ws_bank_account',
+    'field_name' => 'hipay_ws_bank_bsb_number',
+    'label' => 'BSB number',
+    'required' => 0,
+    'settings' => array(
+      'text_processing' => 0,
+    ),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'text',
+      'settings' => array(
+        'size' => 60,
+      ),
+      'type' => 'text_textfield',
+      'weight' => 9,
     ),
   );
 
