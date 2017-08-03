@@ -567,6 +567,8 @@ function commerce_hipay_ws_bank_account_get_field_mapping() {
     'acct_num' => 'hipay_ws_bank_account_number',
     'aba_num' => 'hipay_ws_bank_aba_number',
     'transit_num' => 'hipay_ws_bank_transit_number',
+    'bank_num' => 'hipay_ws_bank_bank_number',
+    'bsb_num' => 'hipay_ws_bank_bsb_number',
   );
 }
 

@@ -24,7 +24,7 @@ function commerce_hipay_ws_api_upload($account, $kyc_document, $payment_method_i
   }
   // If still no payment method instance is available, we cannot continue.
   if (empty($payment_method_instance)) {
-    // @TODO: watchdog.
+    watchdog('commerce_hipay_ws', 'Unable to load @method_id payment method instance.', array('@method_id' => 'commerce_hipay_ws'), WATCHDOG_ERROR);
     return FALSE;
   }
 
