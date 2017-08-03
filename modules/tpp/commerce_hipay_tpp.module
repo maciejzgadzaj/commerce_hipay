@@ -5,9 +5,22 @@
  */
 
 require_once 'includes/commerce_hipay_tpp.inc';
+require_once 'includes/commerce_hipay_tpp.admin.inc';
+require_once 'includes/commerce_hipay_tpp.callbacks.inc';
 require_once 'includes/commerce_hipay_tpp.constants.inc';
 require_once 'includes/commerce_hipay_tpp.codes.inc';
 require_once 'includes/commerce_hipay_tpp.cardonfile.inc';
+require_once 'includes/entities/commerce_hipay_tpp.entity.virtual_iban.inc';
+require_once 'includes/entities/commerce_hipay_tpp.entity_ui.virtual_iban.inc';
+require_once 'includes/api/commerce_hipay_tpp.api.inc';
+require_once 'includes/api/commerce_hipay_tpp.api.virtual_iban.inc';
+
+/**
+ * Implements hook_entity_info().
+ */
+function commerce_hipay_tpp_entity_info() {
+  return commerce_hipay_tpp_virtual_iban_entity_info();
+}
 
 /**
  * Implements hook_commerce_payment_method_info().
@@ -31,7 +44,54 @@ function commerce_hipay_tpp_commerce_payment_method_info() {
     ),
   );
 
+  $payment_methods['commerce_hipay_tpp_virtual_iban'] = array(
+    'title' => 'Hipay Virtual IBAN',
+    'display_title' => t('Virtual IBAN'),
+    'description' => t('Hipay TPP Virtual IBAN payment method (on-site)'),
+    'terminal' => FALSE,
+    'offsite' => FALSE,
+  );
+
   return $payment_methods;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function commerce_hipay_tpp_permission() {
+  $permissions = array();
+
+  $permissions = array(
+    'administer Hipay TPP configuration' => array(
+      'title' => t('Administer Hipay TPP configuration'),
+      'description' => t('Allows users to administer Hipay TPP configuration.'),
+      'restrict access' => TRUE,
+    ),
+    'access Hipay TPP API calls payload' => array(
+      'title' => t('Access Hipay TPP API calls payload'),
+      'description' => t('Allows users to administer Hipay TPP configuration.'),
+      'restrict access' => TRUE,
+    ),
+  );
+
+  $permissions += commerce_entity_access_permissions('commerce_hipay_tpp_virtual_iban');
+
+  return $permissions;
+}
+
+/**
+ * Implements hook_commerce_order_status_info().
+ */
+function commerce_hipay_tpp_commerce_order_status_info() {
+  $order_statuses = array();
+
+  $order_statuses[COMMERCE_HIPAY_TPP_ORDER_STATUS_PENDING_BANK_TRANSFER] = array(
+    'name' => COMMERCE_HIPAY_TPP_ORDER_STATUS_PENDING_BANK_TRANSFER,
+    'title' => t('Pending bank transfer'),
+    'state' => 'pending',
+  );
+
+  return $order_statuses;
 }
 
 /**
@@ -162,6 +222,18 @@ function commerce_hipay_tpp_menu() {
     'weight' => 1,
   );
 
+  $items['admin/commerce/hipay-tpp'] = array(
+    'title' => 'Hipay TPP',
+    'description' => 'Manage Hipay TPP settings.',
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' => array('access administration pages'),
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+  );
+
+  // Virtual IBANs.
+  $items += commerce_hipay_tpp_virtual_iban_menu();
+
   return $items;
 }
 
@@ -173,6 +245,17 @@ function commerce_hipay_tpp_menu() {
 function commerce_hipay_tpp_menu_alter(&$items) {
   $items['admin/commerce/orders/%commerce_order/payment/%commerce_payment_transaction/delete']['access callback'] = 'commerce_hipay_tpp_access_delete';
   $items['admin/commerce/orders/%commerce_order/payment/%commerce_payment_transaction/delete']['access arguments'] = array(3, 5);
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function commerce_hipay_tpp_views_api() {
+  return array(
+    'api' => 3,
+    'version' => '3.0',
+    'path' => drupal_get_path('module', 'commerce_hipay_tpp') . '/includes/views',
+  );
 }
 
 /**
@@ -329,199 +412,6 @@ function commerce_hipay_tpp_access_delete($order, $transaction) {
   }
   // Allow access if the user can delete this transaction.
   return commerce_payment_transaction_access('delete', $transaction);
-}
-
-/**
- * Returns default settings for the Hipay TPP payment method.
- *
- * @see commerce_hipay_tpp_settings_form()
- */
-function commerce_hipay_tpp_settings_default() {
-  $default_settings = array(
-    'endpoint' => COMMERCE_HIPAY_TPP_TEST,
-    'operation' => COMMERCE_HIPAY_TPP_OPERATION_SALE,
-    'supported_currencies' => drupal_map_assoc(array_keys(commerce_hipay_get_enabled_currencies())),
-    'currency_code' => commerce_default_currency(),
-    'template' => COMMERCE_HIPAY_TPP_TEMPLATE_BASIC,
-    'language' => 'en_GB',
-    '3ds' => 1,
-    'cardonfile' => FALSE,
-    'css' => '',
-    'api_logging' => array(
-      'request' => FALSE,
-      'response' => FALSE,
-    ),
-  );
-  foreach (array_keys(commerce_currencies(TRUE)) as $currency_code) {
-    $default_settings['accounts'][$currency_code] = array(
-      'api_username' => '',
-      'api_password' => '',
-      'secret_passphrase' => '',
-    );
-  }
-  return $default_settings;
-}
-
-/**
- * Payment method callback: settings form.
- *
- * @see hook_commerce_payment_method_info()
- */
-function commerce_hipay_tpp_settings_form($settings = array()) {
-  // Merge default settings into the stored settings array.
-  // Settings are stored in multi-level array, so we need recursive merge. And
-  // actually replace instead of merge, to make sure the default settings are
-  // correctly overriden by custom user settings (array_merge_recursive() would
-  // just add new array elements instead of overriding existing ones).
-  $settings = array_replace_recursive(commerce_hipay_tpp_settings_default(), $settings);
-
-  $default_currency = commerce_default_currency();
-  $enabled_currencies = commerce_currencies(TRUE);
-
-  $form = array();
-
-  $form['endpoint'] = array(
-    '#type' => 'radios',
-    '#title' => t('Environment'),
-    '#options' => array(
-      COMMERCE_HIPAY_TPP_TEST => t('Test - process test transactions to a test account'),
-      COMMERCE_HIPAY_TPP_PRODUCTION => t('Production - process real transactions to a production account'),
-    ),
-    '#default_value' => $settings['endpoint'],
-    '#required' => TRUE,
-  );
-
-  foreach ($enabled_currencies as $currency_code => $currency) {
-    $form['accounts'][$currency_code] = array(
-      '#type' => 'fieldset',
-      '#title' => t('@currency_code account', array('@currency_code' => $currency_code)),
-      '#collapsible' => TRUE,
-      '#collapsed' => !($currency_code == commerce_default_currency()) && empty($settings['accounts'][$currency_code]['api_username']) && empty($settings['accounts'][$currency_code]['api_password']),
-      '#group' => 'accounts',
-    );
-
-    $form['accounts'][$currency_code]['api_username'] = array(
-      '#type' => 'textfield',
-      '#title' => t('API username'),
-      '#description' => t('The name of the user for accessing Hipay TPP webservice. This, as well as API password, can be found in your Hipay Fullservice Account under <em>Integration / Security Settings</em>.'),
-      '#default_value' => $settings['accounts'][$currency_code]['api_username'],
-      '#required' => $currency_code == commerce_default_currency(),
-    );
-
-    $form['accounts'][$currency_code]['api_password'] = array(
-      '#type' => 'textfield',
-      '#title' => t('API password'),
-      '#description' => t('The password for the user specified in the above field.'),
-      '#default_value' => $settings['accounts'][$currency_code]['api_password'],
-      '#required' => $currency_code == commerce_default_currency(),
-    );
-
-    $form['accounts'][$currency_code]['secret_passphrase'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Secret Passphrase'),
-      '#description' => t('This secret passphrase is used to generate a unique character string (signature) hashed with SHA algorithm. It should be the same as the value provided in <em>Secret Passphrase</em> field in your Hipay Fullservice Account configuration in <em>Integration » Security Settings</em>.'),
-      '#default_value' => $settings['accounts'][$currency_code]['secret_passphrase'],
-      '#required' => $currency_code == commerce_default_currency(),
-    );
-  }
-
-  $form['operation'] = array(
-    '#type' => 'radios',
-    '#title' => t('Default transaction type'),
-    '#options' => array(
-      COMMERCE_HIPAY_TPP_OPERATION_SALE => t('Sale - indicates transaction is sent for authorization, and if approved, is automatically submitted for capture'),
-      COMMERCE_HIPAY_TPP_OPERATION_AUTHORIZATION => t('Authorization - indicates this transaction is sent for authorization only. The transaction will not be sent for settlement until the transaction is submitted for capture manually by the Merchant'),
-    ),
-    '#default_value' => $settings['operation'],
-    '#required' => TRUE,
-  );
-
-  $form['supported_currencies'] = array(
-    '#type' => 'checkboxes',
-    '#title' => t('Supported currencies'),
-    '#description' => t('Transactions in these currencies will be sent as-is to the gateway, without any prior conversion. This setting should reflect your <em>Settlement currencies</em> configuration of your Hipay Fullservice account.'),
-    '#options' => commerce_hipay_get_enabled_currencies(),
-    '#multiple' => TRUE,
-    '#default_value' => $settings['supported_currencies'],
-    '#required' => TRUE,
-  );
-
-  $form['currency_code'] = array(
-    '#type' => 'select',
-    '#title' => t('Default currency'),
-    '#description' => t('Transactions in other currencies will be converted to this currency, so multi-currency sites must be configured to use appropriate conversion rates.'),
-    '#options' => commerce_hipay_get_enabled_currencies(),
-    '#default_value' => $settings['currency_code'],
-  );
-
-  $form['template'] = array(
-    '#type' => 'radios',
-    '#title' => t('Checkout redirect mode'),
-    '#options' => array(
-      COMMERCE_HIPAY_TPP_TEMPLATE_BASIC => t('Redirect to the hosted checkout page through an automatically submitted form'),
-      COMMERCE_HIPAY_TPP_TEMPLATE_IFRAME => t('Stay on this site using an iframe to embed the hosted checkout page'),
-    ),
-    '#default_value' => $settings['template'],
-    '#required' => TRUE,
-  );
-
-  $form['language'] = array(
-    '#type' => 'select',
-    '#title' => t('Default language'),
-    '#description' => t("Language to be used by the off-site payment page or iframe if user's language is not supported by the gateway."),
-    '#options' => commerce_hipay_get_supported_languages(),
-    '#default_value' => $settings['language'],
-  );
-
-  $form['3ds'] = array(
-    '#type' => 'radios',
-    '#title' => t('Should the 3-D Secure authentication be performed for payment transactions'),
-    '#options' => array(
-      0 => t('Bypass 3-D Secure authentication.'),
-      1 => t('3-D Secure authentication if available.'),
-      2 => t('3-D Secure authentication mandatory.'),
-    ),
-    '#default_value' => $settings['3ds'],
-    '#required' => TRUE,
-  );
-
-  if (module_exists('commerce_cardonfile')) {
-    $form['cardonfile'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Enable Card on File functionality with this payment method.'),
-      '#description' => t('Stores tokenized value for card data.'),
-      '#default_value' => $settings['cardonfile'],
-    );
-  }
-  else {
-    $form['cardonfile'] = array(
-      '#type' => 'markup',
-      '#markup' => t('To enable Card on File functionality download and install the <a href="@cardonfile_url">Card on File</a> module.', array(
-        '@cardonfile_url' => url('https://www.drupal.org/project/commerce_cardonfile'),
-      )),
-    );
-  }
-
-  $form['css'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Payment page style sheet'),
-    '#description' => t('Path and filename of the custom style sheet for the hosted payment page, relative to Drupal webroot.')
-    . '<br />' . t('Note that Hipay requires HTTPS protocol, and the URL generated will reflect this requirement - make sure that your server configuration supports it.'),
-    '#default_value' => $settings['css'],
-  );
-
-  $form['api_logging'] = array(
-    '#type' => 'checkboxes',
-    '#title' => t('Log the following messages for debugging'),
-    '#description' => t('Basic transaction-related request and response data will be saved in transaction <em>payload</em> property regardless of this setting. Enabling this option will save additional information on each transaction request and response in the dblog, and save cURL verbose information to @curllog.', array('@curllog' => file_directory_temp() . '/curl.log')),
-    '#options' => array(
-      'request' => t('API request messages'),
-      'response' => t('API response messages'),
-    ),
-    '#default_value' => $settings['api_logging'],
-  );
-
-  return $form;
 }
 
 /**
@@ -685,220 +575,6 @@ function commerce_hipay_tpp_get_charge_data($order, $payment_method, $charge = N
     'amount' => $amount,
     'currency_code' => $currency_code,
   );
-}
-
-/**
- * Performs background call to Hipay API to initialize the hosted payment page.
- *
- * @param object $order
- *   The order object the hosted checkout is for.
- * @param array $payment_method
- *   The payment method instance used to generate the redirect link.
- *
- * @return object
- *   The Hipay initialization call response object.
- *
- * @see http://hipay-tpp-gateway-api.readthedocs.org/en/latest/Chap3-RESTAPIResources-initializeHostedPaymentPage.html
- */
-function commerce_hipay_tpp_api_initialize($order, $payment_method) {
-  // Get generic API request data.
-  // The same function is also used for 'Request a New Order' API resource
-  // (see commerce_hipay_tpp_api_order_request()).
-  $request_data = commerce_hipay_tpp_get_request_data($order, $payment_method);
-
-  // E-commerce with SSL/TLS Encryption.
-  $request_data['eci'] = COMMERCE_HIPAY_TPP_ECI_ECOMMERCE;
-
-  // Use either full-page redirect to the hosted payment page
-  // or embed it in the iframe.
-  $request_data['template'] = $payment_method['settings']['template'];
-
-  // Create payment transaction before we call Hipay API.
-  $transaction = commerce_payment_transaction_new($payment_method['method_id'], $order->order_id);
-  $transaction->instance_id = $payment_method['instance_id'];
-  $transaction->amount = commerce_currency_decimal_to_amount($request_data['amount'], $request_data['currency']);
-  $transaction->currency_code = $request_data['currency'];
-  $transaction->status = COMMERCE_PAYMENT_STATUS_PENDING;
-  $transaction->message = t('@operation transaction initialized.');
-  $transaction->message_variables = array(
-    '@operation' => ucfirst($payment_method['settings']['operation']),
-  );
-  $transaction->data['operation'] = $payment_method['settings']['operation'];
-  commerce_payment_transaction_save($transaction);
-
-  $request_data['cdata2'] = $transaction->transaction_id;
-
-  //$request_data['operation_id'] = $transaction->transaction_id;
-
-  if (module_exists('commerce_cardonfile') && !empty($payment_method['settings']['cardonfile'])) {
-    $request_data['multi_use'] = 1;
-  }
-
-  // Allow other modules to alter the $request_data array.
-  drupal_alter('commerce_hipay_tpp_api_initialize', $request_data, $order, $payment_method);
-
-  // Add request data to the transaction payload.
-  $transaction->payload['init-request-' . time()] = $request_data;
-  commerce_payment_transaction_save($transaction);
-
-  // Perform the call to Hipay TPP API.
-  $url = commerce_hipay_tpp_get_server_url($payment_method) . COMMERCE_HIPAY_TPP_RESOURCE_INITIALIZATION;
-  $context = array(
-    'call_type' => 'Initialization',
-    'currency_code' => $request_data['currency'],
-  );
-  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $context);
-
-  // Update payment transaction with response details.
-  $transaction->payload['init-response-' . time()] = $response;
-
-  // Handle API exceptions.
-  if (!empty($response['code'])) {
-    $transaction->status = COMMERCE_PAYMENT_STATUS_FAILURE;
-    $transaction->message = t('Error @error_code: @error_message: @error_description');
-    $transaction->message_variables = array(
-      '@error_code' => $response['code'],
-      '@error_message' => $response['message'],
-      '@error_description' => $response['description'],
-    );
-  }
-
-  // Save updated transaction.
-  commerce_payment_transaction_save($transaction);
-
-  // Allow other modules to process the initialization response.
-  foreach (module_implements('commerce_hipay_tpp_api_initialize_response') as $module) {
-    $function = $module . '_commerce_hipay_tpp_api_initialize_response';
-    $function($response, $transaction, $order, $payment_method);
-  }
-
-  return $response;
-}
-
-/**
- * Performs background call to Hipay API to request a new order.
- *
- * @param object $order
- *   The order object the hosted checkout is for.
- * @param array $payment_method
- *   The payment method instance used to request a new Hipay order.
- *
- * @see http://hipay-tpp-gateway-api.readthedocs.org/en/latest/Chap3-RESTAPIResources-requestNewOrder.html
- */
-function commerce_hipay_tpp_api_order_request($order, $payment_method) {
-  // We use 'cardonfile_charge' callback.
-  if (commerce_hipay_tpp_cardonfile_charge($payment_method, $order->data['cardonfile'], $order)) {
-    commerce_payment_redirect_pane_next_page($order);
-  }
-  else {
-    commerce_payment_redirect_pane_previous_page($order);
-  }
-
-  // Redirect user to the relevant checkout page.
-  drupal_goto(commerce_checkout_order_uri($order));
-}
-
-/**
- * Performs a call to Hipay TPP API.
- *
- * @param string $url
- *   Hipay API endpoint URL.
- * @param array $request_data
- *   A string of parameters to be sent to Hipay TPP API.
- * @param array $payment_method
- *   The payment method being used.
- * @param array $context
- *   An associative array containing additional information about the request.
- *
- * @return object
- *   An array of Hipay TPP API response parameters.
- */
-function commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $context = array()) {
-  // Call type description for logging purposes.
-  $call_type = !empty($context['call_type']) ? $context['call_type'] : 'API call';
-
-  // Log the request data if request logging is enabled.
-  if (!empty($payment_method['settings']['api_logging']['request'])) {
-    watchdog('commerce_hipay_tpp', '@call_type: request: !request_data', array(
-      '@call_type' => $call_type,
-      '!request_data' => '<pre>' . var_export($request_data, TRUE) . '</pre>',
-    ), WATCHDOG_DEBUG);
-  }
-
-  $ch = curl_init($url);
-
-  // Log cURL verbose information to a file.
-  if (!empty($payment_method['settings']['api_logging']['request']) || !empty($payment_method['settings']['api_logging']['response'])) {
-    $curl_debug_file = file_directory_temp() . '/curl.log';
-    $fh = fopen($curl_debug_file, "a+");
-    curl_setopt($ch, CURLOPT_STDERR, $fh);
-    curl_setopt($ch, CURLOPT_VERBOSE, TRUE);
-  }
-
-  $api_credentials = commerce_hipay_tpp_get_api_credentials($payment_method, $context);
-  curl_setopt($ch, CURLOPT_USERPWD, $api_credentials['api_username'] . ':' . $api_credentials['api_password']);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-    'Accept: application/json',
-  ));
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-  curl_setopt($ch, CURLOPT_FAILONERROR, FALSE);
-  curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-  curl_setopt($ch, CURLOPT_HEADER, FALSE);
-  curl_setopt($ch, CURLOPT_POST, TRUE);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($request_data));
-
-  $start = microtime(TRUE);
-
-  // Execute the request.
-  $result = curl_exec($ch);
-
-  $request_time = microtime(TRUE) - $start;
-
-  // Log the cURL response if response logging is enabled.
-  if (!empty($payment_method['settings']['api_logging']['response'])) {
-    watchdog('commerce_hipay_tpp', '@call_type: cURL response: !response', array(
-      '@call_type' => $call_type,
-      '!response' => '<pre>' . var_export($result, TRUE) . '</pre>',
-    ), WATCHDOG_DEBUG);
-  }
-
-  // If there was an error performing cURL request.
-  if ($error = curl_error($ch)) {
-    // Log cURL error.
-    watchdog('commerce_hipay_tpp', '@call_type: cURL error: @error', array(
-      '@call_type' => $call_type,
-      '@error' => $error,
-    ), WATCHDOG_ERROR);
-
-    // Create response object in the same format as decoded Hipay API exception
-    // response.
-    $response = array(
-      'code' => curl_errno($ch),
-      'message' => 'cURL error',
-      'description' => $error,
-    );
-  }
-  // No cURL errors, the request worked fine.
-  else {
-    // Decode JSON response into array.
-    $response = json_decode($result, TRUE);
-
-    // Log the response if response logging is enabled.
-    if (!empty($payment_method['settings']['api_logging']['response'])) {
-      watchdog('commerce_hipay_tpp', '@call_type: response: !response Request time: @request_time', array(
-        '@call_type' => $call_type,
-        '!response' => '<pre>' . var_export($response, TRUE) . '</pre>',
-        '@request_time' => $request_time,
-      ), WATCHDOG_DEBUG);
-    }
-  }
-
-  curl_close($ch);
-  if ((!empty($payment_method['settings']['api_logging']['request']) || !empty($payment_method['settings']['api_logging']['response'])) && is_resource($fh)) {
-    fclose($fh);
-  }
-
-  return $response;
 }
 
 /**
@@ -1177,7 +853,13 @@ function commerce_hipay_tpp_callback_notification() {
   // Get Hipay API notification feedback and process it.
   $callback_type = 'notification';
   $feedback = commerce_hipay_tpp_get_feedback();
-  $result = commerce_hipay_tpp_process_notification($feedback, $callback_type);
+
+  if (!empty($feedback['payment_product']) && $feedback['payment_product'] == 'sct') {
+    $result = commerce_hipay_tpp_process_sct_notification($feedback);
+  }
+  else {
+    $result = commerce_hipay_tpp_process_notification($feedback, $callback_type);
+  }
 
   // Allow other modules to process the notification.
   foreach (module_implements('commerce_hipay_tpp_process_notification') as $module) {
@@ -1527,172 +1209,6 @@ function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
 }
 
 /**
- * Captures an amount on existing authorization transaction.
- *
- * @param object $transaction
- *   An authorization transaction to be captured.
- * @param int $amount
- *   An amount to be captured.
- *
- * @return object
- *   A capture transaction.
- */
-function commerce_hipay_tpp_api_capture($transaction, $amount) {
-  $order = commerce_order_load($transaction->order_id);
-  $payment_method = commerce_payment_method_instance_load($transaction->instance_id);
-
-  // Create new transaction for capture.
-  $capture_transaction = commerce_payment_transaction_new($payment_method['method_id'], $transaction->order_id);
-  $capture_transaction->instance_id = $payment_method['instance_id'];
-  $capture_transaction->amount = commerce_currency_decimal_to_amount($amount, $transaction->currency_code);
-  $capture_transaction->currency_code = $transaction->currency_code;
-  $capture_transaction->status = COMMERCE_PAYMENT_STATUS_PENDING;
-  $capture_transaction->message = t('Capture transaction initialized.');
-  $capture_transaction->data['reference_transaction_id'] = $transaction->transaction_id;
-  $capture_transaction->data['operation'] = COMMERCE_HIPAY_TPP_OPERATION_CAPTURE;
-  $capture_transaction->remote_id = $transaction->remote_id;
-  commerce_payment_transaction_save($capture_transaction);
-
-  // Prepare the request data.
-  // See http://hipay-tpp-gateway-api.readthedocs.org/en/latest/Chap3-RESTAPIResources-maintenanceOperations.html
-  $request_data = array(
-    'operation' => COMMERCE_HIPAY_TPP_OPERATION_CAPTURE,
-    'amount' => $amount,
-    'operation_id' => $capture_transaction->transaction_id,
-  );
-
-  // Allow other modules to alter the $request_data array.
-  drupal_alter('commerce_hipay_tpp_api_capture', $request_data, $order, $payment_method);
-
-  // Add request data to the transaction's payload.
-  $capture_transaction->payload['request-' . time()] = $request_data;
-  commerce_payment_transaction_save($capture_transaction);
-
-  // Perform the call to Hipay TPP API.
-  $url = commerce_hipay_tpp_get_server_url($payment_method) . COMMERCE_HIPAY_TPP_RESOURCE_MAINTAINANCE . $transaction->remote_id;
-  $context = array(
-    'call_type' => 'Capture',
-    'currency_code' => $transaction->currency_code,
-  );
-  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $context);
-
-  // Update payment transaction with response details.
-  $capture_transaction->payload['response-' . time()] = $response;
-  commerce_payment_transaction_save($capture_transaction);
-
-  commerce_hipay_tpp_process_response($response, $capture_transaction, COMMERCE_HIPAY_TPP_OPERATION_CAPTURE);
-
-  return $capture_transaction;
-}
-
-/**
- * Refunds an amount on existing transaction.
- *
- * @param object $capture_transaction
- *   The capture transaction
- * @param int $amount
- *   An amount to be refunded.
- *
- * @return object
- *   A Refund transaction.
- */
-function commerce_hipay_tpp_api_refund($capture_transaction, $amount) {
-  $order = commerce_order_load($capture_transaction->order_id);
-  $payment_method = commerce_payment_method_instance_load($capture_transaction->instance_id);
-
-  // Create new transaction for refund.
-  $refund_transaction = commerce_payment_transaction_new($payment_method['method_id'], $capture_transaction->order_id);
-  $refund_transaction->instance_id = $payment_method['instance_id'];
-  $refund_transaction->amount = -commerce_currency_decimal_to_amount($amount, $capture_transaction->currency_code);
-  $refund_transaction->currency_code = $capture_transaction->currency_code;
-  $refund_transaction->status = COMMERCE_PAYMENT_STATUS_PENDING;
-  $refund_transaction->message = t('Refund transaction initialized.');
-  $refund_transaction->data['reference_transaction_id'] = $capture_transaction->transaction_id;
-  $refund_transaction->data['operation'] = COMMERCE_HIPAY_TPP_OPERATION_REFUND;
-  $refund_transaction->remote_id = $capture_transaction->remote_id;
-
-  commerce_payment_transaction_save($refund_transaction);
-
-  // Prepare the request data.
-  // See http://hipay-tpp-gateway-api.readthedocs.org/en/latest/Chap3-RESTAPIResources-maintenanceOperations.html
-  $request_data = array(
-    'operation' => COMMERCE_HIPAY_TPP_OPERATION_REFUND,
-    'amount' => $amount,
-    'operation_id' => $refund_transaction->transaction_id,
-  );
-
-  // Allow other modules to alter the $request_data array.
-  drupal_alter('commerce_hipay_tpp_api_refund', $request_data, $order, $payment_method);
-
-  // Add request data to the transaction's payload.
-  $refund_transaction->payload['request-' . time()] = $request_data;
-  commerce_payment_transaction_save($refund_transaction);
-
-  // Perform the call to Hipay TPP API.
-  $url = commerce_hipay_tpp_get_server_url($payment_method) . COMMERCE_HIPAY_TPP_RESOURCE_MAINTAINANCE . $capture_transaction->remote_id;
-  $context = array(
-    'call_type' => 'Refund',
-    'currency_code' => $capture_transaction->currency_code,
-  );
-  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $context);
-
-  // Update refund transaction with response details.
-  $refund_transaction->payload['response-' . time()] = $response;
-  commerce_payment_transaction_save($refund_transaction);
-
-  commerce_hipay_tpp_process_response($response, $refund_transaction, 'refund');
-
-  return $refund_transaction;
-}
-
-/**
- * Cancels an existing transaction.
- *
- * @param object $transaction
- *   An transaction to cancel.
- */
-function commerce_hipay_tpp_api_cancel($transaction) {
-  $order = commerce_order_load($transaction->order_id);
-  $payment_method = commerce_payment_method_instance_load($transaction->instance_id);
-
-  // Prepare the request data.
-  // See http://hipay-tpp-gateway-api.readthedocs.org/en/latest/Chap3-RESTAPIResources-maintenanceOperations.html
-  $request_data = array(
-    'operation' => COMMERCE_HIPAY_TPP_OPERATION_CANCEL,
-  );
-
-  // Allow other modules to alter the $request_data array.
-  drupal_alter('commerce_hipay_tpp_api_cancel', $request_data, $order, $payment_method);
-
-  $transaction->payload['cancel-request-' . time()] = $request_data;
-  commerce_payment_transaction_save($transaction);
-
-  // Perform the call to Hipay TPP API.
-  $url = commerce_hipay_tpp_get_server_url($payment_method) . COMMERCE_HIPAY_TPP_RESOURCE_MAINTAINANCE . $transaction->remote_id;
-  $context = array(
-    'call_type' => 'Cancel',
-    'currency_code' => $transaction->currency_code,
-  );
-  $response = commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $context);
-
-  // Update payment transaction with response details.
-  $transaction->payload['cancel-response-' . time()] = $response;
-
-  commerce_payment_transaction_save($transaction);
-
-  if (!isset($response['code'])) {
-    drupal_set_message(t('Cancel request has been sent to the payment gateway, now waiting for the server-to-server notification to update the transaction details. Refresh this page in a moment to see updated transaction details.'));
-  }
-  else {
-    drupal_set_message(t('There has been an error requesting the Cancel: @error_code: @error_message: @error_description', array(
-      '@error_code' => $response['code'],
-      '@error_message' => $response['message'],
-      '@error_description' => $response['description'],
-    )), 'error');
-  }
-}
-
-/**
  * Returns parameters returned by Hipay TPP API.
  *
  * @return array
@@ -1827,13 +1343,19 @@ function commerce_hipay_tpp_get_endpoint($environment) {
  * @return string
  *   The full URL of Hipay TPP API endpoint
  */
-function commerce_hipay_tpp_get_server_url($payment_method) {
+function commerce_hipay_tpp_get_server_url($payment_method, $version = 'v1') {
   switch ($payment_method['settings']['endpoint']) {
     case COMMERCE_HIPAY_TPP_PRODUCTION:
-      return COMMERCE_HIPAY_TPP_ENDPOINT_PRODUCTION;
+      $url = COMMERCE_HIPAY_TPP_ENDPOINT_PRODUCTION;
+      break;
     case COMMERCE_HIPAY_TPP_TEST:
-      return COMMERCE_HIPAY_TPP_ENDPOINT_TEST;
+      $url = COMMERCE_HIPAY_TPP_ENDPOINT_TEST;
+      break;
   }
+
+  $url .= $version . '/';
+
+  return $url;
 }
 
 /**
@@ -2121,4 +1643,65 @@ function commerce_hipay_tpp_get_remote_success_status_for_operation_type($operat
     case COMMERCE_HIPAY_TPP_OPERATION_REFUND:
       return COMMERCE_HIPAY_TPP_PAYMENT_STATUS_REFUNDED;
   }
+}
+
+/**
+ * Returns all payment method instances for a given payment method id.
+ *
+ * @param $method_id
+ *   A payment method id
+ * @param $include_disabled
+ *   Return enabled and disabled instances
+ *
+ * @return
+ *   An array of all loaded payment method instances keyed by instance_id
+ */
+function commerce_hipay_tpp_payment_method_instances($method_id = 'commerce_hipay_tpp', $include_disabled = FALSE) {
+  $cached_ids = &drupal_static(__FUNCTION__, array());
+  $include_disabled = !empty($include_disabled);
+
+  if (!array_key_exists($method_id, $cached_ids)) {
+    $cached_ids[$method_id] = array();
+
+    // load all rules ... no easier way
+    $rules_configs = rules_config_load_multiple(FALSE);
+
+    // find all rules with an action to enable this method
+    foreach ($rules_configs as $rule_name => $rule) {
+      // Only rules and sub-types have actions.
+      if (!($rule instanceof Rule)) {
+        continue;
+      }
+
+      // fast skip if rule does not depend on commerce_payment
+      if (!isset($rule->dependencies) || !in_array('commerce_payment', $rule->dependencies)) {
+        continue;
+      }
+
+      foreach ($rule->actions() as $action) {
+        // skip any actions that are not simple rules actions, ie loops
+        if (!($action instanceof RulesAction)) {
+          continue;
+        }
+
+        if ($action->getElementName() == 'commerce_payment_enable_' . $method_id) {
+          $instance_id = commerce_payment_method_instance_id($method_id, $rule);
+          $cached_ids[$method_id][$instance_id] = $rule->active;
+          continue 2; // skip to next rule
+        }
+      }
+    }
+  }
+
+  // load instances
+  $instances = array();
+  if (!empty($cached_ids[$method_id])) {
+    foreach ($cached_ids[$method_id] as $instance_id => $instance_active) {
+      if ($instance_active || $include_disabled) {
+        $instances[$instance_id] = commerce_payment_method_instance_load($instance_id);
+      }
+    }
+  }
+
+  return $instances;
 }

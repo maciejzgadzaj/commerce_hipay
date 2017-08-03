@@ -10,8 +10,8 @@ define('COMMERCE_HIPAY_TPP_TEST', 'test');
 
 // TPP REST API endpoints.
 // http://hipay-tpp-gateway-api.readthedocs.org/en/latest/Chap2-IntegrationGuidelines.html
-define('COMMERCE_HIPAY_TPP_ENDPOINT_PRODUCTION', 'https://secure-gateway.hipay-tpp.com/rest/v1/');
-define('COMMERCE_HIPAY_TPP_ENDPOINT_TEST', 'https://stage-secure-gateway.hipay-tpp.com/rest/v1/');
+define('COMMERCE_HIPAY_TPP_ENDPOINT_PRODUCTION', 'https://secure-gateway.hipay-tpp.com/rest/');
+define('COMMERCE_HIPAY_TPP_ENDPOINT_TEST', 'https://stage-secure-gateway.hipay-tpp.com/rest/');
 // Secure Vault Tokenization API endpoints.
 define('COMMERCE_HIPAY_TPP_SECURE_VAULT_ENDPOINT_PRODUCTION', 'https://secure-vault.hipay-tpp.com/rest/v1/');
 define('COMMERCE_HIPAY_TPP_SECURE_VAULT_ENDPOINT_TEST', 'https://stage-secure-vault.hipay-tpp.com/rest/v1/');
@@ -22,6 +22,8 @@ define('COMMERCE_HIPAY_TPP_RESOURCE_INITIALIZATION', 'hpayment');
 define('COMMERCE_HIPAY_TPP_RESOURCE_ORDER', 'order');
 define('COMMERCE_HIPAY_TPP_RESOURCE_MAINTAINANCE', 'maintenance/transaction/');
 define('COMMERCE_HIPAY_TPP_RESOURCE_TRANSACTION', 'transaction/');
+define('COMMERCE_HIPAY_TPP_RESOURCE_VIRTUAL_IBAN_CREATE', 'virtual-iban');
+define('COMMERCE_HIPAY_TPP_RESOURCE_VIRTUAL_IBAN_SEARCH', 'virtual-iban/search');
 // Secure Vault Tokenization API resources.
 // We are not using Tokenization API token lookup or token generation resources.
 // In our case tokens are generated during initializing a hosted payment page,
@@ -54,6 +56,9 @@ define('COMMERCE_HIPAY_TPP_API_STATUS_COMPLETED', 'completed');
 define('COMMERCE_HIPAY_TPP_API_STATUS_PENDING', 'pending');
 define('COMMERCE_HIPAY_TPP_API_STATUS_DECLINED', 'declined');
 define('COMMERCE_HIPAY_TPP_API_STATUS_ERROR', 'error');
+
+// Commerce order statuses.
+define('COMMERCE_HIPAY_TPP_ORDER_STATUS_PENDING_BANK_TRANSFER', 'pending_bank_transfer');
 
 // Commerce payment transaction statuses.
 // No custom status for capture transactions, as for this we need to use
@@ -106,3 +111,6 @@ define('COMMERCE_HIPAY_TPP_REMOTE_STATUS_RISK_ACCEPTED', 161);
 define('COMMERCE_HIPAY_TPP_REMOTE_STATUS_AUTHORIZATION_REFUSED', 163);
 define('COMMERCE_HIPAY_TPP_REMOTE_STATUS_CAPTURE_REFUSED', 173);
 define('COMMERCE_HIPAY_TPP_REMOTE_STATUS_PENDING_PAYMENT', 200);
+
+// Hipay TPP REST response status codes.
+define('COMMERCE_HIPAY_TPP_REST_STATUS_SUCCESS', 0);

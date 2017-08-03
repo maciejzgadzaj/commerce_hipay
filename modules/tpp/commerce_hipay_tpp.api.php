@@ -149,6 +149,32 @@ function hook_commerce_hipay_tpp_api_cancel_alter(&$request_data, $order, $payme
 }
 
 /**
+ * Allows other modules to alter Virtual IBAN creation request parameters
+ * before sending them to Hipay TPP API.
+ *
+ * @param array $request_data
+ *   An array of parameters being sent to Hipay TPP API.
+ * @param array $payment_method
+ *   The payment method instance used for the Virtual IBAN creation.
+ */
+function hook_commerce_hipay_tpp_api_virtual_iban_create_alter(&$request_data, $payment_method) {
+  // No example.
+}
+
+/**
+ * Allows other modules to alter Virtual IBAN search request parameters
+ * before sending them to Hipay TPP API.
+ *
+ * @param array $request_data
+ *   An array of parameters being sent to Hipay TPP API.
+ * @param array $payment_method
+ *   The payment method instance used for the Virtual IBAN search.
+ */
+function hook_commerce_hipay_tpp_api_virtual_iban_search_alter($request_data, $payment_method) {
+  // No example.
+}
+
+/**
  * Allows other modules to process Hipay server-to-server notification.
  *
  * @param array $feedback
@@ -171,5 +197,32 @@ function hook_commerce_hipay_tpp_api_cancel_alter(&$request_data, $order, $payme
  * @see commerce_hipay_tpp_refresh()
  */
 function hook_commerce_hipay_tpp_process_notification($feedback, $callback_type, $processing_result) {
+  // No example.
+}
+
+/**
+ * Allows other modules to process Hipay SCP server-to-server notification.
+ *
+ * Hipay SCT notifications are notifications sent on receiving a Virtual IBAN
+ * payment.
+ *
+ * @param array $feedback
+ *   An associative array containing the Hipay SCP server-to-server notification
+ *   feedback.
+ * @param object $transaction
+ *   A payment transaction entity related to the notification.
+ * @param object|null $order
+ *   An order entity related to the notification (if found).
+ * @param bool $processing_result
+ *   A boolean indicating whether the feedback was processed successfully by
+ *   commerce_hipay_tpp_process_notification() and other earlier implementations
+ *   of this hook.
+ *
+ * @return bool
+ *   A boolean indicating whether the processing was successful or not.
+ *
+ * @see commerce_hipay_tpp_process_sct_notification()
+ */
+function hook_commerce_hipay_tpp_process_sct_notification($feedback, $transaction, $order, $processing_result) {
   // No example.
 }
