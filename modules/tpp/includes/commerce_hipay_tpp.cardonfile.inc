@@ -204,7 +204,7 @@ function commerce_hipay_tpp_cardonfile_charge($payment_method, $card_data, $orde
       '@error_message' => $response['message'],
       '@error_description' => $response['description'],
     );
-    drupal_set_message(t('There was an error processing your payment with Hipay. Please try again or contact us if the problem persists.'), 'error');
+    drupal_set_message(t(COMMERCE_HIPAY_TPP_MESSAGE_PAYMENT_ERROR_GENERAL), 'error');
   }
   else {
     switch ($response['state']) {
@@ -214,7 +214,7 @@ function commerce_hipay_tpp_cardonfile_charge($payment_method, $card_data, $orde
         break;
 
       default:
-        drupal_set_message(t('There was an error processing your payment with Hipay. Please try again or contact us if the problem persists.'), 'error');
+        drupal_set_message(t(COMMERCE_HIPAY_TPP_MESSAGE_PAYMENT_ERROR_GENERAL), 'error');
     }
   }
 

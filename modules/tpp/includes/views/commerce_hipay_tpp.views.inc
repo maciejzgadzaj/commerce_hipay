@@ -9,6 +9,7 @@
  * Implements hook_views_data_alter().
  */
 function commerce_hipay_tpp_views_data_alter(&$data) {
+  commerce_hipay_tpp_direct_debit_views_data_alter($data);
   commerce_hipay_tpp_virtual_iban_views_data_alter($data);
 }
 

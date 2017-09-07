@@ -731,7 +731,7 @@ function commerce_hipay_tpp_virtual_iban_payment_transaction_new($original_trans
 /**
  * Provides Views data structure for the Virtual IBAN entities.
  *
- * @see commerce_hipay_ws_views_data_alter()
+ * @see commerce_hipay_tpp_views_data_alter()
  */
 function commerce_hipay_tpp_virtual_iban_views_data_alter(&$data) {
   // Virtual IBANs.

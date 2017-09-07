@@ -24,6 +24,7 @@ define('COMMERCE_HIPAY_TPP_RESOURCE_MAINTAINANCE', 'maintenance/transaction/');
 define('COMMERCE_HIPAY_TPP_RESOURCE_TRANSACTION', 'transaction/');
 define('COMMERCE_HIPAY_TPP_RESOURCE_VIRTUAL_IBAN_CREATE', 'virtual-iban');
 define('COMMERCE_HIPAY_TPP_RESOURCE_VIRTUAL_IBAN_SEARCH', 'virtual-iban/search');
+define('COMMERCE_HIPAY_TPP_RESOURCE_DIRECT_DEBIT_CREATE', 'debit-agreement');
 // Secure Vault Tokenization API resources.
 // We are not using Tokenization API token lookup or token generation resources.
 // In our case tokens are generated during initializing a hosted payment page,
@@ -114,3 +115,12 @@ define('COMMERCE_HIPAY_TPP_REMOTE_STATUS_PENDING_PAYMENT', 200);
 
 // Hipay TPP REST response status codes.
 define('COMMERCE_HIPAY_TPP_REST_STATUS_SUCCESS', 0);
+
+// Hipay TPP SEPA Direct Debit mandate statuses.
+define('COMMERCE_HIPAY_TPP_DIRECT_DEBIT_STATUS_PENDING', 'pending');
+define('COMMERCE_HIPAY_TPP_DIRECT_DEBIT_STATUS_AVAILABLE', 'available');
+define('COMMERCE_HIPAY_TPP_DIRECT_DEBIT_STATUS_TERMINATED', 'terminated');
+define('COMMERCE_HIPAY_TPP_DIRECT_DEBIT_STATUS_SUSPENDED', 'suspended');
+define('COMMERCE_HIPAY_TPP_DIRECT_DEBIT_STATUS_ERROR', 'error');
+
+define('COMMERCE_HIPAY_TPP_MESSAGE_PAYMENT_ERROR_GENERAL', 'There was an error processing your payment with Hipay. Please try again or contact us if the problem persists.');

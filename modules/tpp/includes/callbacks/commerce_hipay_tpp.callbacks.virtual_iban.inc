@@ -6,6 +6,141 @@
  */
 
 /**
+ * Returns default settings for the Hipay Virtual IBAN payment method.
+ *
+ * @see commerce_hipay_tpp_virtual_iban_settings_form()
+ */
+function commerce_hipay_tpp_virtual_iban_settings_default() {
+  $default_settings = array(
+    'endpoint' => COMMERCE_HIPAY_TPP_TEST,
+    'creation_mode' => 'order',
+    'expiry_date' => '+1 year',
+    'completion_message' => '<p>To complete your order, please transfer <b>[commerce-order:commerce-order-total:amount_decimal] [commerce-order:commerce-order-total:currency_code]</b> to the following bank account:</p>
+<p>BIC: <b>[commerce-order:payment-method:virtual-iban:bic]</b>
+<br />IBAN: <b>[commerce-order:payment-method:virtual-iban:iban]</b></p>
+<p>using reference: <b>[commerce-order:payment-method:virtual-iban:external-reference]</b></p>',
+    'api_logging' => array(
+      'request' => FALSE,
+      'response' => FALSE,
+    ),
+  );
+  foreach (array_keys(commerce_currencies(TRUE)) as $currency_code) {
+    $default_settings['accounts'][$currency_code] = array(
+      'api_username' => '',
+      'api_password' => '',
+      'secret_passphrase' => '',
+    );
+  }
+  return $default_settings;
+}
+
+/**
+ * Payment method callback: Virtual IBAN payment method settings form.
+ *
+ * @see hook_commerce_payment_method_info()
+ */
+function commerce_hipay_tpp_virtual_iban_settings_form($settings = array()) {
+  // Merge default settings into the stored settings array.
+  // Settings are stored in multi-level array, so we need recursive merge. And
+  // actually replace instead of merge, to make sure the default settings are
+  // correctly overriden by custom user settings (array_merge_recursive() would
+  // just add new array elements instead of overriding existing ones).
+  $settings = array_replace_recursive(commerce_hipay_tpp_virtual_iban_settings_default(), $settings);
+
+  $default_currency = commerce_default_currency();
+  $enabled_currencies = commerce_currencies(TRUE);
+
+  $form = array();
+
+  $form['endpoint'] = array(
+    '#type' => 'radios',
+    '#title' => t('Environment'),
+    '#options' => array(
+      COMMERCE_HIPAY_TPP_TEST => t('Test - process test transactions to a test account'),
+      COMMERCE_HIPAY_TPP_PRODUCTION => t('Production - process real transactions to a production account'),
+    ),
+    '#default_value' => $settings['endpoint'],
+    '#required' => TRUE,
+  );
+
+  foreach ($enabled_currencies as $currency_code => $currency) {
+    $form['accounts'][$currency_code] = array(
+      '#type' => 'fieldset',
+      '#title' => t('@currency_code account', array('@currency_code' => $currency_code)),
+      '#collapsible' => TRUE,
+      '#collapsed' => !($currency_code == commerce_default_currency()) && empty($settings['accounts'][$currency_code]['api_username']) && empty($settings['accounts'][$currency_code]['api_password']),
+      '#group' => 'accounts',
+    );
+
+    $form['accounts'][$currency_code]['api_username'] = array(
+      '#type' => 'textfield',
+      '#title' => t('API username'),
+      '#description' => t('The name of the user for accessing Hipay TPP webservice. This, as well as API password, can be found in your Hipay Fullservice Account under <em>Integration / Security Settings</em>.'),
+      '#default_value' => $settings['accounts'][$currency_code]['api_username'],
+      '#required' => $currency_code == commerce_default_currency(),
+    );
+
+    $form['accounts'][$currency_code]['api_password'] = array(
+      '#type' => 'textfield',
+      '#title' => t('API password'),
+      '#description' => t('The password for the user specified in the above field.'),
+      '#default_value' => $settings['accounts'][$currency_code]['api_password'],
+      '#required' => $currency_code == commerce_default_currency(),
+    );
+
+    $form['accounts'][$currency_code]['secret_passphrase'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Secret Passphrase'),
+      '#description' => t('This secret passphrase is used to generate a unique character string (signature) hashed with SHA algorithm. It should be the same as the value provided in <em>Secret Passphrase</em> field in your Hipay Fullservice Account configuration in <em>Integration » Security Settings</em>.'),
+      '#default_value' => $settings['accounts'][$currency_code]['secret_passphrase'],
+      '#required' => $currency_code == commerce_default_currency(),
+    );
+  }
+
+  $form['creation_mode'] = array(
+    '#type' => 'radios',
+    '#title' => t('Creation mode'),
+    '#options' => array(
+      'order' => t('new Virtual IBAN for each order'),
+      'user' => t('one Virtual IBAN for each user'),
+    ),
+    '#default_value' => $settings['creation_mode'],
+    '#required' => TRUE,
+  );
+
+  $form['expiry_date'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Expiration date'),
+    '#description' => t('<a href="@relative_url">Relative format</a> parsable by <a href="@strtotime_url"><code>strtotime()</code></a>, for example: <em>+1 year</em>', array(
+      '@relative_url' => url('http://php.net/manual/datetime.formats.relative.php'),
+      '@strtotime_url' => url('http://php.net/manual/function.strtotime.php')
+    )),
+    '#default_value' => $settings['expiry_date'],
+    '#required' => TRUE,
+  );
+
+  $form['completion_message'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Completion message'),
+    '#description' => t('Message to be displayed on the completion step of the checkout process.'),
+    '#default_value' => $settings['completion_message'],
+  );
+
+  $form['api_logging'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Log the following messages for debugging'),
+    '#description' => t('Basic transaction-related request and response data will be saved in transaction <em>payload</em> property regardless of this setting. Enabling this option will save additional information on each transaction request and response in the dblog, and save cURL verbose information to @curllog.', array('@curllog' => file_directory_temp() . '/curl.log')),
+    '#options' => array(
+      'request' => t('API request messages'),
+      'response' => t('API response messages'),
+    ),
+    '#default_value' => $settings['api_logging'],
+  );
+
+  return $form;
+}
+
+/**
  * Payment method callback; generation callback for the payment submission form.
  *
  * @param $payment_method
@@ -46,7 +181,7 @@ function commerce_hipay_tpp_virtual_iban_submit_form_validate($payment_method, $
         '@virtual_iban_id' => $order->data['commerce_hipay_tpp_virtual_iban_id'],
         '@order_id' => $order->order_id,
       ), WATCHDOG_ERROR);
-      drupal_set_message(t('There was an error processing your payment with Hipay. Please try again or contact us if the problem persists.'), 'error');
+      drupal_set_message(t(COMMERCE_HIPAY_TPP_MESSAGE_PAYMENT_ERROR_GENERAL), 'error');
       return FALSE;
     }
   }
@@ -79,7 +214,7 @@ function commerce_hipay_tpp_virtual_iban_submit_form_validate($payment_method, $
         '%external_reference' => $virtual_iban->external_reference,
         '@order_id' => $order->order_id,
       ), WATCHDOG_ERROR);
-      drupal_set_message(t('There was an error processing your payment with Hipay. Please try again or contact us if the problem persists.'), 'error');
+      drupal_set_message(t(COMMERCE_HIPAY_TPP_MESSAGE_PAYMENT_ERROR_GENERAL), 'error');
       return FALSE;
     }
   }
@@ -111,7 +246,7 @@ function commerce_hipay_tpp_virtual_iban_submit_form_validate($payment_method, $
     $response = commerce_hipay_tpp_api_virtual_iban_create($virtual_iban, $payment_method, $context);
 
     if (!isset($response['code']) || $response['code'] != COMMERCE_HIPAY_TPP_REST_STATUS_SUCCESS || empty($response['virtual_iban'])) {
-      drupal_set_message(t('There was an error processing your payment with Hipay. Please try again or contact us if the problem persists.'), 'error');
+      drupal_set_message(t(COMMERCE_HIPAY_TPP_MESSAGE_PAYMENT_ERROR_GENERAL), 'error');
       return FALSE;
     }
 

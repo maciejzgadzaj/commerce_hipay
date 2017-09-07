@@ -149,6 +149,20 @@ function hook_commerce_hipay_tpp_api_cancel_alter(&$request_data, $order, $payme
 }
 
 /**
+ * Allows other modules to alter SEPA direct debit mandate creation request
+ * parameters before sending them to Hipay TPP API.
+ *
+ * @param array $request_data
+ *   An array of parameters being sent to Hipay TPP API.
+ * @param array $payment_method
+ *   The payment method instance used for the SEPA direct debit mandate
+ *   creation.
+ */
+function hook_commerce_hipay_tpp_api_direct_debit_create_alter($request_data, $payment_method) {
+  // No example.
+}
+
+/**
  * Allows other modules to alter Virtual IBAN creation request parameters
  * before sending them to Hipay TPP API.
  *

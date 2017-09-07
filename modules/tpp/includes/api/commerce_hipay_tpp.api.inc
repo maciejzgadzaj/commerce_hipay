@@ -21,11 +21,12 @@
 function commerce_hipay_tpp_api_request($url, $request_data, $payment_method, $context = array(), $type = 'commerce_hipay_tpp') {
   // Call type description for logging purposes.
   $call_type = !empty($context['call_type']) ? $context['call_type'] : 'API call';
-
+  
   // Log the request data if request logging is enabled.
   if (!empty($payment_method['settings']['api_logging']['request'])) {
-    watchdog($type, '@call_type: request: !request_data', array(
+    watchdog($type, '@call_type: request to @url: !request_data', array(
       '@call_type' => $call_type,
+      '@url' => $url,
       '!request_data' => '<pre>' . var_export($request_data, TRUE) . '</pre>',
     ), WATCHDOG_DEBUG);
   }
@@ -126,7 +127,9 @@ function commerce_hipay_tpp_api_initialize($order, $payment_method) {
   $request_data = commerce_hipay_tpp_get_request_data($order, $payment_method);
 
   // E-commerce with SSL/TLS Encryption.
-  $request_data['eci'] = COMMERCE_HIPAY_TPP_ECI_ECOMMERCE;
+  if (!isset($request_data['eci'])) {
+    $request_data['eci'] = COMMERCE_HIPAY_TPP_ECI_ECOMMERCE;
+  }
 
   // Use either full-page redirect to the hosted payment page
   // or embed it in the iframe.
@@ -205,12 +208,20 @@ function commerce_hipay_tpp_api_initialize($order, $payment_method) {
  * @see http://hipay-tpp-gateway-api.readthedocs.org/en/latest/Chap3-RESTAPIResources-requestNewOrder.html
  */
 function commerce_hipay_tpp_api_order_request($order, $payment_method) {
-  // We use 'cardonfile_charge' callback.
-  if (commerce_hipay_tpp_cardonfile_charge($payment_method, $order->data['cardonfile'], $order)) {
-    commerce_payment_redirect_pane_next_page($order);
+  // We can request a new order using either a stored credit card...
+  if (!empty($order->data['cardonfile'])) {
+    $result = commerce_hipay_tpp_cardonfile_charge($payment_method, $order->data['cardonfile'], $order);
+  }
+  // ...or a stored direct debit mandate.
+  elseif (!empty($order->data['commerce_hipay_tpp_direct_debit'])) {
+    $result = commerce_hipay_tpp_direct_debit_charge($payment_method, $order);
+  }
+
+  if (!empty($result)) {
+    commerce_payment_redirect_pane_next_page($order, t('Customer successfully submitted payment at the payment gateway.'));
   }
   else {
-    commerce_payment_redirect_pane_previous_page($order);
+    commerce_payment_redirect_pane_previous_page($order, t('Customer payment submission failed at the payment gateway.'));
   }
 
   // Redirect user to the relevant checkout page.

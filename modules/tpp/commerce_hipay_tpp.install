@@ -39,6 +39,9 @@ function commerce_hipay_tpp_requirements($phase) {
 function commerce_hipay_tpp_schema() {
   $schema = array();
 
+  module_load_include('inc', 'commerce_hipay_tpp', 'includes/entities/commerce_hipay_tpp.entity.direct_debit');
+  $schema += commerce_hipay_tpp_direct_debit_schema();
+
   module_load_include('inc', 'commerce_hipay_tpp', 'includes/entities/commerce_hipay_tpp.entity.virtual_iban');
   $schema += commerce_hipay_tpp_virtual_iban_schema();
 
@@ -51,6 +54,9 @@ function commerce_hipay_tpp_schema() {
 function commerce_hipay_tpp_install() {
   module_load_include('inc', 'commerce_hipay_tpp', 'includes/entities/commerce_hipay_tpp.entity.virtual_iban');
   commerce_hipay_tpp_virtual_iban_create_fields();
+
+  module_load_include('inc', 'commerce_hipay_tpp', 'includes/entities/commerce_hipay_tpp.entity.direct_debit');
+  commerce_hipay_tpp_direct_debit_create_fields();
 }
 
 /**
@@ -74,4 +80,19 @@ function commerce_hipay_tpp_update_7201() {
 
   module_load_include('inc', 'commerce_hipay_tpp', 'includes/entities/commerce_hipay_tpp.entity.virtual_iban');
   commerce_hipay_tpp_virtual_iban_create_fields();
+}
+
+/**
+ * Create database schema and fields for Direct Debit entities.
+ */
+function commerce_hipay_tpp_update_7202() {
+  $schema = commerce_hipay_tpp_schema();
+  foreach ($schema as $table_name => $definition) {
+    if (!db_table_exists($table_name)) {
+      db_create_table($table_name, $definition);
+    }
+  }
+
+  module_load_include('inc', 'commerce_hipay_tpp', 'includes/entities/commerce_hipay_tpp.entity.direct_debit');
+  commerce_hipay_tpp_direct_debit_create_fields();
 }
