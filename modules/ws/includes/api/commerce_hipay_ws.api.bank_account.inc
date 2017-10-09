@@ -140,7 +140,7 @@ function commerce_hipay_ws_api_bank_account_validate_notification($feedback) {
 
   // Create new revision and save updated bank account entity.
   $bank_account->revision = TRUE;
-  $bank_account->log = 'Updated status from received Hipay Wallet notificaton.';
+  $bank_account->log = 'Updated status from received Hipay Wallet notification.';
   commerce_hipay_ws_bank_account_save($bank_account);
 
   // Add watchdog entry.

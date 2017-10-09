@@ -187,7 +187,7 @@ function commerce_hipay_ws_api_user_account_validate_notification($feedback) {
 
   // Create new revision and save updated user account entity.
   $user_account->revision = TRUE;
-  $user_account->log = 'Updated identified status from received Hipay Wallet notificaton.';
+  $user_account->log = 'Updated identified status from received Hipay Wallet notification.';
   commerce_hipay_ws_user_account_save($user_account);
 
   // Also update statuses of all KYC documents to validated.

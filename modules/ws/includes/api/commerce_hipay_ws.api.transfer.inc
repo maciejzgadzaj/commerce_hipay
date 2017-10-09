@@ -245,7 +245,7 @@ function commerce_hipay_ws_api_transfer_validate_notification($feedback) {
     $transfer->status = COMMERCE_HIPAY_WS_TRANSFER_STATUS_FAILED;
   }
   $transfer->revision = TRUE;
-  $transfer->log = 'Updated status from Hipay Wallet notificaton.';
+  $transfer->log = 'Updated status from Hipay Wallet notification.';
   commerce_hipay_ws_transfer_save($transfer);
 
   // Add watchdog entry.

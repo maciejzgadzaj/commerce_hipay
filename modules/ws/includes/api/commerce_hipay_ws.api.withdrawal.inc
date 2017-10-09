@@ -216,7 +216,7 @@ function commerce_hipay_ws_api_withdrawal_validate_notification($feedback) {
   // Update the Hipay withdrawal entity with the new status.
   $withdrawal->status = ($feedback['status'] == COMMERCE_HIPAY_WS_NOTIFICATION_STATUS_OK) ? COMMERCE_HIPAY_WS_WITHDRAWAL_STATUS_VALIDATED : COMMERCE_HIPAY_WS_WITHDRAWAL_STATUS_FAILED;
   $withdrawal->revision = TRUE;
-  $withdrawal->log = 'Updated status from Hipay Wallet notificaton.';
+  $withdrawal->log = 'Updated status from Hipay Wallet notification.';
   commerce_hipay_ws_withdrawal_save($withdrawal);
 
   // Add watchdog entry.
