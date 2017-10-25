@@ -320,7 +320,6 @@ function commerce_hipay_tpp_virtual_iban_completion_message_pane_checkout_form($
 function commerce_hipay_tpp_process_sct_notification($feedback) {
   // Make sure that we have actually received the feedback from the gateway.
   if (empty($feedback) || !is_array($feedback)) {
-    header("HTTP/1.1 400 Bad Request.", true, 400);
     watchdog('commerce_hipay_tpp_virtual_iban', 'SCT notification: Missing or invalid feedback received in notification: !feedback', array(
       '!feedback' => '<pre>' . var_export($feedback, TRUE) . '</pre>',
     ), WATCHDOG_ERROR);
@@ -341,7 +340,6 @@ function commerce_hipay_tpp_process_sct_notification($feedback) {
 
   // Validate the feedback signature.
   if (!commerce_hipay_tpp_feedback_validate_signature($feedback, $payment_method_instance)) {
-    header("HTTP/1.1 400 Bad Request.", true, 400);
     watchdog('commerce_hipay_tpp_virtual_iban', 'SCT notification: Signature hashes do not match.', array(), WATCHDOG_ERROR);
     return FALSE;
   }
@@ -353,7 +351,6 @@ function commerce_hipay_tpp_process_sct_notification($feedback) {
     || empty($feedback['payment_method']['iban_creditor'])
     || empty($feedback['payment_method']['external_reference'])
   ) {
-    header("HTTP/1.1 400 Bad Request.", true, 400);
     watchdog('commerce_hipay_tpp_virtual_iban', 'SCT notification: Missing Virtual IBAN details.', array(), WATCHDOG_ERROR);
     return FALSE;
   }
@@ -366,13 +363,11 @@ function commerce_hipay_tpp_process_sct_notification($feedback) {
   );
   // If no local Virtual IBAN entities were found.
   if (!$virtual_ibans = entity_load('commerce_hipay_tpp_virtual_iban', FALSE, $conditions)) {
-    header("HTTP/1.1 400 Bad Request.", true, 400);
     watchdog('commerce_hipay_tpp_virtual_iban', 'SCT notification: Unable to find any Virtual IBAN entities matching notification details.', array(), WATCHDOG_ERROR);
     return FALSE;
   }
   // If more than one local Virtual IBAN entity was found.
   if (count($virtual_ibans) != 1) {
-    header("HTTP/1.1 400 Bad Request.", true, 400);
     watchdog('commerce_hipay_tpp_virtual_iban', 'SCT notification: Error loading Virtual IBAN entities matching notification details - expected 1, found @count.', array(
       '@count' => count($virtual_ibans),
     ), WATCHDOG_ERROR);
@@ -395,7 +390,6 @@ function commerce_hipay_tpp_process_sct_notification($feedback) {
       || empty($transaction->data['commerce_hipay_tpp_virtual_iban_external_reference'])
       || $transaction->data['commerce_hipay_tpp_virtual_iban_external_reference'] != $virtual_iban->external_reference
     ) {
-      header("HTTP/1.1 400 Bad Request.", true, 400);
       watchdog('commerce_hipay_tpp_virtual_iban', 'SCT notification: Mismatch between payment transaction @transaction_id and Virtual IBAN @virtual_iban_id data.', array(
         '@transaction_id' => $transaction->transaction_id,
         '@virtual_iban_id' => $virtual_iban->virtual_iban_id,
@@ -409,7 +403,6 @@ function commerce_hipay_tpp_process_sct_notification($feedback) {
       $transaction->amount != commerce_currency_decimal_to_amount($feedback['order']['amount'], $feedback['order']['currency'])
       || $transaction->currency_code != $feedback['order']['currency']
     ) {
-      header("HTTP/1.1 400 Bad Request.", true, 400);
       watchdog('commerce_hipay_tpp_virtual_iban', 'SCT notification: Mismatch between transaction @transaction_id and notification amount data.', array(
         '@transaction_id' => $transaction->transaction_id,
       ), WATCHDOG_ERROR);
@@ -420,7 +413,6 @@ function commerce_hipay_tpp_process_sct_notification($feedback) {
     if (!empty($transaction->order_id)) {
       $order = commerce_order_load($transaction->order_id);
       if (!empty($order->data['commerce_payment_order_paid_in_full_invoked'])) {
-        header("HTTP/1.1 400 Bad Request.", true, 400);
         watchdog('commerce_hipay_tpp_virtual_iban', 'SCT notification: Matched order @order_id has already been paid in full.', array(
           '@order_id' => $order->order_id,
         ), WATCHDOG_ERROR);

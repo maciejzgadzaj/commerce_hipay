@@ -453,6 +453,11 @@ function commerce_hipay_tpp_callback_notification() {
     $function = $module . '_commerce_hipay_tpp_process_notification';
     $result = $result && $function($feedback, $callback_type, $result);
   }
+
+  // Add error header if there was a notification processing error at any point.
+  if ($result === FALSE) {
+    header('HTTP/1.1 400 Bad Request', TRUE, 400);
+  }
 }
 
 /**
