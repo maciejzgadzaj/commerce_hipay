@@ -451,7 +451,7 @@ function commerce_hipay_tpp_callback_notification() {
   // Allow other modules to process the notification.
   foreach (module_implements('commerce_hipay_tpp_process_notification') as $module) {
     $function = $module . '_commerce_hipay_tpp_process_notification';
-    $result = $result && $function($feedback, $callback_type, $result);
+    $result = $function($feedback, $callback_type, $result) && $result;
   }
 
   // Add error header if there was a notification processing error at any point.
