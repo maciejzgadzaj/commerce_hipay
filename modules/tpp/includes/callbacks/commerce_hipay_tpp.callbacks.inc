@@ -596,6 +596,8 @@ function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
       '@status_message' => commerce_hipay_tpp_get_payment_status_message($feedback['status']),
     );
     $operation_transaction->payload[$callback_type . '-' . time()] = $feedback;
+    $operation_transaction->revision = TRUE;
+    $operation_transaction->log = t('Updated from received Hipay notification.');
     commerce_payment_transaction_save($operation_transaction);
   }
   // Otherwise we update the main transaction.
