@@ -720,5 +720,5 @@ function commerce_hipay_ws_commerce_hipay_ws_withdrawal_view_alter(&$build, $ent
   $build['uid']['#content'] = l($build['#entity']->uid, 'user/' . $build['#entity']->uid);
   $build['created']['#content'] = format_date($build['#entity']->created, 'short');
   $build['changed']['#content'] = format_date($build['#entity']->changed, 'short');
-  $build['executed']['#content'] = format_date($build['#entity']->executed, 'short');
+  $build['executed']['#content'] = !empty($build['#entity']->executed) ? format_date($build['#entity']->executed, 'short') : '-';
 }
