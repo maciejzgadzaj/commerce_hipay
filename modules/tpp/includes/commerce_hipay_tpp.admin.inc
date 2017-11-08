@@ -38,7 +38,7 @@ function commerce_hipay_tpp_refresh($order, $transaction) {
   // Allow other modules to process the response feedback.
   foreach (module_implements('commerce_hipay_tpp_process_notification') as $module) {
     $function = $module . '_commerce_hipay_tpp_process_notification';
-    $result = $result && $function($feedback, $callback_type, $result);
+    $result = $function($feedback, $callback_type, $result) && $result;
   }
 
   if ($result) {

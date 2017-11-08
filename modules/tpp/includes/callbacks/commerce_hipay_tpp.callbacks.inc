@@ -300,7 +300,7 @@ function commerce_hipay_tpp_redirect_form_validate($order, $payment_method) {
   // Allow other modules to validate feedback and change the validation result.
   foreach (module_implements('commerce_hipay_tpp_redirect_form_validate') as $module) {
     $function = $module . '_commerce_hipay_tpp_redirect_form_validate';
-    $result = $result && $function($feedback, $order, $payment_method);
+    $result = $function($feedback, $order, $payment_method) && $result;
   }
 
   return $result;

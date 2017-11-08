@@ -581,7 +581,7 @@ function commerce_hipay_tpp_process_sct_notification($feedback) {
   // Allow other modules to process the notification.
   foreach (module_implements('commerce_hipay_tpp_process_sct_notification') as $module) {
     $function = $module . '_commerce_hipay_tpp_process_sct_notification';
-    $result = $result && $function($feedback, $transaction, $order, $result);
+    $result = $function($feedback, $transaction, $order, $result) && $result;
   }
 
   return $result;
