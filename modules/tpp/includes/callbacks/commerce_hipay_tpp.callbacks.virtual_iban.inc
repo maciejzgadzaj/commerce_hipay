@@ -276,7 +276,7 @@ function commerce_hipay_tpp_virtual_iban_submit_form_submit($payment_method, $pa
 /**
  * Implements hook_commerce_checkout_pane_info_alter().
  */
-function commerce_hipay_tpp_commerce_checkout_pane_info_alter(&$checkout_panes) {
+function commerce_hipay_tpp_commerce_checkout_pane_info_alterr(&$checkout_panes) {
   if (($order_id = arg(1)) && ($order = commerce_order_load($order_id))) {
     if (!empty($order->data['payment_method']) && $order->data['payment_method'] == 'commerce_hipay_tpp_virtual_iban|commerce_payment_commerce_hipay_tpp_virtual_iban') {
       $checkout_panes['checkout_completion_message']['callbacks']['checkout_form'] = 'commerce_hipay_tpp_virtual_iban_completion_message_pane_checkout_form';

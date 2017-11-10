@@ -1,0 +1,47 @@
+name: Commerce Hipay Wallet
+type: module
+description: 'Provides Drupal Commerce integration with Hipay Wallet payment services.'
+package: Commerce (contrib)
+core: 8.x
+dependencies:
+- commerce_hipay
+
+#name = Commerce Hipay Wallet
+#description = Provides integration with Hipay Wallet.
+#package = Commerce (contrib)
+#dependencies[] = addressfield
+#dependencies[] = commerce_hipay
+#dependencies[] = commerce_store
+#dependencies[] = date
+#dependencies[] = date_popup
+#dependencies[] = entityreference
+#dependencies[] = file
+#dependencies[] = list
+#dependencies[] = options
+#dependencies[] = text
+#core = 7.x
+#php = 5.5
+#files[] = includes/entities/commerce_hipay_ws.controller.user_account.inc
+#files[] = includes/entities/commerce_hipay_ws.controller.bank_account.inc
+#files[] = includes/entities/commerce_hipay_ws.controller.transfer.inc
+#files[] = includes/entities/commerce_hipay_ws.controller.withdrawal.inc
+#files[] = includes/views/commerce_hipay_ws.views.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_bank_account_handler_delete_link_field.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_bank_account_handler_edit_link_field.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_bank_account_handler_link_field.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_bank_account_handler_operations_field.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_bank_account_handler_validated_filter.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_handler_link_account_id.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_handler_link_order_id.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_handler_link_transfer_id.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_handler_link_withdrawal_id.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_transfer_handler_link_field.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_transfer_handler_operations_field.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_user_account_handler_delete_link_field.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_user_account_handler_edit_link_field.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_user_account_handler_identified_filter.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_user_account_handler_link_field.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_user_account_handler_operations_field.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_withdrawal_handler_link_field.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_withdrawal_handler_link_transfer_id.inc
+#files[] = includes/views/handlers/commerce_hipay_ws_withdrawal_handler_operations_field.inc

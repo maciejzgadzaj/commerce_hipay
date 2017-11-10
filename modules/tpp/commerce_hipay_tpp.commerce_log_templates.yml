@@ -1,0 +1,16 @@
+payment_submitted:
+  category: commerce_order
+  label: 'Payment submitted.'
+  template: '<p>Payment was successfully submitted at Hipay.</p>'
+payment_submission_failed:
+  category: commerce_order
+  label: 'Payment submission failed.'
+  template: '<p>Payment submission at Hipay failed.</p>'
+payment_cancelled:
+  category: commerce_order
+  label: 'Payment cancelled at Hipay.'
+  template: '<p>Payment was cancelled at Hipay.</p>'
+notification_received:
+  category: commerce_order
+  label: 'Notification received.'
+  template: '<p>Hipay <em>{{ message }}</em> notification received.</p>'

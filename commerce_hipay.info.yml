@@ -1,0 +1,7 @@
+name: Commerce Hipay
+type: module
+description: 'Provides Drupal Commerce integration with Hipay payment services.'
+package: Commerce (contrib)
+core: 8.x
+dependencies:
+- commerce_payment
