@@ -1469,8 +1469,8 @@ function commerce_hipay_tpp_virtual_iban_views_default_views() {
   $handler->display->display_options['fields']['nothing']['field'] = 'nothing';
   $handler->display->display_options['fields']['nothing']['label'] = '';
   $handler->display->display_options['fields']['nothing']['alter']['text'] = '<ul class="links inline operations">
-<li><a href="/admin/commerce/hipay-tpp/virtual-ibans/payment-transactions/[transaction_id]">view</a></li>
-<li><a href="/admin/commerce/hipay-tpp/virtual-ibans/payment-transactions/[transaction_id]/assign-to-order">assign to order</a></li>
+<li><a href="' . $GLOBALS['base_url'] . '/admin/commerce/hipay-tpp/virtual-ibans/payment-transactions/[transaction_id]">view</a></li>
+<li><a href="' . $GLOBALS['base_url'] . '/admin/commerce/hipay-tpp/virtual-ibans/payment-transactions/[transaction_id]/assign-to-order">assign to order</a></li>
 </ul>';
   $handler->display->display_options['fields']['nothing']['element_label_colon'] = FALSE;
   /* Filter criterion: Commerce Payment Transaction: Payment method */
