@@ -5,16 +5,14 @@ namespace Drupal\commerce_hipay_tpp\Plugin\Commerce\PaymentGateway;
 use Drupal\commerce_hipay_tpp\Event\HostedPaymentPageNotificationEvent;
 use Drupal\commerce_hipay_tpp\Event\HostedPaymentPageResponseEvent;
 use Drupal\commerce_hipay_tpp\Event\HostedPaymentPageReturnEvent;
+use Drupal\commerce_hipay_tpp\Event\MaintenanceOperationResponseEvent;
 use Drupal\commerce_hipay_tpp\Hipay\HipayTPP;
 use Drupal\commerce_payment\Exception\SoftDeclineException;
 use Drupal\Component\Serialization\Json;
-use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 use Drupal\commerce_payment\Entity\PaymentInterface;
-//use Drupal\commerce_payment\Entity\PaymentMethodInterface;
-//use Drupal\commerce_payment\Exception\DeclineException;
 use Drupal\commerce_payment\Exception\InvalidResponseException;
 use Drupal\commerce_payment\Exception\HardDeclineException;
 use Drupal\commerce_payment\Exception\InvalidRequestException;
@@ -26,6 +24,7 @@ use Drupal\commerce_price\Price;
 use HiPay\Fullservice\Enum\Transaction\ECI;
 use HiPay\Fullservice\Enum\Transaction\Template;
 use HiPay\Fullservice\Gateway\Request\Info\CustomerShippingInfoRequest;
+use HiPay\Fullservice\Gateway\Request\Maintenance\MaintenanceRequest;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\commerce_order\Entity\OrderInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -427,18 +426,8 @@ class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterfac
         ]);
     }
 
-    $api_username = $this->configuration['accounts'][$hosted_payment_page_request->currency]['api_username'];
-    $api_password = $this->configuration['accounts'][$hosted_payment_page_request->currency]['api_password'];
-    $api_env = $this->configuration['mode'] == 'live' ? Configuration::API_ENV_PRODUCTION : Configuration::API_ENV_STAGE;
-
-    /** @var \HiPay\Fullservice\HTTP\Configuration\Configuration $config */
-    $config = new Configuration($api_username, $api_password, $api_env);
-
-    /** @var \HiPay\Fullservice\HTTP\SimpleHTTPClient $client_provider */
-    $client_provider = new SimpleHTTPClient($config);
-
     /** @var \HiPay\Fullservice\Gateway\Client\GatewayClient $gateway_client */
-    $gateway_client = new GatewayClient($client_provider);
+    $gateway_client = $this->getGatewayClient($hosted_payment_page_request->currency);
 
     /** @var \HiPay\Fullservice\Gateway\Model\HostedPaymentPage $hosted_payment_page */
     $hosted_payment_page = $gateway_client->requestHostedPaymentPage($hosted_payment_page_request);
@@ -497,18 +486,16 @@ class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterfac
     $event = new HostedPaymentPageReturnEvent($response_data, $payment);
     $this->eventDispatcher->dispatch(HipayEvents::HOSTED_PAYMENT_PAGE_RETURN, $event);
 
+    // Add order log entry.
     $log_storage = $this->entityTypeManager->getStorage('commerce_log');
-
     if ($response_data['state'] == TransactionState::ERROR) {
       $log_storage->generate($order, 'payment_submission_failed')->save();
       throw new SoftDeclineException('There was an error processing your payment with Hipay. Please try again or contact us if the problem persists.');
     }
-
     if ($response_data['state'] == TransactionState::DECLINED) {
       $log_storage->generate($order, 'payment_submission_failed')->save();
       throw new HardDeclineException('There was an error processing your payment with Hipay. Please try again or contact us if the problem persists.');
     }
-
     $log_storage->generate($order, 'payment_submitted')->save();
   }
 
@@ -551,7 +538,15 @@ class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterfac
     // Try to load the payment transaction.
     $payment_storage = $this->entityTypeManager->getStorage('commerce_payment');
     /** @var \Drupal\commerce_payment\Entity\PaymentInterface $payment */
-    if (empty($notification_data['custom_data']['transaction_id']) || !($payment = $payment_storage->load($notification_data['custom_data']['transaction_id']))) {
+    if (!empty($notification_data['operation']['id'])) {
+      $payment = $payment_storage->load($notification_data['operation']['id']);
+      $amount = new Price($notification_data['operation']['amount'], $notification_data['operation']['currency']);
+    }
+    elseif (!empty($notification_data['custom_data']['transaction_id'])) {
+      $payment = $payment_storage->load($notification_data['custom_data']['transaction_id']);
+      $amount = new Price($notification_data['order']['amount'], $notification_data['order']['currency']);
+    }
+    if (empty($payment)) {
       throw new InvalidRequestException('Unable to load payment transaction from notification values.');
     }
 
@@ -566,34 +561,40 @@ class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterfac
       throw new InvalidRequestException('Unable to load order from notification values.');
     }
 
+    $payment->setRemoteId($notification_data['transaction_reference']);
     $payment->setRemoteState($notification_data['status']);
+    $payment->setAmount($amount);
 
-    // @TODO:
-    // We want to update the main transaction status only for the very first call
-    // (regardless whether it was authorization or capture), which means only when
-    // the main transaction still has its 'pending' status.
+    // If the transaction has been completed on Hipay side, update its state
+    // to one of Drupal Commerce's native final states.
     if ($notification_data['state'] == TransactionState::COMPLETED) {
       switch ($notification_data['status']) {
         case TransactionStatus::AUTHORIZED:
-          $amount = new Price($notification_data['authorized_amount'], $notification_data['currency']);
-          $payment->setAmount($amount);
           $payment->setState('authorization');
           $payment->setAuthorizedTime(time());
           break;
         case TransactionStatus::CAPTURED:
-          $amount = new Price($notification_data['captured_amount'], $notification_data['currency']);
-          $payment->setAmount($amount);
           $payment->setState('completed');
           $payment->setCompletedTime(time());
           break;
+        case TransactionStatus::REFUNDED:
+          $payment->setState('refunded');
+          $payment->setCompletedTime(time());
+          break;
+        case TransactionStatus::CANCELLED:
+          $payment->setState('authorization_voided');
+          break;
       }
     }
+    // Otherwise use a temporary Hipay-specific state, as we should receive
+    // another "completed" Hipay notification in the future.
     else {
       $payment->setState('hipay_' . $notification_data['state']);
     }
 
     $payment->save();
 
+    // Add order log entry.
     $log_storage = $this->entityTypeManager->getStorage('commerce_log');
     $log_storage->generate($order, 'notification_received', ['message' => $notification_data['message']])->save();
 
@@ -605,22 +606,314 @@ class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterfac
   /**
    * {@inheritdoc}
    */
-  public function capturePayment(PaymentInterface $payment, Price $amount = NULL) {
-
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function voidPayment(PaymentInterface $payment) {
+    $this->assertPaymentState($payment, ['authorization']);
 
+    /** @var \HiPay\Fullservice\Gateway\Request\Maintenance\MaintenanceRequest $maintenance_request */
+    $maintenance_request = new MaintenanceRequest();
+
+    $maintenance_request->operation = 'cancel';
+
+    // Log the request message if request logging is enabled.
+    if (!empty($this->configuration['api_logging']['request'])) {
+      \Drupal::logger('commerce_hipay_tpp')
+        ->debug('Maintenance cancel request: <pre>@request</pre>', [
+          '@request' => var_export((array) $maintenance_request, TRUE),
+        ]);
+    }
+
+    try {
+      /** @var \HiPay\Fullservice\Gateway\Client\GatewayClient $gateway_client */
+      $gateway_client = $this->getGatewayClient($payment->getAmount()->getCurrencyCode());
+
+      /** @var \HiPay\Fullservice\Gateway\Model\Operation $maintenance_operation */
+      $maintenance_operation = $gateway_client->requestMaintenanceOperation($maintenance_request->operation, $payment->getRemoteId(), NULL, NULL, $maintenance_request);
+    }
+    catch (\Exception $e) {
+      // Log the exception message if response logging is enabled.
+      if (!empty($this->configuration['api_logging']['response'])) {
+        \Drupal::logger('commerce_hipay_tpp')
+          ->debug('Maintenance cancel exception: @code: @message', [
+            '@code' => $e->getCode(),
+            '@message' => $e->getMessage(),
+          ]);
+      }
+
+      throw new PaymentGatewayException($e->getMessage(), $e->getCode());
+    }
+
+    // Log the response message if response logging is enabled.
+    if (!empty($this->configuration['api_logging']['response'])) {
+      \Drupal::logger('commerce_hipay_tpp')
+        ->debug('Maintenance cancel response: <pre>@response</pre>', [
+          '@response' => var_export($maintenance_operation->toArray(), TRUE),
+        ]);
+    }
+
+    $payment->setState('hipay_authorization_voided');
+    $remote_status = $maintenance_operation->getStatus();
+    $payment->setRemoteState($remote_status);
+    $payment->save();
+
+    if ($remote_status == TransactionStatus::CANCELLED) {
+      // Add order log entry.
+      $log_storage = $this->entityTypeManager->getStorage('commerce_log');
+      $log_storage->generate($payment->getOrder(), 'authorization_voided')
+        ->save();
+    }
+
+    // Allow other modules to react to the Maintenance Operation response data.
+    $event = new MaintenanceOperationResponseEvent($maintenance_operation->toArray(), $payment);
+    $this->eventDispatcher->dispatch(HipayEvents::MAINTENANCE_OPERATION_RESPONSE, $event);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function refundPayment(PaymentInterface $payment, Price $amount = NULL) {
+  public function capturePayment(PaymentInterface $payment, Price $amount = NULL) {
+    $this->assertPaymentState($payment, ['authorization']);
 
+    // If not specified, capture the entire amount.
+    $amount = $amount ?: $payment->getAmount();
+    $amount = $this->rounder->round($amount);
+
+    // Create new capture payment transaction to allow for multiple captures.
+    // We don't use standard DC2's one-payment-transaction-per-order approach
+    // here, as it would be impossible to do partial captures then. See
+    // https://www.drupal.org/node/2847378#comment-12115052 for more info.
+    // Also we need different payment transaction IDs between authorization,
+    // capture and refund operations so that we can can send them to Hipay
+    // in each request, so that later we can recognize incoming notifications.
+    $values = [
+      'payment_gateway' => $payment->getPaymentGatewayId(),
+      'payment_method' => $payment->getPaymentMethodId(),
+      'order_id' => $payment->getOrderId(),
+      'remote_id' => $payment->getRemoteId(),
+      'state' => 'new',
+      'amount' => $amount,
+    ];
+    $payment_storage = $this->entityTypeManager->getStorage('commerce_payment');
+    /** @var PaymentInterface $capture_payment */
+    $capture_payment = $payment_storage->create($values);
+    // Save the new capture transaction to obtain its ID,
+    // which we need to send to Hipay in the capture request.
+    $capture_payment->save();
+
+    /** @var \HiPay\Fullservice\Gateway\Request\Maintenance\MaintenanceRequest $maintenance_request */
+    $maintenance_request = new MaintenanceRequest();
+
+    $maintenance_request->operation = 'capture';
+    $maintenance_request->operation_id = $capture_payment->id();
+    $maintenance_request->amount = $amount->getNumber();
+
+    // Log the request message if request logging is enabled.
+    if (!empty($this->configuration['api_logging']['request'])) {
+      \Drupal::logger('commerce_hipay_tpp')
+        ->debug('Maintenance capture request: <pre>@request</pre>', [
+          '@request' => var_export((array) $maintenance_request, TRUE),
+        ]);
+    }
+
+    try {
+      /** @var \HiPay\Fullservice\Gateway\Client\GatewayClient $gateway_client */
+      $gateway_client = $this->getGatewayClient($amount->getCurrencyCode());
+
+      /** @var \HiPay\Fullservice\Gateway\Model\Operation $maintenance_operation */
+      $maintenance_operation = $gateway_client->requestMaintenanceOperation($maintenance_request->operation, $payment->getRemoteId(), $maintenance_request->amount, $maintenance_request->operation_id, $maintenance_request);
+    }
+    catch (\Exception $e) {
+      $capture_payment->delete();
+
+      // Log the exception message if response logging is enabled.
+      if (!empty($this->configuration['api_logging']['response'])) {
+        \Drupal::logger('commerce_hipay_tpp')
+          ->debug('Maintenance capture exception: @code: @message', [
+            '@code' => $e->getCode(),
+            '@message' => $e->getMessage(),
+          ]);
+      }
+
+      throw new PaymentGatewayException($e->getMessage(), $e->getCode());
+    }
+
+    // Log the response message if response logging is enabled.
+    if (!empty($this->configuration['api_logging']['response'])) {
+      \Drupal::logger('commerce_hipay_tpp')
+        ->debug('Maintenance capture response: <pre>@response</pre>', [
+          '@response' => var_export($maintenance_operation->toArray(), TRUE),
+        ]);
+    }
+
+    // Update new capture payment transaction.
+    // Use temporary payment state, which will be updated to final "completed"
+    // once we receive the notification from Hipay.
+    $capture_payment->setState('capture_requested');
+    $remote_status = $maintenance_operation->getStatus();
+    $capture_payment->setRemoteState($remote_status);
+    $capture_payment->save();
+
+    if (
+      $remote_status == TransactionStatus::CAPTURE_REQUESTED
+      || $remote_status == TransactionStatus::CAPTURED
+      || $remote_status == TransactionStatus::PARTIALLY_CAPTURED
+    ) {
+      // Update original authorization payment transaction.
+      $authorized_amount = $payment->getAmount();
+      $payment->setAmount($authorized_amount->subtract($amount));
+
+      // If full amount of original authorization was captured, void it.
+      if ($payment->getAmount()->isZero()) {
+        $payment->setState('authorization_voided');
+      }
+      $payment->save();
+
+      // Add order log entry.
+      $log_storage = $this->entityTypeManager->getStorage('commerce_log');
+      $log_storage->generate($payment->getOrder(), 'authorization_captured', [
+        'amount' => $amount->getNumber(),
+        'currency_code' => $amount->getCurrencyCode(),
+      ])->save();
+    }
+
+    // Allow other modules to react to the Maintenance Operation response data.
+    $event = new MaintenanceOperationResponseEvent($maintenance_operation->toArray(), $capture_payment);
+    $this->eventDispatcher->dispatch(HipayEvents::MAINTENANCE_OPERATION_RESPONSE, $event);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function refundPayment(PaymentInterface $capture_payment, Price $amount = NULL) {
+    $this->assertPaymentState($capture_payment, ['completed', 'partially_refunded']);
+
+    // If not specified, refund the entire captured amount.
+    $amount = $amount ?: $capture_payment->getAmount();
+    $amount = $this->rounder->round($amount);
+
+    // Create new refund payment transaction following up on creating separate
+    // transactions for capture operations (see capturePayment() - we do not use
+    // standard DC2's one-payment-transaction-per-order approach there - see
+    // https://www.drupal.org/node/2847378#comment-12115052 for more info).
+    // Also we need different payment transaction IDs between authorization,
+    // capture and refund operations so that we can can send them to Hipay
+    // in each request, so that later we can recognize incoming notifications.
+    $values = [
+      'payment_gateway' => $capture_payment->getPaymentGatewayId(),
+      'payment_method' => $capture_payment->getPaymentMethodId(),
+      'order_id' => $capture_payment->getOrderId(),
+      'remote_id' => $capture_payment->getRemoteId(),
+      'state' => 'new',
+      'amount' => $amount,
+    ];
+    $payment_storage = $this->entityTypeManager->getStorage('commerce_payment');
+    /** @var PaymentInterface $refund_payment */
+    $refund_payment = $payment_storage->create($values);
+    // Save the new capture transaction to obtain its ID,
+    // which we need to send to Hipay in the capture request.
+    $refund_payment->save();
+
+    /** @var \HiPay\Fullservice\Gateway\Request\Maintenance\MaintenanceRequest $maintenance_request */
+    $maintenance_request = new MaintenanceRequest();
+
+    $maintenance_request->operation = 'refund';
+    $maintenance_request->operation_id = $refund_payment->id();
+    $maintenance_request->amount = $amount->getNumber();
+
+    // Log the request message if request logging is enabled.
+    if (!empty($this->configuration['api_logging']['request'])) {
+      \Drupal::logger('commerce_hipay_tpp')
+        ->debug('Maintenance refund request: <pre>@request</pre>', [
+          '@request' => var_export((array) $maintenance_request, TRUE),
+        ]);
+    }
+
+    try {
+      /** @var \HiPay\Fullservice\Gateway\Client\GatewayClient $gateway_client */
+      $gateway_client = $this->getGatewayClient($amount->getCurrencyCode());
+
+      /** @var \HiPay\Fullservice\Gateway\Model\Operation $maintenance_operation */
+      $maintenance_operation = $gateway_client->requestMaintenanceOperation($maintenance_request->operation, $capture_payment->getRemoteId(), $maintenance_request->amount, $maintenance_request->operation_id, $maintenance_request);
+    }
+    catch (\Exception $e) {
+      $refund_payment->delete();
+
+      // Log the exception message if response logging is enabled.
+      if (!empty($this->configuration['api_logging']['response'])) {
+        \Drupal::logger('commerce_hipay_tpp')
+          ->debug('Maintenance refund exception: @code: @message', [
+            '@code' => $e->getCode(),
+            '@message' => $e->getMessage(),
+          ]);
+      }
+
+      throw new PaymentGatewayException($e->getMessage(), $e->getCode());
+    }
+
+    // Log the response message if response logging is enabled.
+    if (!empty($this->configuration['api_logging']['response'])) {
+      \Drupal::logger('commerce_hipay_tpp')
+        ->debug('Maintenance refund response: <pre>@response</pre>', [
+          '@response' => var_export($maintenance_operation->toArray(), TRUE),
+        ]);
+    }
+
+    // Update new refund payment transaction.
+    // Use temporary payment state, which will be updated to final "refunded"
+    // once we receive the notification from Hipay.
+    $refund_payment->setState('refund_requested');
+    $remote_status = $maintenance_operation->getStatus();
+    $refund_payment->setRemoteState($remote_status);
+    $refund_payment->save();
+
+    if (
+      $remote_status == TransactionStatus::REFUND_REQUESTED
+      || $remote_status == TransactionStatus::REFUNDED
+      || $remote_status == TransactionStatus::PARTIALLY_REFUNDED
+    ) {
+      // Update original capture payment transaction.
+      $new_refunded_amount = $capture_payment->getRefundedAmount()->add($amount);
+      $capture_payment->setRefundedAmount($new_refunded_amount);
+      // Once total captured amount was refunded, update capture payment state
+      // to "captured" so that the "Refund" button is not displayed anymore.
+      if ($capture_payment->getAmount()->equals($capture_payment->getRefundedAmount())) {
+        $capture_payment->setState('captured');
+      }
+      $capture_payment->save();
+
+      // Add order log entry.
+      $log_storage = $this->entityTypeManager->getStorage('commerce_log');
+      $log_storage->generate($capture_payment->getOrder(), 'payment_refunded', [
+        'amount' => $amount->getNumber(),
+        'currency_code' => $amount->getCurrencyCode(),
+      ])->save();
+    }
+
+    // Allow other modules to react to the Maintenance Operation response data.
+    $event = new MaintenanceOperationResponseEvent($maintenance_operation->toArray(), $refund_payment);
+    $this->eventDispatcher->dispatch(HipayEvents::MAINTENANCE_OPERATION_RESPONSE, $event);
+  }
+
+  /**
+   * Gets gateway client for Hipay TPP API request.
+   *
+   * @param string $currency
+   *   A currency code to return the gateway client for.
+   *
+   * @return \HiPay\Fullservice\Gateway\Client\GatewayClient
+   */
+  protected function getGatewayClient($currency) {
+    $api_username = $this->configuration['accounts'][$currency]['api_username'];
+    $api_password = $this->configuration['accounts'][$currency]['api_password'];
+    $api_env = $this->configuration['mode'] == 'live' ? Configuration::API_ENV_PRODUCTION : Configuration::API_ENV_STAGE;
+
+    /** @var \HiPay\Fullservice\HTTP\Configuration\Configuration $config */
+    $config = new Configuration($api_username, $api_password, $api_env);
+
+    /** @var \HiPay\Fullservice\HTTP\SimpleHTTPClient $client_provider */
+    $client_provider = new SimpleHTTPClient($config);
+
+    /** @var \HiPay\Fullservice\Gateway\Client\GatewayClient $gateway_client */
+    return new GatewayClient($client_provider);
   }
 
   /**

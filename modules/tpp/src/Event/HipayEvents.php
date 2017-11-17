@@ -35,4 +35,11 @@ final class HipayEvents {
    */
   const HOSTED_PAYMENT_PAGE_NOTIFICATION = 'commerce_hipay_tpp.hosted_payment_page_notification';
 
+  /**
+   * Name of the event fired when receiving the Maintenance Operation response.
+   *
+   * @Event
+   */
+  const MAINTENANCE_OPERATION_RESPONSE = 'commerce_hipay_tpp.maintenance_operation_response';
+
 }

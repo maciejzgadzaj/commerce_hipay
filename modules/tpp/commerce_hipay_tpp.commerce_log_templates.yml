@@ -10,6 +10,22 @@ payment_cancelled:
   category: commerce_order
   label: 'Payment cancelled at Hipay.'
   template: '<p>Payment was cancelled at Hipay.</p>'
+authorization_captured:
+  category: commerce_order
+  label: 'Authorization captured.'
+  template: '<p>Captured {{ amount }} {{ currency_code }}.</p>'
+authorization_voided:
+  category: commerce_order
+  label: 'Authorization voided.'
+  template: '<p>Authorization voided.</p>'
+payment_refunded:
+  category: commerce_order
+  label: 'Payment refunded.'
+  template: '<p>Refunded {{ amount }} {{ currency_code }}.</p>'
+operation_failed:
+  category: commerce_order
+  label: 'Operation failed.'
+  template: '<p>{{ operation_type }} operation failed: {{ failure_message }}.</p>'
 notification_received:
   category: commerce_order
   label: 'Notification received.'
