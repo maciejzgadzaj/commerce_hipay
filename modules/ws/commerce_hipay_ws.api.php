@@ -181,6 +181,23 @@ function hook_commerce_hipay_ws_withdrawal_validation($withdrawal, $feedback) {
 }
 
 /**
+ * Allows other modules to respond to Hipay "other_transaction" notification.
+ *
+ * @param array $feedback
+ *   An array of XML feedback values received in Hipay Wallet notification.
+ *
+ * @return false|mixed
+ *   Hook implementations should return FALSE if notification processing should
+ *   be considered as failed (and the HTTP error code 503 should be returned in
+ *   the response to Hipay Wallet), or TRUE if it was successful.
+ *
+ * @see commerce_hipay_ws_api_other_transaction_notification()
+ */
+function hook_commerce_hipay_ws_other_transaction_notification($feedback) {
+  // No example.
+}
+
+/**
  * Allows other modules to alter the list of available Hipay transfer statuses.
  *
  * @param array $statuses

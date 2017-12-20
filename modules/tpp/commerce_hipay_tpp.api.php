@@ -240,3 +240,26 @@ function hook_commerce_hipay_tpp_process_notification($feedback, $callback_type,
 function hook_commerce_hipay_tpp_process_sct_notification($feedback, $transaction, $order, $processing_result) {
   // No example.
 }
+
+/**
+ * Allows other modules to process Hipay financial settlement notification.
+ *
+ * Hipay settlement notifications are notifications sent after settling the
+ * payment amount.
+ *
+ * @param array $feedback
+ *   An associative array containing the Hipay server-to-server settlement
+ *   notification feedback.
+ * @param bool $processing_result
+ *   A boolean indicating whether the feedback was processed successfully by
+ *   commerce_hipay_tpp_process_settlement_notification() and other earlier
+ *   implementations of this hook.
+ *
+ * @return bool
+ *   A boolean indicating whether the processing was successful or not.
+ *
+ * @see commerce_hipay_tpp_process_settlement_notification()
+ */
+function hook_commerce_hipay_tpp_process_settlement_notification($feedback, $processing_result) {
+  // No example.
+}

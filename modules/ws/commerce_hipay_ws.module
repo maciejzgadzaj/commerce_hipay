@@ -550,6 +550,8 @@ function commerce_hipay_ws_commerce_hipay_ws_api_request_alter(&$parameters, $re
  *
  * @param array $xml_string
  *   A string containing XML feedback received from Hipay Wallet API.
+ *
+ * @see commerce_hipay_ws_callback_notification()
  */
 function commerce_hipay_ws_callback_notification_process_feedback_xml($xml_string) {
   $result = FALSE;
@@ -590,6 +592,11 @@ function commerce_hipay_ws_callback_notification_process_feedback_xml($xml_strin
         // Hipay withdrawal has been validated.
         case 'withdraw_validation':
           $result = commerce_hipay_ws_api_withdrawal_validate_notification($feedback_xml);
+          break;
+
+        // Other transactions, like settlements.
+        case 'other_transaction':
+          $result = commerce_hipay_ws_api_other_transaction_notification($feedback_xml);
           break;
 
       }

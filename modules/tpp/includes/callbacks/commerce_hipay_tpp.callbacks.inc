@@ -441,7 +441,10 @@ function commerce_hipay_tpp_callback_notification() {
   $callback_type = 'notification';
   $feedback = commerce_hipay_tpp_get_feedback();
 
-  if (!empty($feedback['payment_product']) && $feedback['payment_product'] == 'sct') {
+  if (!empty($feedback['notification_type']) && $feedback['notification_type'] == 'settlement') {
+    $result = commerce_hipay_tpp_process_settlement_notification($feedback);
+  }
+  elseif (!empty($feedback['payment_product']) && $feedback['payment_product'] == 'sct') {
     $result = commerce_hipay_tpp_process_sct_notification($feedback);
   }
   else {
@@ -747,4 +750,42 @@ function commerce_hipay_tpp_process_notification($feedback, $callback_type) {
   }
 
   return TRUE;
+}
+
+/**
+ * Processes the settlement financial feedback returned by Hipay API.
+ *
+ * @param array $feedback
+ *   An associative array containing the Hipay API call feedback.
+ *
+ * @return bool
+ *   Boolean indicating whether the feedback was processed successfully.
+ *
+ * @see commerce_hipay_tpp_callback_notification()
+ */
+function commerce_hipay_tpp_process_settlement_notification($feedback) {
+  // Make sure that we have actually received the feedback from the gateway.
+  if (empty($feedback) || !is_array($feedback) || empty($feedback['reference'])) {
+    watchdog('commerce_hipay_tpp', 'Settlement notification: Missing or invalid feedback received in notification: !feedback', array(
+      '!feedback' => '<pre>' . var_export($feedback, TRUE) . '</pre>',
+    ), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  // Log notification feedback if response logging is enabled.
+  if (!empty($payment_method_instance['settings']['api_logging']['response'])) {
+    watchdog('commerce_hipay_tpp', 'Settlement notification: !feedback', array(
+      '!feedback' => '<pre>' . var_export($feedback, TRUE) . '</pre>',
+    ), WATCHDOG_DEBUG);
+  }
+
+  $result = TRUE;
+
+  // Allow other modules to process the notification.
+  foreach (module_implements('commerce_hipay_tpp_process_settlement_notification') as $module) {
+    $function = $module . '_commerce_hipay_tpp_process_settlement_notification';
+    $result = $function($feedback, $result) && $result;
+  }
+
+  return $result;
 }

@@ -286,3 +286,27 @@ function commerce_hipay_ws_get_website_topics_options($business_line_id) {
 
   return $return;
 }
+
+/**
+ * Processes Hipay Wallet "other_transaction" notification.
+ *
+ * @param array $feedback
+ *   An array of XML parameters received in the notification.
+ *
+ * @return bool
+ *   An boolean indicating whether the notification was processed successfully.
+ *
+ * @see commerce_hipay_ws_callback_notification_process_feedback_xml()
+ */
+function commerce_hipay_ws_api_other_transaction_notification($feedback) {
+  // Invoke the rules event to allow other modules to react to the notification.
+  $result = TRUE;
+
+  foreach (rules_invoke_all('commerce_hipay_ws_other_transaction_notification', $feedback) as $result) {
+    // If any of the hook implementations returns FALSE, alter the function
+    // update result respectively.
+    $result = $result && $result;
+  }
+
+  return $result;
+}
