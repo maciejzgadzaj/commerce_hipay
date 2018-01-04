@@ -6,7 +6,11 @@ use Drupal\commerce_payment\Entity\PaymentInterface;
 use Symfony\Component\EventDispatcher\Event;
 
 /**
+ * Class MaintenanceOperationResponseEvent
+ *
  * Defines the Maintenance Operation response event.
+ *
+ * @package Drupal\commerce_hipay_tpp\Event
  *
  * @see \Drupal\commerce_hipay_tpp\Event\HipayEvents
  */

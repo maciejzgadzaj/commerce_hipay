@@ -2,12 +2,15 @@
 
 namespace Drupal\commerce_hipay_tpp\Event;
 
-use Drupal\commerce_order\Entity\OrderInterface;
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Symfony\Component\EventDispatcher\Event;
 
 /**
+ * Class HostedPaymentPageReturnEvent
+ *
  * Defines the Hosted Payment Page return event.
+ *
+ * @package Drupal\commerce_hipay_tpp\Event
  *
  * @see \Drupal\commerce_hipay_tpp\Event\HipayEvents
  */

@@ -5,7 +5,7 @@ namespace Drupal\commerce_hipay_tpp\PluginForm\PaymentOffsiteForm;
 use Drupal\commerce_payment\PluginForm\PaymentOffsiteForm;
 
 /**
- * Class BasePaymentOffsiteForm.
+ * Class BasePaymentOffsiteForm
  *
  * Provides the base class for Hipay TPP payment off-site forms.
  *

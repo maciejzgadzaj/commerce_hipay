@@ -5,7 +5,7 @@ namespace Drupal\commerce_hipay_tpp\PluginForm\PaymentOffsiteForm;
 use Drupal\Core\Form\FormStateInterface;
 
 /**
- * Class DirectDebitPaymentOffsiteForm.
+ * Class DirectDebitPaymentOffsiteForm
  *
  * Provides the off-site redirect form for direct debit payments.
  *

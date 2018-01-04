@@ -2,8 +2,6 @@
 
 namespace Drupal\commerce_hipay_tpp\Hipay;
 
-use Drupal\Component\Utility\Xss;
-
 /**
  * Class HipayTPP
  *
@@ -13,6 +11,14 @@ use Drupal\Component\Utility\Xss;
  */
 class HipayTPP {
 
+  /**
+   * Returns a list of currencies enabled on the site as form select options.
+   *
+   * @return array
+   *   A list of currencies enabled on the site as form select options.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   */
   public static function getEnabledCurrenciesOptions() {
     $options = [];
 
@@ -28,6 +34,14 @@ class HipayTPP {
     return $options;
   }
 
+  /**
+   * Returns a list of currencies enabled on the site.
+   *
+   * @return \Drupal\Core\Entity\EntityInterface[]
+   *   A list of currencies enabled on the site.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   */
   public static function getEnabledCurrencies() {
     return \Drupal::entityTypeManager()->getStorage('commerce_currency')->loadMultiple();
   }

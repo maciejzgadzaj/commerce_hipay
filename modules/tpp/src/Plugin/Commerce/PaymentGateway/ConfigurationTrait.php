@@ -2,11 +2,20 @@
 
 namespace Drupal\commerce_hipay_tpp\Plugin\Commerce\PaymentGateway;
 
-use Drupal\commerce_hipay_tpp\Hipay\HipayAPI;
-use Drupal\commerce_hipay_tpp\Hipay\HipayAPI\GatewayAPI;
 use Drupal\commerce_hipay_tpp\Hipay\HipayTPP;
 use Drupal\Core\Form\FormStateInterface;
 
+/**
+ * Trait ConfigurationTrait
+ *
+ * Provides methods common for all Hipay offsite payment methods.
+ *
+ * @package Drupal\commerce_hipay_tpp\Plugin\Commerce\PaymentGateway
+ *
+ * @see \Drupal\commerce_hipay_tpp\Plugin\Commerce\PaymentGateway\CreditCard
+ * @see \Drupal\commerce_hipay_tpp\Plugin\Commerce\PaymentGateway\DirectDebit
+ * @see \Drupal\commerce_hipay_tpp\Plugin\Commerce\PaymentGateway\VirtualIBAN
+ */
 trait ConfigurationTrait {
 
   /**

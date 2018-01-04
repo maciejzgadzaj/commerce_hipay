@@ -2,19 +2,13 @@
 
 namespace Drupal\commerce_hipay_tpp\PluginForm\PaymentOffsiteForm;
 
+use Drupal\commerce_payment\Exception\PaymentGatewayException;
 use Drupal\commerce_payment\PluginForm\PaymentOffsiteForm;
-use Drupal\commerce_price\Price;
-use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Url;
 use HiPay\Fullservice\Enum\Transaction\Template;
-use HiPay\Fullservice\HTTP\Configuration\Configuration;
-use HiPay\Fullservice\HTTP\SimpleHTTPClient;
-use HiPay\Fullservice\Gateway\Client\GatewayClient;
-use HiPay\Fullservice\Gateway\Request\Order\HostedPaymentPageRequest;
 
 /**
- * Class CreditCardPaymentOffsiteForm.
+ * Class CreditCardPaymentOffsiteForm
  *
  * Provides the off-site redirect form for credit card payments.
  *
@@ -31,14 +25,38 @@ class CreditCardPaymentOffsiteForm extends BasePaymentOffsiteForm {
     /** @var \Drupal\commerce_payment\Entity\PaymentInterface $payment */
     $payment = $this->entity;
 
+    // Save the payment so that we can get its ID and pass it to Hipay.
+    $payment->save();
+
     /** @var \Drupal\commerce_hipay_tpp\Plugin\Commerce\PaymentGateway\CreditCard $payment_gateway_plugin */
     $payment_gateway_plugin = $payment->getPaymentGateway()->getPlugin();
+
+    /** @var \Drupal\commerce_order\Entity\Order $order */
+    $order = $payment->getOrder();
 
     $extra = [
       'return_url' => $form['#return_url'],
       'cancel_url' => $form['#cancel_url'],
       'capture' => $form['#capture'],
     ];
+
+    /** @var \Drupal\commerce_payment\Entity\PaymentMethod $payment_method */
+    $payment_method = $payment->getOrder()->get('payment_method')->entity;
+
+    // If it is previously stored payment method with "remote_id" value set,
+    // we just request a new order without external redirect.
+    if ($payment_method->getRemoteId()) {
+      /** @var \HiPay\Fullservice\Gateway\Model\Order $hipay_response */
+      $hipay_response = $payment_gateway_plugin->requestNewOrder($payment, $extra);
+
+      $checkout_order_manager = \Drupal::getContainer()->get('commerce_checkout.checkout_order_manager');
+      $checkout_flow = $checkout_order_manager->getCheckoutFlow($order)->getPlugin();
+      $next_step_id = $checkout_flow->getNextStepId($order->get('checkout_step')->value);
+      $checkout_flow->redirectToStep($next_step_id);
+    }
+
+    // Otherwise, if this is a new payment method, we need to initialize
+    // Hipay's Hosted Payment Page and execute an external redirect.
 
     /** @var \HiPay\Fullservice\Gateway\Model\HostedPaymentPage $hipay_response */
     $hipay_response = $payment_gateway_plugin->initializeHostedPaymentPage($payment, $extra);

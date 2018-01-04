@@ -2,49 +2,55 @@
 
 namespace Drupal\commerce_hipay_tpp\Plugin\Commerce\PaymentGateway;
 
+use Drupal\commerce_hipay_tpp\Event\HipayEvents;
 use Drupal\commerce_hipay_tpp\Event\HostedPaymentPageNotificationEvent;
+use Drupal\commerce_hipay_tpp\Event\HostedPaymentPageRequestEvent;
 use Drupal\commerce_hipay_tpp\Event\HostedPaymentPageResponseEvent;
 use Drupal\commerce_hipay_tpp\Event\HostedPaymentPageReturnEvent;
 use Drupal\commerce_hipay_tpp\Event\MaintenanceOperationResponseEvent;
+use Drupal\commerce_hipay_tpp\Event\OrderRequestEvent;
+use Drupal\commerce_hipay_tpp\Event\OrderResponseEvent;
 use Drupal\commerce_hipay_tpp\Hipay\HipayTPP;
-use Drupal\commerce_payment\Exception\SoftDeclineException;
-use Drupal\Component\Serialization\Json;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Url;
+use Drupal\commerce_order\Entity\OrderInterface;
 use Drupal\commerce_payment\Entity\PaymentInterface;
-use Drupal\commerce_payment\Exception\InvalidResponseException;
+use Drupal\commerce_payment\Entity\PaymentMethodInterface;
 use Drupal\commerce_payment\Exception\HardDeclineException;
 use Drupal\commerce_payment\Exception\InvalidRequestException;
+use Drupal\commerce_payment\Exception\InvalidResponseException;
 use Drupal\commerce_payment\Exception\PaymentGatewayException;
+use Drupal\commerce_payment\Exception\SoftDeclineException;
 use Drupal\commerce_payment\PaymentMethodTypeManager;
 use Drupal\commerce_payment\PaymentTypeManager;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\OffsitePaymentGatewayBase;
 use Drupal\commerce_price\Price;
-use HiPay\Fullservice\Enum\Transaction\ECI;
-use HiPay\Fullservice\Enum\Transaction\Template;
-use HiPay\Fullservice\Gateway\Request\Info\CustomerShippingInfoRequest;
-use HiPay\Fullservice\Gateway\Request\Maintenance\MaintenanceRequest;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\commerce_order\Entity\OrderInterface;
-use Symfony\Component\HttpFoundation\Request;
-use HiPay\Fullservice\HTTP\Configuration\Configuration;
-use HiPay\Fullservice\HTTP\SimpleHTTPClient;
-use HiPay\Fullservice\Gateway\Client\GatewayClient;
-use HiPay\Fullservice\Gateway\Request\Order\HostedPaymentPageRequest;
-use Drupal\Core\Language\LanguageInterface;
-use Drupal\Component\Utility\Unicode;
 use Drupal\commerce_price\RounderInterface;
 use Drupal\Component\Datetime\TimeInterface;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Drupal\Component\Serialization\Json;
+use Drupal\Component\Utility\Unicode;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
-use Drupal\commerce_hipay_tpp\Event\HipayEvents;
-use Drupal\commerce_hipay_tpp\Event\HostedPaymentPageRequestEvent;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Language\LanguageInterface;
+use Drupal\Core\Url;
+use HiPay\Fullservice\Enum\Transaction\ECI;
+use HiPay\Fullservice\Enum\Transaction\Template;
 use HiPay\Fullservice\Enum\Transaction\TransactionState;
 use HiPay\Fullservice\Enum\Transaction\TransactionStatus;
+use HiPay\Fullservice\Gateway\Client\GatewayClient;
 use HiPay\Fullservice\Gateway\Request\Info\CustomerBillingInfoRequest;
+use HiPay\Fullservice\Gateway\Request\Info\CustomerShippingInfoRequest;
+use HiPay\Fullservice\Gateway\Request\Maintenance\MaintenanceRequest;
+use HiPay\Fullservice\Gateway\Request\Order\HostedPaymentPageRequest;
+use HiPay\Fullservice\Gateway\Request\Order\OrderRequest;
+use HiPay\Fullservice\HTTP\Configuration\Configuration;
+use HiPay\Fullservice\HTTP\SimpleHTTPClient;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
+ * Class CreditCard
+ *
  * Provides Hipay TPP Credit Card payment gateway.
  *
  * @CommercePaymentGateway(
@@ -57,12 +63,24 @@ use HiPay\Fullservice\Gateway\Request\Info\CustomerBillingInfoRequest;
  *   },
  *   forms = {
  *     "offsite-payment" = "Drupal\commerce_hipay_tpp\PluginForm\PaymentOffsiteForm\CreditCardPaymentOffsiteForm",
+ *     "add-payment-method" = "Drupal\commerce_hipay_tpp\PluginForm\PaymentOffsiteForm\CreditCardAddPaymentMethodForm",
  *   }
  * )
+ *
+ * @package Drupal\commerce_hipay_tpp\Plugin\Commerce\PaymentGateway
+ *
+ * @see \Drupal\commerce_hipay_tpp\Plugin\Commerce\PaymentGateway\CreditCardInterface
  */
 class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterface {
 
   use ConfigurationTrait;
+
+  /**
+   * The Hipay API request object.
+   *
+   * @var HostedPaymentPageRequest|OrderRequest
+   */
+  protected $request;
 
   /**
    * The price rounder.
@@ -134,7 +152,6 @@ class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterfac
         'mastercard' => 'mastercard',
         'american-express' => 'american-express',
       ],
-      'payment_product_list' => [],
       '3ds' => 1,
       'language' => 'en_GB',
       'css' => '',
@@ -245,18 +262,83 @@ class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterfac
 
   /**
    * {@inheritdoc}
-   *
-   * @see https://developer.hipay.com/doc-api/enterprise/gateway/#!/payments/generateHostedPaymentPage
    */
   public function initializeHostedPaymentPage(PaymentInterface $payment, array $extra) {
-    // Save the payment so that we can get its ID and pass it to Hipay.
+    /** @var \HiPay\Fullservice\Gateway\Request\Order\HostedPaymentPageRequest $hosted_payment_page_request */
+    $this->request = new HostedPaymentPageRequest();
+
+    // Set generic request data.
+    $this->setRequestData($payment, $extra);
+
+    // Allow other modules to alter the Hosted Payment Page request.
+    $event = new HostedPaymentPageRequestEvent($this->request, $payment);
+    $this->eventDispatcher->dispatch(HipayEvents::HOSTED_PAYMENT_PAGE_REQUEST, $event);
+
+    // Execute the request and return its response.
+    /** @var \HiPay\Fullservice\Gateway\Model\HostedPaymentPage $hosted_payment_page */
+    $hosted_payment_page = $this->doHostedPaymentPageRequest();
+
+    $state = !empty($hosted_payment_page->getForwardUrl()) ? 'initialized' : 'initialization_failed';
+    $payment->setState($state);
     $payment->save();
 
+    // Allow other modules to react to the Hosted Payment Page response.
+    $event = new HostedPaymentPageResponseEvent($hosted_payment_page, $payment);
+    $this->eventDispatcher->dispatch(HipayEvents::HOSTED_PAYMENT_PAGE_RESPONSE, $event);
+
+    return $hosted_payment_page;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function requestNewOrder(PaymentInterface $payment, array $extra) {
     /** @var \Drupal\commerce_order\Entity\Order $order */
     $order = $payment->getOrder();
 
-    /** @var \HiPay\Fullservice\Gateway\Request\Order\HostedPaymentPageRequest $hosted_payment_page_request */
-    $hosted_payment_page_request = new HostedPaymentPageRequest();
+    /** @var \HiPay\Fullservice\Gateway\Request\Order\OrderRequest $order_request */
+    $this->request = new OrderRequest();
+
+    // Set generic request data.
+    $this->setRequestData($payment, $extra);
+
+    // Set request data specific to Hipay's New Order request.
+    /** @var \Drupal\commerce_payment\Entity\PaymentMethod $payment_method */
+    $payment_method = $order->get('payment_method')->entity;
+
+    $this->request->eci = ECI::RECURRING_ECOMMERCE;
+    $this->request->payment_product = $payment_method->card_type->value;
+    $this->request->cardtoken = $payment_method->getRemoteId();
+
+    // Allow other modules to alter the Order request.
+    $event = new OrderRequestEvent($this->request, $payment);
+    $this->eventDispatcher->dispatch(HipayEvents::ORDER_REQUEST, $event);
+
+    // Execute the request and return its response.
+    /** @var \HiPay\Fullservice\Gateway\Model\Transaction $transaction */
+    $transaction = $this->doOrderRequest();
+
+    $payment->setState('hipay_' . $transaction->getState());
+    $payment->save();
+
+    // Allow other modules to react to the Order response.
+    $event = new OrderResponseEvent($transaction, $payment);
+    $this->eventDispatcher->dispatch(HipayEvents::ORDER_RESPONSE, $event);
+
+    return $transaction;
+  }
+
+  /**
+   * Sets generic data to the API request object.
+   *
+   * @param \Drupal\commerce_payment\Entity\PaymentInterface $payment
+   *   The payment.
+   * @param array $extra
+   *   Extra data needed for this request.
+   */
+  protected function setRequestData(PaymentInterface $payment, array $extra) {
+    /** @var \Drupal\commerce_order\Entity\Order $order */
+    $order = $payment->getOrder();
 
     // For each HPP initialization call we want to send a different value of
     // "orderid" parameter, to make sure that the "forwardUrl" we receive in
@@ -277,48 +359,48 @@ class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterfac
       $orderid .= '-' . date('YmdHis');
     }
 
-    $hosted_payment_page_request->orderid = $orderid;
-    $hosted_payment_page_request->operation = !empty($extra['capture']) ? 'sale' : 'authorization';
-    $hosted_payment_page_request->eci = ECI::SECURE_ECOMMERCE;
-    $hosted_payment_page_request->template = $this->configuration['template'];
-    $hosted_payment_page_request->authentication_indicator = !empty($this->configuration['3ds']) ? $this->configuration['3ds'] : 0;
-    $hosted_payment_page_request->payment_product_category_list = 'credit-card';
-    $hosted_payment_page_request->payment_product_list = implode(',', array_filter($this->configuration['payment_product_list']));
+    $this->request->orderid = $orderid;
+    $this->request->operation = !empty($extra['capture']) ? 'sale' : 'authorization';
+    $this->request->eci = ECI::SECURE_ECOMMERCE;
+    $this->request->template = $this->configuration['template'];
+    $this->request->authentication_indicator = !empty($this->configuration['3ds']) ? $this->configuration['3ds'] : 0;
+    $this->request->payment_product_category_list = 'credit-card';
+    $this->request->payment_product_list = implode(',', array_filter($this->configuration['payment_product_list']));
 
-    $hosted_payment_page_request->merchant_display_name = substr($order->getStore()->getName(), 0, 32);
-    $hosted_payment_page_request->description = substr(t('Order @order_number at @store', array(
+    $this->request->merchant_display_name = substr($order->getStore()->getName(), 0, 32);
+    $this->request->description = substr(t('Order @order_number at @store', array(
       '@order_number' => $order->id(),
       '@store' => $order->getStore()->getName(),
     )), 0, 255);
 
     $total_price_amount = $this->rounder->round($order->getTotalPrice());
-    $hosted_payment_page_request->amount = $total_price_amount->getNumber();
-    $hosted_payment_page_request->currency = $order->getTotalPrice()->getCurrencyCode();
+    $this->request->amount = $total_price_amount->getNumber();
+    $this->request->currency = $order->getTotalPrice()->getCurrencyCode();
 
-    $hosted_payment_page_request->cid = $order->getCustomerId();
-    $hosted_payment_page_request->ipaddr = $order->getIpAddress();
-    $hosted_payment_page_request->language = $this->getRequestLanguage($payment);
-    $hosted_payment_page_request->email = $order->getEmail();
+    $this->request->cid = $order->getCustomerId();
+    $this->request->ipaddr = $order->getIpAddress();
+    $this->request->language = $this->getRequestLanguage($payment);
+    $this->request->email = $order->getEmail();
 
     // Use "custom_data" to send real Drupal order ID value, as the value sent
     // in main "orderid" parameter could be altered for subsequent payment init
     // requests for the same order (see above).
-    $hosted_payment_page_request->custom_data = Json::encode([
+    $this->request->custom_data = Json::encode([
       'order_id' => $order->id(),
       'transaction_id' => $payment->id(),
     ]);
 
-    $hosted_payment_page_request->accept_url = $extra['return_url'];
-    $hosted_payment_page_request->decline_url = $extra['return_url'];
-    $hosted_payment_page_request->pending_url = $extra['return_url'];
-    $hosted_payment_page_request->exception_url = $extra['return_url'];
-    $hosted_payment_page_request->cancel_url = $extra['cancel_url'];
+    $this->request->accept_url = $extra['return_url'];
+    $this->request->decline_url = $extra['return_url'];
+    $this->request->pending_url = $extra['return_url'];
+    $this->request->exception_url = $extra['return_url'];
+    $this->request->cancel_url = $extra['cancel_url'];
 
     // Send customer billing details.
     /** @var \Drupal\profile\Entity\Profile $billing_profile */
     if ($billing_profile = $order->getBillingProfile()) {
       /** @var \Drupal\address\Plugin\Field\FieldType\AddressItem $billing_address */
-      $billing_address = $billing_profile->address->first();
+      $billing_address = $billing_profile->get('address')->first();
 
       $customer_billing_info = new CustomerBillingInfoRequest();
       $customer_billing_info->firstname = $billing_address->getGivenName();
@@ -334,14 +416,14 @@ class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterfac
         $customer_billing_info->state = $billing_address->getAdministrativeArea();
       }
 
-      $hosted_payment_page_request->customerBillingInfo = $customer_billing_info;
+      $this->request->customerBillingInfo = $customer_billing_info;
     }
 
     // Send customer shipping details.
     /** @var \Drupal\profile\Entity\Profile $shipping_profile */
     if ($shipping_profile = $this->getShippingProfile($order)) {
-      /** @var \Drupal\address\Plugin\Field\FieldType\AddressItem $billing_address */
-      $shipping_address = $shipping_profile->address->first();
+      /** @var \Drupal\address\Plugin\Field\FieldType\AddressItem $shipping_address */
+      $shipping_address = $shipping_profile->get('address')->first();
 
       $customer_shipping_info = new CustomerShippingInfoRequest();
       $customer_shipping_info->shipto_firstname = $shipping_address->getGivenName();
@@ -357,7 +439,7 @@ class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterfac
         $customer_shipping_info->shipto_state = $shipping_address->getAdministrativeArea();
       }
 
-      $hosted_payment_page_request->customerShippingInfo = $customer_shipping_info;
+      $this->request->customerShippingInfo = $customer_shipping_info;
     }
 
     // Collect the adjustments and calculate shipping and tax prices.
@@ -377,60 +459,42 @@ class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterfac
     // Send the shipping amount.
     if (!$shipping_amount->isZero()) {
       $shipping_amount = $this->rounder->round($shipping_amount);
-      $hosted_payment_page_request->shipping = $shipping_amount->getNumber();
+      $this->request->shipping = $shipping_amount->getNumber();
     }
 
     // Send the tax amount.
     if (!$tax_amount->isZero()) {
       $tax_amount = $this->rounder->round($tax_amount);
-      $hosted_payment_page_request->tax = $tax_amount->getNumber();
+      $this->request->tax = $tax_amount->getNumber();
     }
 
     // Send URL to merchant custom style sheet.
     if (!empty($this->configuration['css'])) {
       $prefix = strpos($this->configuration['css'], 'http') === 0 ? '' : 'base:';
-      $hosted_payment_page_request->css = Url::fromUri($prefix . $this->configuration['css'], [
+      $this->request->css = Url::fromUri($prefix . $this->configuration['css'], [
         'absolute' => TRUE,
         'https' => TRUE,
       ])->toString();
     }
-
-    // Allow other modules to alter the Hosted Payment Page request.
-    $event = new HostedPaymentPageRequestEvent($hosted_payment_page_request, $payment);
-    $this->eventDispatcher->dispatch(HipayEvents::HOSTED_PAYMENT_PAGE_REQUEST, $event);
-
-    // Execute the request and return its response.
-    /** @var \HiPay\Fullservice\Gateway\Model\HostedPaymentPage $hosted_payment_page */
-    $hosted_payment_page = $this->doHostedPaymentPageRequest($hosted_payment_page_request);
-
-    $state = !empty($hosted_payment_page->getForwardUrl()) ? 'initialized' : 'initialization_failed';
-    $payment->setState($state);
-    $payment->save();
-
-    // Allow other modules to react to the Hosted Payment Page response.
-    $event = new HostedPaymentPageResponseEvent($hosted_payment_page, $payment);
-    $this->eventDispatcher->dispatch(HipayEvents::HOSTED_PAYMENT_PAGE_RESPONSE, $event);
-
-    return $hosted_payment_page;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function doHostedPaymentPageRequest(HostedPaymentPageRequest $hosted_payment_page_request) {
+  public function doHostedPaymentPageRequest() {
     // Log the request message if request logging is enabled.
     if (!empty($this->configuration['api_logging']['request'])) {
       \Drupal::logger('commerce_hipay_tpp')
         ->debug('Hosted Payment Page request: <pre>@request</pre>', [
-          '@request' => var_export((array) $hosted_payment_page_request, TRUE),
+          '@request' => var_export((array) $this->request, TRUE),
         ]);
     }
 
     /** @var \HiPay\Fullservice\Gateway\Client\GatewayClient $gateway_client */
-    $gateway_client = $this->getGatewayClient($hosted_payment_page_request->currency);
+    $gateway_client = $this->getGatewayClient($this->request->currency);
 
     /** @var \HiPay\Fullservice\Gateway\Model\HostedPaymentPage $hosted_payment_page */
-    $hosted_payment_page = $gateway_client->requestHostedPaymentPage($hosted_payment_page_request);
+    $hosted_payment_page = $gateway_client->requestHostedPaymentPage($this->request);
 
     // Log the request message if request logging is enabled.
     if (!empty($this->configuration['api_logging']['response'])) {
@@ -441,6 +505,35 @@ class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterfac
     }
 
     return $hosted_payment_page;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function doOrderRequest() {
+    // Log the request message if request logging is enabled.
+    if (!empty($this->configuration['api_logging']['request'])) {
+      \Drupal::logger('commerce_hipay_tpp')
+        ->debug('Order request: <pre>@request</pre>', [
+          '@request' => var_export((array) $this->request, TRUE),
+        ]);
+    }
+
+    /** @var \HiPay\Fullservice\Gateway\Client\GatewayClient $gateway_client */
+    $gateway_client = $this->getGatewayClient($this->request->currency);
+
+    /** @var \HiPay\Fullservice\Gateway\Model\Transaction $transaction */
+    $transaction = $gateway_client->requestNewOrder($this->request);
+
+    // Log the request message if request logging is enabled.
+    if (!empty($this->configuration['api_logging']['response'])) {
+      \Drupal::logger('commerce_hipay_tpp')
+        ->debug('Order response: <pre>@response</pre>', [
+          '@response' => var_export($transaction->toArray(), TRUE),
+        ]);
+    }
+
+    return $transaction;
   }
 
   /**
@@ -481,6 +574,26 @@ class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterfac
     $payment->setRemoteId($response_data['reference']);
     $payment->setRemoteState($response_data['status']);
     $payment->save();
+
+    /** @var \Drupal\commerce_payment\Entity\PaymentMethod $payment_method */
+    $payment_method = $order->get('payment_method')->entity;
+    $payment_method->card_type = strtolower($response_data['cardbrand']);
+    // Only the last 4 numbers are safe to store.
+    $payment_method->card_number = substr($response_data['cardpan'], -4);
+    $payment_method->card_exp_month = substr($response_data['cardexpiry'], -2);
+    $payment_method->card_exp_year = substr($response_data['cardexpiry'], 0, 4);
+    $expires = \Drupal\commerce_payment\CreditCard::calculateExpirationTimestamp(substr($response_data['cardexpiry'], -2), substr($response_data['cardexpiry'], 0, 4));
+    // Store the remote ID returned by the request.
+    $payment_method
+      ->setRemoteId($response_data['cardtoken'])
+      ->setExpiresTime($expires)
+      // Now that we have all credit card details and remote_id stored
+      // in the payment method we can mark it as reusable, so that it is shown
+      // in user's "Payment methods" listing and can be reused for future
+      // orders.
+      ->setReusable(TRUE)
+      ->save();
+
 
     // Allow other modules to react to the Hosted Payment Page return data.
     $event = new HostedPaymentPageReturnEvent($response_data, $payment);
@@ -981,6 +1094,13 @@ class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterfac
     }
   }
 
+  /**
+   * Validates API response/notification signature against its content.
+   *
+   * @param array $response_data
+   *
+   * @return bool
+   */
   public function validateResponseSignature($response_data) {
     $configuration = $this->getConfiguration();
 
@@ -1005,6 +1125,13 @@ class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterfac
     return TRUE;
   }
 
+  /**
+   * Validates API response/notification signature against its content.
+   *
+   * @param array $response_data
+   *
+   * @return bool
+   */
   public function validateSignature($response_data) {
     $configuration = $this->getConfiguration();
 
@@ -1030,6 +1157,20 @@ class CreditCard extends OffsitePaymentGatewayBase implements CreditCardInterfac
     $local_signature = sha1($string_to_hash);
 
     return ($local_signature === $hipay_signature) ? TRUE : FALSE;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function createPaymentMethod(PaymentMethodInterface $payment_method, array $payment_details) {
+
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function deletePaymentMethod(PaymentMethodInterface $payment_method) {
+    $payment_method->delete();
   }
 
 }

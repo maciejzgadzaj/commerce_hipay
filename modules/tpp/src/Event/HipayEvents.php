@@ -3,7 +3,11 @@
 namespace Drupal\commerce_hipay_tpp\Event;
 
 /**
+ * Class HipayEvents
+ *
  * Defines events for the Commerce Hipay TPP module.
+ *
+ * @package Drupal\commerce_hipay_tpp\Event
  */
 final class HipayEvents {
 
@@ -20,6 +24,20 @@ final class HipayEvents {
    * @Event
    */
   const HOSTED_PAYMENT_PAGE_RESPONSE = 'commerce_hipay_tpp.hosted_payment_page_response';
+
+  /**
+   * Name of the event fired when performing the Order requests.
+   *
+   * @Event
+   */
+  const ORDER_REQUEST = 'commerce_hipay_tpp.order_request';
+
+  /**
+   * Name of the event fired when receiving the Order response.
+   *
+   * @Event
+   */
+  const ORDER_RESPONSE = 'commerce_hipay_tpp.order_response';
 
   /**
    * Name of the event fired when returning from the Hosted Payment Page redirect.

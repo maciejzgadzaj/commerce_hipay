@@ -7,7 +7,11 @@ use HiPay\Fullservice\Gateway\Model\HostedPaymentPage;
 use Symfony\Component\EventDispatcher\Event;
 
 /**
+ * Class HostedPaymentPageResponseEvent
+ *
  * Defines the Hosted Payment Page response event.
+ *
+ * @package Drupal\commerce_hipay_tpp\Event
  *
  * @see \Drupal\commerce_hipay_tpp\Event\HipayEvents
  */

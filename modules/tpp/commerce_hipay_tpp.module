@@ -23,6 +23,44 @@ require_once 'includes/entities/commerce_hipay_tpp.entity_ui.virtual_iban.inc';
 require_once 'includes/api/commerce_hipay_tpp.api.virtual_iban.inc';
 
 /**
+ * Implements hook_commerce_payment_method_type_info_alter().
+ *
+ * Overrides default commerce_payment module's credit card payment method type
+ * to avoid checking for card type in case of new Hipay credit cards which do
+ * not yet have 'card_type' value set before offsite redirect return.
+ *
+ * @see \Drupal\commerce_hipay_tpp\Plugin\Commerce\PaymentMethodType\CreditCard
+ */
+function commerce_hipay_tpp_commerce_payment_method_type_info_alter(array &$definitions) {
+  $definitions['credit_card']['class'] = 'Drupal\commerce_hipay_tpp\Plugin\Commerce\PaymentMethodType\CreditCard';
+}
+
+/**
+ * Implements hook_theme_registry_alter().
+ *
+ * Overrides default commerce_payment module's credit card template file to hide
+ * 'Expires' line for new Hipay credit cards which do not yet have 'expires'
+ * value set before offsite redirect return.
+ */
+function commerce_hipay_tpp_theme_registry_alter(&$theme_registry) {
+  $theme_registry['commerce_payment_method__credit_card']['path'] = 'modules/contrib/commerce_hipay/modules/tpp/templates';
+}
+
+/**
+ * Implements hook_commerce_checkout_pane_info_alter().
+ *
+ * Overrides default "Payment information" checkout pane to prevent displaying
+ * "New credit card" option twice when going back in the checkout process from
+ * "Order review" to "Order information" page, and to allow deleting no longer
+ * needed order payment method and billing profile.
+ *
+ * @see \Drupal\commerce_hipay_tpp\Plugin\Commerce\CheckoutPane\PaymentInformation
+ */
+function commerce_hipay_tpp_commerce_checkout_pane_info_alter(&$definitions) {
+  $definitions['payment_information']['class'] = 'Drupal\commerce_hipay_tpp\Plugin\Commerce\CheckoutPane\PaymentInformation';
+}
+
+/**
  * Implements hook_entity_info().
  */
 function commerce_hipay_tpp_entity_info() {
