@@ -19,3 +19,13 @@ INSTALLATION
 
 Please refer to the README.txt file available in relevant module directory
 on how to install and configure each module and provided payment method.
+
+
+WARNING
+=======
+
+No more development planned.
+
+If someone would like to continue working on this module,
+please open a new issue in drupal.org module issue queue:
+https://www.drupal.org/project/issues/commerce_hipay
