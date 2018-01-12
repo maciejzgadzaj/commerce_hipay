@@ -91,7 +91,7 @@ function commerce_hipay_tpp_cardonfile_save($feedback, $order, $payment_method) 
       $card_data->payment_method = $payment_method['method_id'];
       $card_data->instance_id = $payment_method['instance_id'];
       $card_data->remote_id = $feedback['payment_method']['token'];
-      $card_data->card_type = $feedback['payment_method']['brand'];
+      $card_data->card_type = $feedback['payment_product'];
       $card_data->card_name = $feedback['payment_method']['card_holder'];
       $card_data->card_number = substr($feedback['payment_method']['pan'], -4);
       $card_data->card_exp_year = $feedback['payment_method']['card_expiry_year'];
